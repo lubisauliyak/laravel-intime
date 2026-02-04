@@ -92,11 +92,13 @@ class AgeGroupResource extends Resource
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
-            ->recordActions([
-                EditAction::make()
-                    ->label('Ubah'),
-                DeleteAction::make()
-                    ->label('Hapus'),
+            ->actions([
+                \Filament\Actions\ActionGroup::make([
+                    EditAction::make()
+                        ->label('Ubah'),
+                    DeleteAction::make()
+                        ->label('Hapus'),
+                ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

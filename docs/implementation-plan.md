@@ -139,7 +139,6 @@ Tabel `member_migrations` (Optional but Recommended) untuk mencatat histori perp
 
 ### Phase 2: QR & Membership (Week 2)
 *   [ ] Integration `simple-qrcode`.
-*   [ ] Custom Action: Generate Member Cards (PDF).
 *   [ ] Logic: Automatic Age Categorization.
 *   [ ] Role & Policy implementation (Filament Shield / Spatie).
 
@@ -148,11 +147,20 @@ Tabel `member_migrations` (Optional but Recommended) untuk mencatat histori perp
 *   [ ] Meeting Resource with Scope filter (Gender & Age).
 *   [ ] **Custom Unified Page:** QR Scanner + Manual Search (dalam satu tampilan).
 *   [ ] Real-time validation & feedback notifications.
+*   [x] **Catatan:** Logika status presensi otomatis ('BELUM HADIR' ke 'TIDAK HADIR') akan diimplementasikan di fase ini atau fase berikutnya.
 
-### Phase 4: Reporting & Dashboard (Week 4)
-*   [ ] Dashboard Stats: Attendance rate per Group.
-*   [ ] Export Report: Excel per Meeting / Per Month.
+### Phase 4: Reporting & QR Management (Week 4)
+*   [x] Statistik per grup turunan (Drill-down).
+*   [x] Detail Presensi per grup (Infolist & Table).
+*   [x] Logika otomatis 'BELUM HADIR' vs 'TIDAK HADIR' berdasarkan waktu.
+*   [ ] **QR Code Management:** Download QR Code per anggota (Single/Bulk).
+*   [ ] Live Scanner Enhancements (Late detection, filter target).
 *   [ ] UI/UX Polishing & Performance Optimization.
+
+### Phase 5: Final: Advanced Export & Member Cards (Week 5)
+*   [ ] **Custom Excel Export:** Multi-sheet report (Summary & Member Details).
+*   [ ] **Cetak Kartu Anggota (Member Cards):** Bulk print selected members to PDF layout.
+*   [ ] Project documentation & handover preparation.
 
 ---
 

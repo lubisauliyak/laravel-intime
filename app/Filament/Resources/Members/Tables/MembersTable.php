@@ -107,17 +107,19 @@ class MembersTable
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
-            ->recordActions([
-                ViewAction::make()
-                    ->label('Lihat'),
-                EditAction::make()
-                    ->label('Ubah'),
-                DeleteAction::make()
-                    ->label('Hapus'),
-                RestoreAction::make()
-                    ->label('Pulihkan'),
-                ForceDeleteAction::make()
-                    ->label('Hapus Permanen'),
+            ->actions([
+                \Filament\Actions\ActionGroup::make([
+                    ViewAction::make()
+                        ->label('Lihat'),
+                    EditAction::make()
+                        ->label('Ubah'),
+                    DeleteAction::make()
+                        ->label('Hapus'),
+                    RestoreAction::make()
+                        ->label('Pulihkan'),
+                    ForceDeleteAction::make()
+                        ->label('Hapus Permanen'),
+                ])
             ])
             ->modifyQueryUsing(fn ($query) => $query
                 ->orderByRaw("FIELD(gender, 'male', 'female')")

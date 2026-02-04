@@ -64,13 +64,15 @@ class GroupsTable
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
-            ->recordActions([
-                EditAction::make()
-                    ->label('Ubah')
-                    ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
-                DeleteAction::make()
-                    ->label('Hapus')
-                    ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
+            ->actions([
+                \Filament\Actions\ActionGroup::make([
+                    EditAction::make()
+                        ->label('Ubah')
+                        ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
+                    DeleteAction::make()
+                        ->label('Hapus')
+                        ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
+                ])
             ])
             ->modifyQueryUsing(fn ($query) => $query
                 ->addSelect(['level_sort' => \App\Models\Level::select('level_number')

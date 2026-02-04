@@ -68,21 +68,23 @@ class UserTable
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
-            ->recordActions([
-                EditAction::make()
-                    ->label('Ubah')
-                    ->after(function ($record) {
-                        // Sync Spatie role when role column is changed
-                        if ($record->role) {
-                            $record->syncRoles([$record->role]);
-                        }
-                    }),
-                DeleteAction::make()
-                    ->label('Hapus'),
-                RestoreAction::make()
-                    ->label('Pulihkan'),
-                ForceDeleteAction::make()
-                    ->label('Hapus Permanen'),
+            ->actions([
+                \Filament\Actions\ActionGroup::make([
+                    EditAction::make()
+                        ->label('Ubah')
+                        ->after(function ($record) {
+                            // Sync Spatie role when role column is changed
+                            if ($record->role) {
+                                $record->syncRoles([$record->role]);
+                            }
+                        }),
+                    DeleteAction::make()
+                        ->label('Hapus'),
+                    RestoreAction::make()
+                        ->label('Pulihkan'),
+                    ForceDeleteAction::make()
+                        ->label('Hapus Permanen'),
+                ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

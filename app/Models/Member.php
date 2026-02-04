@@ -32,6 +32,11 @@ class Member extends Model
         return $this->belongsTo(AgeGroup::class);
     }
 
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     protected static function boot()
     {
         parent::boot();

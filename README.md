@@ -16,7 +16,7 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
 ## 🛠️ Teknologi
 
 -   **Backend**: Laravel 12
--   **Admin Panel**: Filament PHP v3
+-   **Admin Panel**: Filament PHP v5
 -   **Database**: MySQL
 -   **Localization**: Indonesian (Bahasa Indonesia)
 
@@ -34,14 +34,23 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
 -   [x] Integrasi QR Code Generator (Simple QR Code).
 -   [x] Auto-generate QR Code saat pendaftaran anggota.
 -   [x] Implementasi Role & Permission (Filament Shield).
--   [x] **Hierarchical Data Scoping**: Admin hanya dapat mengelola data sesuai tingkat hirarki grup mereka (Ancestors read-only, Descendants full-access).
--   [x] Sinkronisasi Role Otomatis antara database dan Spatie Permissions.
+-   [x] **Hierarchical Data Scoping**: Admin hanya dapat mengelola data sesuai tingkat hirarki grup mereka.
 
-### ⏳ Phase 3: Attendance & Reporting (Next)
--   [ ] Sistem Presensi Berbasis Scan QR.
--   [ ] Dashboard Statistik Kehadiran.
--   [ ] Ekspor Laporan Bulanan/Mingguan (PDF/Excel).
--   [ ] Cetak Kartu Anggota Digital.
+### ✅ Phase 3: Attendance Engine (Selesai)
+-   [x] Live Scanner Station (QR Code & Manual Search).
+-   [x] Real-time Attendance Validation (Gender, Age, Active Status).
+-   [x] Multi-level Attendance Statistics (Summary & Drill-down).
+-   [x] Dashboard Widgets for Organization-wide metrics.
+
+### ⏳ Phase 4: QR Management & Advanced Actions (Current)
+-   [ ] Download QR Code per Anggota (Single/Bulk).
+-   [ ] Manual Attendance Management (Set status susulan/Izin/Sakit).
+-   [ ] Lampiran Bukti Izin (Foto/Keterangan).
+-   [ ] Live Scanner Enhancements (Late detection).
+
+### ⏳ Phase 5: Final: Deep Reporting & Member Cards (Next)
+-   [ ] **Custom Excel Export**: Multi-sheet report (Summary & Member Details).
+-   [ ] **Cetak Kartu Anggota**: Bulk print selected members to PDF ready-to-print.
 
 ## ⚙️ Instalasi
 

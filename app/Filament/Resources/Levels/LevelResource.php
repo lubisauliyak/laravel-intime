@@ -99,15 +99,17 @@ class LevelResource extends Resource
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
-            ->recordActions([
-                EditAction::make()
-                    ->label('Ubah'),
-                DeleteAction::make()
-                    ->label('Hapus'),
-                RestoreAction::make()
-                    ->label('Pulihkan'),
-                ForceDeleteAction::make()
-                    ->label('Hapus Permanen'),
+            ->actions([
+                \Filament\Actions\ActionGroup::make([
+                    EditAction::make()
+                        ->label('Ubah'),
+                    DeleteAction::make()
+                        ->label('Hapus'),
+                    RestoreAction::make()
+                        ->label('Pulihkan'),
+                    ForceDeleteAction::make()
+                        ->label('Hapus Permanen'),
+                ])
             ])
             ->defaultSort('level_number', 'desc')
             ->toolbarActions([

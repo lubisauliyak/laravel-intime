@@ -40,6 +40,11 @@ class Group extends Model
         return $this->hasMany(User::class);
     }
 
+    public function meetings()
+    {
+        return $this->hasMany(Meeting::class);
+    }
+
     public function getFullNameAttribute(): string
     {
         $code = $this->level?->code ?? 'N/A';
