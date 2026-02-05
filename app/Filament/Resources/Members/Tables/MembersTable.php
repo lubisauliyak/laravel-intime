@@ -26,7 +26,8 @@ class MembersTable
                 ImageColumn::make('qr_code_path')
                     ->label('QR')
                     ->square()
-                    ->disk('public'),
+                    ->disk('public')
+                    ->visibleFrom('md'),
                 TextColumn::make('member_code')
                     ->label('ID Anggota')
                     ->searchable()
@@ -78,7 +79,8 @@ class MembersTable
                         'male' => 'info',
                         'female' => 'danger',
                         default => 'gray',
-                    }),                
+                    })
+                    ->visibleFrom('md'),                
                 TextColumn::make('membership_type')
                     ->label('Tipe')
                     ->badge()
@@ -87,7 +89,8 @@ class MembersTable
                         'pengurus' => 'warning',
                         'anggota' => 'success',
                         default => 'gray',
-                    }),
+                    })
+                    ->visibleFrom('sm'),
                 IconColumn::make('status')
                     ->label('Aktif')
                     ->boolean()

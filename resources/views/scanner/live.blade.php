@@ -32,55 +32,55 @@
 
 <body class="bg-[#0a0a0c] text-white min-h-screen overflow-x-hidden">
     <!-- Navbar -->
-    <nav class="p-6 flex items-center justify-between border-b border-white/5 bg-black/40 sticky top-0 z-50">
-        <div class="flex items-center gap-4">
-            <a href="/admin/meetings/{{ $meeting->id }}" class="p-2 hover:bg-white/10 rounded-xl transition-all">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <nav class="p-4 md:p-6 flex items-center justify-between border-b border-white/5 bg-black/40 sticky top-0 z-50">
+        <div class="flex items-center gap-3 md:gap-4 overflow-hidden">
+            <a href="/admin/meetings/{{ $meeting->id }}" class="p-2 hover:bg-white/10 rounded-xl transition-all shrink-0">
+                <svg class="w-5 h-5 md:w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
-            <div>
-                <h1 class="text-lg font-extrabold tracking-tight">{{ $meeting->name }}</h1>
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest">{{ $meeting->group->name }} • {{ $meeting->meeting_date->format('d M Y') }}</p>
+            <div class="truncate">
+                <h1 class="text-base md:text-lg font-extrabold tracking-tight truncate">{{ $meeting->name }}</h1>
+                <p class="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest truncate">{{ $meeting->group->name }} • {{ $meeting->meeting_date->format('d M Y') }}</p>
             </div>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 md:gap-3 shrink-0">
             @if($isFinished)
-                <div class="flex items-center gap-2 px-4 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full">
-                    <div class="w-2 h-2 rounded-full bg-rose-500"></div>
-                    <span class="text-[10px] font-black text-rose-400 uppercase tracking-widest">Sesi Berakhir</span>
+                <div class="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full">
+                    <div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                    <span class="text-[9px] md:text-[10px] font-black text-rose-400 uppercase tracking-widest">Sesi Berakhir</span>
                 </div>
             @else
-                <div class="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Sedang Berlangsung</span>
+                <div class="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-nowrap">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-widest">Berlangsung</span>
                 </div>
             @endif
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        <div class="grid grid-cols-1 {{ $isFinished ? '' : 'lg:grid-cols-12' }} gap-12 items-start">
+        <div class="grid grid-cols-1 {{ $isFinished ? '' : 'lg:grid-cols-12' }} gap-8 md:gap-12 items-start">
             
             @if(!$isFinished)
             <!-- Area Scanner (Kiri) -->
             <div class="lg:col-span-5 space-y-8 animate-in fade-in duration-1000">
                 <!-- Camera Container -->
                 <div class="relative group">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                    <div id="reader-container" class="relative bg-black rounded-[2.5rem] aspect-square overflow-hidden border-8 border-white/5 shadow-2xl">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                    <div id="reader-container" class="relative bg-black rounded-2xl aspect-square overflow-hidden border-8 border-white/5 shadow-2xl">
                         <div id="reader" style="width: 100%; height: 100%;"></div>
                         
                         <!-- HUD Overlay -->
-                        <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-10">
+                        <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6 md:p-10">
                             <div class="flex justify-between">
-                                <div class="w-14 h-14 border-t-4 border-l-4 border-emerald-500 rounded-tl-2xl"></div>
-                                <div class="w-14 h-14 border-t-4 border-r-4 border-emerald-500 rounded-tr-2xl"></div>
+                                <div class="w-10 h-10 md:w-14 h-14 border-t-4 border-l-4 border-emerald-500 rounded-tl-2xl"></div>
+                                <div class="w-10 h-10 md:w-14 h-14 border-t-4 border-r-4 border-emerald-500 rounded-tr-2xl"></div>
                             </div>
                             <!-- Scanner Line -->
-                            <div id="scanner-line" class="absolute left-10 right-10 h-0.5 bg-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.8)] scan-line hidden"></div>
+                            <div id="scanner-line" class="absolute left-6 right-6 md:left-10 md:right-10 h-0.5 bg-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.8)] scan-line hidden"></div>
                             
                             <div class="flex justify-between">
-                                <div class="w-14 h-14 border-b-4 border-l-4 border-emerald-500 rounded-bl-2xl"></div>
-                                <div class="w-14 h-14 border-b-4 border-r-4 border-emerald-500 rounded-br-2xl"></div>
+                                <div class="w-10 h-10 md:w-14 h-14 border-b-4 border-l-4 border-emerald-500 rounded-bl-2xl"></div>
+                                <div class="w-10 h-10 md:w-14 h-14 border-b-4 border-r-4 border-emerald-500 rounded-br-2xl"></div>
                             </div>
                         </div>
 
@@ -97,15 +97,15 @@
                                     <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </div>
                             </div>
-                            <h3 class="text-3xl font-black mb-4 tracking-tighter uppercase">Scanner Siap</h3>
-                            <p class="text-gray-400 text-base mb-10 max-w-xs leading-relaxed font-medium">Klik tombol di bawah dan berikan izin kamera untuk mulai memindai Kode QR secara otomatis.</p>
-                            <button onclick="startScanning()" class="w-full px-10 py-5 bg-white text-black font-black rounded-3xl hover:bg-emerald-500 hover:text-white transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)] active:scale-95 uppercase tracking-tighter text-lg">AKTIFKAN KAMERA</button>
+                            <h3 class="text-2xl font-black mb-3 tracking-tighter uppercase">Scanner Siap</h3>
+                            <p class="text-gray-400 text-sm mb-8 max-w-xs leading-relaxed font-medium">Klik tombol di bawah untuk mulai memindai Kode QR.</p>
+                            <button onclick="startScanning()" class="w-full px-8 py-4 bg-white text-black font-black rounded-2xl hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-95 uppercase tracking-tighter text-base">AKTIFKAN KAMERA</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Manual Input Card -->
-                <div class="glass p-8 rounded-[2.5rem] border-white/5 relative overflow-hidden group shadow-2xl">
+                <div class="glass p-8 rounded-2xl border-white/5 relative overflow-hidden group shadow-2xl">
                     <div class="absolute top-0 right-0 p-8 opacity-5 -mr-10 -mt-10 group-hover:rotate-12 transition-transform duration-1000">
                         <svg class="w-32 h-32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2"/></svg>
                     </div>
@@ -118,9 +118,9 @@
                     <div class="space-y-5 relative z-10">
                         <select id="manual-search" class="w-full"></select>
                         <div class="grid grid-cols-3 gap-3">
-                            <button onclick="recordManual('hadir')" class="py-3 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white font-black rounded-xl transition-all border border-emerald-500/20 text-[10px] uppercase tracking-tighter">HADIR</button>
-                            <button onclick="recordManual('izin')" class="py-3 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white font-black rounded-xl transition-all border border-amber-500/20 text-[10px] uppercase tracking-tighter">IZIN</button>
-                            <button onclick="recordManual('sakit')" class="py-3 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white font-black rounded-xl transition-all border border-red-500/20 text-[10px] uppercase tracking-tighter">SAKIT</button>
+                            <button onclick="recordManual('hadir')" class="py-4 md:py-3 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white font-black rounded-xl transition-all border border-emerald-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">HADIR</button>
+                            <button onclick="recordManual('izin')" class="py-4 md:py-3 bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white font-black rounded-xl transition-all border border-amber-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">IZIN</button>
+                            <button onclick="recordManual('sakit')" class="py-4 md:py-3 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white font-black rounded-xl transition-all border border-red-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">SAKIT</button>
                         </div>
                     </div>
                 </div>
@@ -130,34 +130,34 @@
             <!-- Tabel Presensi -->
             <div class="{{ $isFinished ? 'max-w-4xl mx-auto w-full' : 'lg:col-span-7' }} space-y-8 animate-in slide-in-from-bottom-6 duration-1000">
                 <div class="flex items-center justify-between px-2">
-                    <div class="flex items-center gap-4">
-                        <h2 class="text-3xl font-black tracking-tighter">DAFTAR HADIR</h2>
-                        <span id="attendee-count" class="px-4 py-1.5 bg-white/10 rounded-full text-xs font-black text-gray-400 uppercase tracking-widest">{{ count($attendances) }} Anggota</span>
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <h2 class="text-2xl md:text-3xl font-black tracking-tighter">DAFTAR HADIR</h2>
+                        <span id="attendee-count" class="px-3 py-1 md:px-4 md:py-1.5 bg-white/10 rounded-full text-[10px] md:text-xs font-black text-gray-400 uppercase tracking-widest">{{ count($attendances) }} Anggota</span>
                     </div>
                     <button onclick="location.reload()" class="p-3 hover:bg-white/10 rounded-2xl text-gray-500 hover:text-white transition-all group">
                         <svg class="w-6 h-6 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-width="2.5" stroke-linecap="round"/></svg>
                     </button>
                 </div>
 
-                <div class="glass rounded-[3rem] overflow-hidden border-white/5 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]">
+                <div class="glass rounded-2xl overflow-hidden border-white/5 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]">
                     <div class="max-h-[70vh] overflow-y-auto custom-scrollbar">
                         <table class="w-full text-left border-collapse">
                             <thead class="sticky top-0 z-10 glass backdrop-blur-3xl">
-                                <tr class="bg-black/40 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
-                                    <th class="px-8 py-5">Identitas Anggota</th>
-                                    <th class="px-8 py-5">Waktu Tiba</th>
-                                    <th class="px-8 py-5 text-right">Metode</th>
+                                <tr class="bg-black/40 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                                    <th class="px-4 py-4 md:px-8 md:py-5">Identitas Anggota</th>
+                                    <th class="px-4 py-4 md:px-8 md:py-5">Waktu</th>
+                                    <th class="px-4 py-4 md:px-8 md:py-5 text-right">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="attendance-list" class="divide-y divide-white/5">
                                 @forelse($attendances as $attendance)
                                     <tr class="hover:bg-white/[0.02] transition-colors">
-                                        <td class="px-8 py-5">
-                                            <div class="font-black text-sm uppercase tracking-tight text-emerald-400">{{ $attendance->member->full_name }}</div>
-                                            <div class="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-widest">{{ $attendance->member->member_code }}</div>
+                                        <td class="px-4 py-4 md:px-8 md:py-5">
+                                            <div class="font-black text-xs md:text-sm uppercase tracking-tight text-emerald-400 truncate max-w-[120px] md:max-w-none">{{ $attendance->member->full_name }}</div>
+                                            <div class="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-widest">{{ $attendance->member->member_code }}</div>
                                         </td>
-                                        <td class="px-8 py-5 font-black text-xs text-gray-400">{{ $attendance->checkin_time->format('H:i') }}</td>
-                                        <td class="px-8 py-5 text-right space-y-1">
+                                        <td class="px-4 py-4 md:px-8 md:py-5 font-black text-[10px] md:text-xs text-gray-400 whitespace-nowrap">{{ $attendance->checkin_time->format('H:i') }}</td>
+                                        <td class="px-4 py-4 md:px-8 md:py-5 text-right">
                                             @php
                                                 $statusColor = match($attendance->status) {
                                                     'hadir' => 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5',
@@ -166,12 +166,14 @@
                                                     default => 'text-gray-500 border-white/10 bg-white/5',
                                                 };
                                             @endphp
-                                            <span class="inline-block text-[9px] font-black border {{ $statusColor }} px-3 py-1 rounded-full uppercase tracking-tighter">{{ $attendance->status ?? 'HADIR' }}</span>
-                                            <div class="flex items-center justify-end gap-2 mt-1">
-                                                @if($attendance->evidence_path || $attendance->notes)
-                                                    <div class="px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-gray-400 text-[8px] font-black uppercase tracking-tighter">Ada Lampiran</div>
-                                                @endif
-                                                <div class="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{{ strtoupper(str_replace('_', ' ', $attendance->method)) }}</div>
+                                            <div class="flex flex-col items-end gap-1.5">
+                                                <span class="inline-block text-[8px] md:text-[9px] font-black border {{ $statusColor }} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">{{ $attendance->status ?? 'HADIR' }}</span>
+                                                <div class="flex items-center justify-end gap-2">
+                                                    @if($attendance->evidence_path || $attendance->notes)
+                                                        <div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">BUKTI</div>
+                                                    @endif
+                                                    <div class="hidden sm:block text-[8px] font-bold text-gray-600 uppercase tracking-widest">{{ strtoupper(str_replace('_', ' ', $attendance->method)) }}</div>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -199,7 +201,7 @@
 
     <!-- Global Floating Feedback -->
     <div id="feedback" class="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] pointer-events-none hidden max-w-sm w-full px-6">
-        <div id="feedback-card" class="bg-emerald-500 text-white p-6 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] flex items-center gap-5 border border-white/20 transform transition-all duration-500 scale-90 opacity-0">
+        <div id="feedback-card" class="bg-emerald-500 text-white p-6 rounded-2xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] flex items-center gap-5 border border-white/20 transform transition-all duration-500 scale-90 opacity-0">
             <div id="feedback-icon" class="w-14 h-14 bg-white/20 rounded-3xl flex items-center justify-center shrink-0 border border-white/10 shadow-inner">
                 <svg id="icon-success" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <svg id="icon-warning" class="w-8 h-8 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M3 12a9 9 0 1118 0 9 9 0 01-18 0z" stroke-width="2.5"/></svg>
@@ -217,7 +219,7 @@
 
     <!-- Evidence Modal -->
     <div id="evidence-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-        <div id="evidence-content" class="glass max-w-md w-full p-8 rounded-[3rem] border-white/10 transform transition-all duration-300 scale-95 opacity-0">
+        <div id="evidence-content" class="glass max-w-md w-full p-8 rounded-2xl border-white/10 transform transition-all duration-300 scale-95 opacity-0">
             <div class="flex items-center gap-4 mb-8">
                 <div class="p-4 bg-blue-500/20 rounded-2xl text-blue-400">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -275,14 +277,21 @@
 
         function recordManual(status) {
             const id = $('#manual-search').val();
+            const $btn = $(event.currentTarget);
+            
             if(!id) {
                 showFeedback('warning', 'Pilih anggota terlebih dahulu.');
                 return;
             }
 
+            // Simpan teks asli
+            const originalText = $btn.text();
+            $btn.text('...').attr('disabled', true).addClass('opacity-50');
+
             if(status === 'hadir') {
-                submitAttendance(id, 'hadir');
+                submitAttendance(id, 'hadir', $btn, originalText);
             } else {
+                $btn.text(originalText).attr('disabled', false).removeClass('opacity-50');
                 openEvidenceModal(id, status);
             }
         }
@@ -332,7 +341,7 @@
             });
         }
 
-        function submitAttendance(memberId, status) {
+        function submitAttendance(memberId, status, $btn = null, originalText = '') {
             $.post('/live-scanner/{{ $meeting->id }}/manual', {
                 _token: $('meta[name="csrf-token"]').attr('content'),
                 member_id: memberId,
@@ -341,17 +350,27 @@
                 showFeedback(res.status, res.message);
                 if(res.status === 'success') {
                     location.reload();
+                } else if($btn) {
+                    $btn.text(originalText).attr('disabled', false).removeClass('opacity-50');
                 }
+            }).fail(() => {
+                if($btn) $btn.text(originalText).attr('disabled', false).removeClass('opacity-50');
+                showFeedback('error', 'Terjadi kesalahan jaringan.');
             });
         }
 
         function startScanning() {
+            if (!window.isSecureContext && location.hostname !== "localhost") {
+                alert('ERROR: Kamera hanya bisa diakses melalui protokol HTTPS (Secure Context) atau Localhost. Silakan gunakan SSL atau setting chrome://flags.');
+                return;
+            }
+
             $('#start-overlay').addClass('opacity-0 pointer-events-none scale-110');
             $('#scanner-line').removeClass('hidden');
             $('#btn-stop-camera').removeClass('hidden');
 
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 60, qrbox: { width: 350, height: 350 } };
+            const config = { fps: 60, qrbox: { width: 250, height: 250 } };
 
             html5QrCode.start({ facingMode: "environment" }, config,
                 (decodedText) => {
@@ -361,7 +380,7 @@
                 (errorMessage) => {}
             ).catch(err => {
                 console.error(err);
-                alert('Gagal mengakses kamera. Periksa izin browser Anda.');
+                alert('GAGAL AKSES KAMERA:\n1. Pastikan browser diizinkan akses kamera.\n2. Gunakan HTTPS (Bukan HTTP).\n3. Pastikan tidak ada aplikasi lain yang memakai kamera.');
                 resetScannerUI();
             });
         }
@@ -420,16 +439,18 @@
 
             const row = `
                 <tr class="animate-in slide-in-from-right-10 duration-700 bg-emerald-500/10">
-                    <td class="px-8 py-5">
-                        <div class="font-black text-sm uppercase tracking-tight text-emerald-400">${name}</div>
-                        <div class="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-widest">${code}</div>
+                    <td class="px-4 py-4 md:px-8 md:py-5">
+                        <div class="font-black text-xs md:text-sm uppercase tracking-tight text-emerald-400 truncate max-w-[120px] md:max-w-none">${name}</div>
+                        <div class="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-widest">${code}</div>
                     </td>
-                    <td class="px-8 py-5 font-black text-xs text-gray-200">${time}</td>
-                    <td class="px-8 py-5 text-right space-y-1">
-                        <span class="inline-block text-[9px] font-black border ${statusColor} px-3 py-1 rounded-full uppercase tracking-tighter">${status.toUpperCase()}</span>
-                        <div class="flex items-center justify-end gap-2 mt-1">
-                            ${hasEvidence ? '<div class="px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-gray-400 text-[8px] font-black uppercase tracking-tighter">Ada Lampiran</div>' : ''}
-                            <div class="text-[8px] font-bold text-gray-600 uppercase tracking-widest">${method.toUpperCase()}</div>
+                    <td class="px-4 py-4 md:px-8 md:py-5 font-black text-[10px] md:text-xs text-gray-200 whitespace-nowrap">${time}</td>
+                    <td class="px-4 py-4 md:px-8 md:py-5 text-right">
+                        <div class="flex flex-col items-end gap-1.5">
+                            <span class="inline-block text-[8px] md:text-[9px] font-black border ${statusColor} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">${status.toUpperCase()}</span>
+                            <div class="flex items-center justify-end gap-2">
+                                ${hasEvidence ? '<div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">BUKTI</div>' : ''}
+                                <div class="hidden sm:block text-[8px] font-bold text-gray-600 uppercase tracking-widest">${method.toUpperCase()}</div>
+                            </div>
                         </div>
                     </td>
                 </tr>

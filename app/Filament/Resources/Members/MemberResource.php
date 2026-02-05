@@ -41,7 +41,7 @@ class MemberResource extends Resource
             ->components([
                 \Filament\Schemas\Components\Section::make('Informasi Anggota')
                     ->schema([
-                        \Filament\Schemas\Components\Grid::make(2)
+                        \Filament\Schemas\Components\Grid::make(['default' => 1, 'md' => 2])
                             ->schema([
                                 \Filament\Infolists\Components\TextEntry::make('full_name')
                                     ->label('Nama Lengkap'),
@@ -59,26 +59,27 @@ class MemberResource extends Resource
                                     ->label('Status Aktif')
                                     ->boolean(),
                             ]),
-                    ])->columnSpan(2),
+                    ])->columnSpan(['default' => 'full', 'lg' => 2]),
                 \Filament\Schemas\Components\Section::make('QR Identity')
                     ->schema([
                         \Filament\Infolists\Components\ImageEntry::make('qr_code_path')
                             ->label('QR Code')
                             ->hiddenLabel()
                             ->square()
-                            ->width(250)
-                            ->height(250)
+                            ->width('100%')
+                            ->height('auto')
                             ->disk('public')
                             ->extraImgAttributes([
-                                'class' => 'mx-auto',
+                                'class' => 'mx-auto max-w-[200px] md:max-w-[250px]',
                                 'style' => 'image-rendering: auto;',
                             ]),
                         \Filament\Infolists\Components\TextEntry::make('member_code')
                             ->label('Scan kode ini untuk absensi')
                             ->alignCenter()
-                            ->color('gray'),
-                    ])->columnSpan(1),
-            ])->columns(3);
+                            ->color('gray')
+                            ->extraAttributes(['class' => 'text-xs md:text-sm']),
+                    ])->columnSpan(['default' => 'full', 'lg' => 1]),
+            ])->columns(['default' => 1, 'lg' => 3]);
     }
 
     public static function table(Table $table): Table

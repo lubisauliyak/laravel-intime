@@ -12,52 +12,55 @@ class MeetingInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('name')
-                    ->label('Nama Pertemuan'),
-                TextEntry::make('description')
-                    ->label('Keterangan')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
-                TextEntry::make('meeting_date')
-                    ->label('Tanggal Pertemuan')
-                    ->date('d F Y'),
-                TextEntry::make('start_time')
-                    ->label('Jam Dimulai')
-                    ->time('H:i'),
-                TextEntry::make('end_time')
-                    ->label('Jam Berakhir')
-                    ->time('H:i'),
-                TextEntry::make('group.name')
-                    ->label('Grup Penyelenggara'),
-                TextEntry::make('target_gender')
-                    ->label('Target Gender')
-                    ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'all' => 'Semua',
-                        'male' => 'Laki-laki',
-                        'female' => 'Perempuan',
-                        default => $state,
-                    })
-                    ->color(fn (string $state): string => match ($state) {
-                        'male' => 'info',
-                        'female' => 'danger',
-                        default => 'gray',
-                    }),
-                TextEntry::make('creator.name')
-                    ->label('Dibuat Oleh'),
-
-                TextEntry::make('deleted_at')
-                    ->label('Dihapus Pada')
-                    ->dateTime()
-                    ->visible(fn (Meeting $record): bool => $record->trashed()),
-                TextEntry::make('created_at')
-                    ->label('Dibuat Pada')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->label('Diperbarui Pada')
-                    ->dateTime()
-                    ->placeholder('-'),
+                \Filament\Schemas\Components\Section::make('Detail Pertemuan')
+                    ->schema([
+                        \Filament\Schemas\Components\Grid::make(['default' => 1, 'md' => 2])
+                            ->schema([
+                                TextEntry::make('name')
+                                    ->label('Nama Pertemuan')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                                TextEntry::make('group.name')
+                                    ->label('Grup Penyelenggara'),
+                                TextEntry::make('meeting_date')
+                                    ->label('Tanggal Pertemuan')
+                                    ->date('d F Y')
+                                    ->icon('heroicon-m-calendar'),
+                                TextEntry::make('target_gender')
+                                    ->label('Target Gender')
+                                    ->badge()
+                                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                                        'all' => 'Semua',
+                                        'male' => 'Laki-laki',
+                                        'female' => 'Perempuan',
+                                        default => $state,
+                                    })
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'male' => 'info',
+                                        'female' => 'danger',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('start_time')
+                                    ->label('Jam Dimulai')
+                                    ->time('H:i')
+                                    ->icon('heroicon-m-clock'),
+                                TextEntry::make('end_time')
+                                    ->label('Jam Berakhir')
+                                    ->time('H:i')
+                                    ->icon('heroicon-m-clock'),
+                                TextEntry::make('creator.name')
+                                    ->label('Dibuat Oleh')
+                                    ->icon('heroicon-m-user'),
+                                TextEntry::make('created_at')
+                                    ->label('Waktu Dibuat')
+                                    ->dateTime()
+                                    ->color('gray'),
+                            ]),
+                        TextEntry::make('description')
+                            ->label('Keterangan Tambahan')
+                            ->placeholder('Tidak ada keterangan tambahan.')
+                            ->columnSpanFull()
+                            ->prose(),
+                    ])
             ]);
     }
 }

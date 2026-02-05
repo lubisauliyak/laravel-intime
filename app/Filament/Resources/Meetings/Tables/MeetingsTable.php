@@ -51,14 +51,16 @@ class MeetingsTable
                         'male' => 'info',
                         'female' => 'danger',
                         default => 'gray',
-                    }),
+                    })
+                    ->visibleFrom('md'),
                 TextColumn::make('target_age_groups')
                     ->label('Kategori Usia')
                     ->badge()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('creator.name')
                     ->label('Dibuat Oleh')
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('md'),
                 TextColumn::make('deleted_at')
                     ->label('Dihapus')
                     ->dateTime()
