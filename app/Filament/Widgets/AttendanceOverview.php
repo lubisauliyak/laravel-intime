@@ -14,7 +14,7 @@ class AttendanceOverview extends StatsOverviewWidget
     protected function getStats(): array
     {
         $todayAttendance = Attendance::whereDate('checkin_time', now())->count();
-        $totalMembers = Member::where('status', 'active')->count();
+        $totalMembers = Member::where('status', true)->count();
         
         // Simple average for active meetings
         $attendanceRate = $totalMembers > 0 ? ($todayAttendance / $totalMembers) * 100 : 0;

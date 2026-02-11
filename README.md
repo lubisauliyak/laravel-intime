@@ -42,14 +42,17 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
 -   [x] Multi-level Attendance Statistics (Summary & Drill-down).
 -   [x] Dashboard Widgets for Organization-wide metrics.
 
-### ⏳ Phase 4: QR Management & Advanced Actions (Current)
--   [ ] Download QR Code per Anggota (Single/Bulk).
--   [ ] Manual Attendance Management (Set status susulan/Izin/Sakit).
--   [ ] Lampiran Bukti Izin (Foto/Keterangan).
--   [ ] Live Scanner Enhancements (Late detection).
+### ✅ Phase 4: Reporting & Mobile UX (Selesai)
+-   [x] Drill-down Statistics per sub-grup.
+-   [x] Manual Attendance Management (Set status susulan/Izin/Sakit).
+-   [x] Sistem Lampiran Bukti Izin (Foto/Keterangan).
+-   [x] Smart Status (BELUM HADIR -> TIDAK HADIR) otomatis.
+-   [x] Optimasi Mobile UX (Responsive Scanner & Tables).
 
-### ⏳ Phase 5: Final: Deep Reporting & Member Cards (Next)
--   [ ] **Custom Excel Export**: Multi-sheet report (Summary & Member Details).
+### ⏳ Phase 5: QR Management, Reporting & Member Cards (Current)
+-   [ ] **QR Management**: Download PNG QR Code (Single/Bulk Zip).
+-   [ ] **Deep Reporting**: Multi-sheet Excel report (Summary & Member Details).
+-   [ ] **Scanner Enhancements**: Deteksi Terlambat & Filter Target Search.
 -   [ ] **Cetak Kartu Anggota**: Bulk print selected members to PDF ready-to-print.
 
 ## ⚙️ Instalasi
@@ -63,9 +66,10 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
     composer install
     npm install && npm run dev
     ```
-3.  Konfigurasi `.env` dan jalankan migrasi:
+3.  Konfigurasi `.env`, jalankan migrasi & link storage:
     ```bash
     php artisan migrate --seed
+    php artisan storage:link
     ```
 4.  Jalankan server:
     ```bash

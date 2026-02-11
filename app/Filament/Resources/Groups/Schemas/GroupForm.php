@@ -73,12 +73,29 @@ class GroupForm
                     ->searchable()
                     ->preload()
                     ->placeholder(fn (Get $get) => $get('level_id') ? 'Pilih induk kelompok' : 'Pilih tingkat hirarki terlebih dahulu')
-                    ->disabled(fn (Get $get) => ! $get('level_id')),
+                    ->disabled(fn (Get $get) => ! $get('level_id'))
+                    ->live()
+                    ->formatStateUsing(function ($state) {
+                        if (!$state) return null;
+                        return \App\Models\Group::where('id', $state)->exists() ? $state : null;
+                    })
+                    ->dehydrated(fn ($state) => filled($state)),
                 TextInput::make('name')
                     ->label('Nama Grup')
                     ->required()
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
                     ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state))
+                    ->unique(
+                        table: \App\Models\Group::class,
+                        column: 'name',
+                        ignorable: fn ($record) => $record,
+                        modifyRuleUsing: function (\Illuminate\Validation\Rules\Unique $rule, Get $get) {
+                            return $rule->where('parent_id', $get('parent_id'));
+                        }
+                    )
+                    ->validationMessages([
+                        'unique' => 'Grup dengan nama ini sudah ada di dalam induk yang sama.',
+                    ])
                     ->maxLength(255),
                 Toggle::make('status')
                     ->label('Status Aktif Grup')

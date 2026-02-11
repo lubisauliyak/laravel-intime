@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('members', function (Blueprint $table) {
-            $table->boolean('status')->default(true)->change();
+        Schema::table('attendances', function (Blueprint $table) {
+            $table->dropColumn('attendance_type');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('members', function (Blueprint $table) {
-            $table->enum('status', ['active', 'inactive', 'moved'])->default('active')->change();
+        Schema::table('attendances', function (Blueprint $table) {
+            $table->enum('attendance_type', ['wajib', 'opsional', 'istimewa'])->default('wajib')->after('method');
         });
     }
 };

@@ -12,4 +12,10 @@ class Level extends Model
         'name',
         'code',
         'level_number',
-    ];}
+    ];
+
+    public function groups(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Group::class);
+    }
+}

@@ -29,6 +29,11 @@ class GroupResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    public static function canViewAny(): bool
+    {
+        return !auth()->user()->hasRole('operator');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return GroupForm::configure($schema);
@@ -74,7 +79,7 @@ class GroupResource extends Resource
         $query = parent::getEloquentQuery();
         $user = auth()->user();
 
-        if ($user && $user->hasRole('admin') && $user->group_id) {
+        if ($user && ($user->hasRole('admin') || $user->hasRole('operator')) && $user->group_id) {
             $descendantIds = $user->group->getAllDescendantIds();
             $ancestorIds = $user->group->getAllAncestorIds();
             

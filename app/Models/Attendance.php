@@ -17,7 +17,6 @@ class Attendance extends Model
         'member_id',
         'checkin_time',
         'method',
-        'attendance_type',
         'status',
         'notes',
         'evidence_path',

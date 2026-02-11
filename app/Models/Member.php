@@ -22,45 +22,18 @@ class Member extends Model
         'qr_code_path',
     ];
 
-    public function group()
+    public function group(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Group::class);
     }
 
-    public function ageGroup()
+    public function ageGroup(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(AgeGroup::class);
     }
 
-    public function attendances()
+    public function attendances(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Attendance::class);
     }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saving(function ($member) {
-            if ($member->birth_date) {
-                $birthDate = \Carbon\Carbon::parse($member->birth_date);
-                $age = $birthDate->age;
-                $member->age = $age;
-
-                // Automatic category matching if not manually set OR if it's a new record
-                // We prioritize manual selection if provided in the request
-                if (!$member->age_group_id) {
-                    $matchingGroup = AgeGroup::where('min_age', '<=', $age)
-                        ->where(function ($query) use ($age) {
-                            $query->where('max_age', '>=', $age)
-                                ->orWhereNull('max_age');
-                        })
-                        ->first();
-
-                    if ($matchingGroup) {
-                        $member->age_group_id = $matchingGroup->id;
-                    }
-                }
-            }
-        });
-    }}
+}

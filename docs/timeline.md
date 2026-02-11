@@ -20,19 +20,19 @@
     *   Tabel kehadiran real-time dan feedback suara.
     *   **Logic SC-5**: Validasi otomatis keaktifan, target kriteria, dan scan ganda.
 
-## 📊 Phase 4: Reporting & QR Management (4 Februari 2026 - Present)
+## 📊 Phase 4: Reporting & Mobile UX (4 - 10 Februari 2026)
 *   **Advanced Attendance Details**:
-    *   **Drill-down Statistics**: Tabel statistik per sub-grup secara hierarkis di halaman pertemuan.
-    *   **Smart Attendance Status**: Otomatisasi status 'BELUM HADIR' ke 'TIDAK HADIR' berdasarkan jam selesai.
-    *   **Manual Management**: Fitur 'Set Status' susulan & 'Hapus Presensi' dalam dropdown ActionGroup.
-    *   **Evidence System**: Dukungan lampiran foto bukti (Izin/Sakit) dan catatan keterangan (Public Storage).
-*   **QR Management (InProgress)**: Fitur pengunduhan aset gambar QR Code (Single/Bulk).
-*   **Scanner Polishing (InProgress)**: Deteksi keterlambatan otomatis dan optimasi filter pencarian.
+    *   **Drill-down Statistics**: Tabel statistik per sub-grup secara hierarkis (refactored to Widget).
+    *   **Smart Attendance Status**: Otomatisasi status 'BELUM HADIR' ke 'TIDAK HADIR'.
+    *   **Manual Management**: Fitur 'Set Status' susulan & 'Lampiran Bukti' (Sakit/Izin).
+*   **Optimization**: Penataan ulang navigasi & mobile-responsive enhancements.
 
-## 📈 Phase 5: Final: Deep Reporting & Member Cards (Planned)
+## 🏁 Phase 5: QR Management, Deep Reporting & Cards (11 Februari 2026 - Present)
+*   **SSOT Alignment**: Sinkronisasi seluruh dokumentasi dan perbaikan arsitektur (Security & Scoping).
+*   **QR Management (Current)**: Fitur pengunduhan aset gambar QR Code PNG (Single/Bulk).
+*   **Scanner Enhancements**: Deteksi keterlambatan & filter target search.
 *   **Unified Excel Report**: Laporan multi-sheet (Ringkasan Statistik + Detail Rincian Nama).
 *   **Bulk Member Cards**: Cetak kartu fisik masal via PDF (Layout A4).
-*   **Optimasi Data Besar**: Implementasi chunking/query optimization untuk dataset >5000 records.
 
 ---
-*Terakhir diperbarui: 4 Februari 2026*
+*Terakhir diperbarui: 11 Februari 2026*

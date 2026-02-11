@@ -156,7 +156,7 @@
                                             <div class="font-black text-xs md:text-sm uppercase tracking-tight text-emerald-400 truncate max-w-[120px] md:max-w-none">{{ $attendance->member->full_name }}</div>
                                             <div class="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-widest">{{ $attendance->member->member_code }}</div>
                                         </td>
-                                        <td class="px-4 py-4 md:px-8 md:py-5 font-black text-[10px] md:text-xs text-gray-400 whitespace-nowrap">{{ $attendance->checkin_time->format('H:i') }}</td>
+                                        <td class="px-4 py-4 md:px-8 md:py-5 font-black text-[10px] md:text-xs text-gray-400 whitespace-nowrap">{{ $attendance->checkin_time?->format('H:i') ?? '-' }}</td>
                                         <td class="px-4 py-4 md:px-8 md:py-5 text-right">
                                             @php
                                                 $statusColor = match($attendance->status) {
@@ -169,6 +169,9 @@
                                             <div class="flex flex-col items-end gap-1.5">
                                                 <span class="inline-block text-[8px] md:text-[9px] font-black border {{ $statusColor }} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">{{ $attendance->status ?? 'HADIR' }}</span>
                                                 <div class="flex items-center justify-end gap-2">
+                                                    @if(str_contains(strtoupper($attendance->notes ?? ''), 'TERLAMBAT'))
+                                                        <div class="px-1.5 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">TERLAMBAT</div>
+                                                    @endif
                                                     @if($attendance->evidence_path || $attendance->notes)
                                                         <div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">BUKTI</div>
                                                     @endif
@@ -261,7 +264,8 @@
         let count = {{ count($attendances) }};
 
         $(document).ready(function() {
-            $('#manual-search').select2({
+            const $manualSearch = $('#manual-search');
+            $manualSearch.select2({
                 placeholder: "-- Cari Nama atau Kode --",
                 minimumInputLength: 2,
                 ajax: {
@@ -273,6 +277,11 @@
                     cache: true
                 }
             });
+
+            // Auto-focus and open Select2 on page load
+            setTimeout(() => {
+                $manualSearch.select2('open');
+            }, 500);
         });
 
         function recordManual(status) {
@@ -414,7 +423,7 @@
                 showFeedback(res.status, res.message);
                 if(res.status === 'success') {
                     playAudio('success');
-                    addToTable(res.name, code, res.time, 'QR CODE');
+                    addToTable(res.name, code, res.time, 'QR CODE', 'hadir', false, res.is_late);
                 } else {
                     playAudio('error');
                 }
@@ -424,7 +433,7 @@
             });
         }
 
-        function addToTable(name, code, time, method, status = 'hadir', hasEvidence = false) {
+        function addToTable(name, code, time, method, status = 'hadir', hasEvidence = false, isLate = false) {
             $('#empty-row').hide();
             count++;
             $('#attendee-count').text(count + ' Anggota');
@@ -448,6 +457,7 @@
                         <div class="flex flex-col items-end gap-1.5">
                             <span class="inline-block text-[8px] md:text-[9px] font-black border ${statusColor} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">${status.toUpperCase()}</span>
                             <div class="flex items-center justify-end gap-2">
+                                ${isLate ? '<div class="px-1.5 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">TERLAMBAT</div>' : ''}
                                 ${hasEvidence ? '<div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">BUKTI</div>' : ''}
                                 <div class="hidden sm:block text-[8px] font-bold text-gray-600 uppercase tracking-widest">${method.toUpperCase()}</div>
                             </div>

@@ -22,4 +22,11 @@ class ViewMeeting extends ViewRecord
                 ->openUrlInNewTab(),
         ];
     }
+
+    protected function getFooterWidgets(): array
+    {
+        return [
+            \App\Filament\Resources\Meetings\Widgets\MeetingStatsTable::class,
+        ];
+    }
 }

@@ -52,7 +52,7 @@ class MeetingResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\ChildGroupsRelationManager::class,
+            //
         ];
     }
 
@@ -71,9 +71,14 @@ class MeetingResource extends Resource
     {
         return parent::getEloquentQuery()
             ->when(auth()->user(), function (Builder $query, $user) {
-                if ($user->group_id && !$user->hasRole('super_admin')) {
-                    $descendantGroupIds = $user->group->getAllDescendantIds();
-                    $query->whereIn('group_id', $descendantGroupIds);
+                if (!$user->hasRole('super_admin')) {
+                    if ($user->group_id) {
+                        $descendantGroupIds = $user->group->getAllDescendantIds();
+                        $query->whereIn('group_id', $descendantGroupIds);
+                    } else {
+                        // Non-super admin with no group sees nothing
+                        $query->whereRaw('1 = 0');
+                    }
                 }
             });
     }

@@ -38,7 +38,7 @@ class User extends Authenticatable implements FilamentUser
         'status',
     ];
 
-    public function group()
+    public function group(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Group::class);
     }

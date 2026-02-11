@@ -1,35 +1,35 @@
 <?php
 
-namespace App\Filament\Resources\Meetings\RelationManagers;
+namespace App\Filament\Resources\Meetings\Widgets;
 
 use App\Models\Attendance;
 use App\Models\Group;
 use App\Models\Member;
+use App\Models\Meeting;
+use App\Filament\Resources\Meetings\MeetingResource;
 use Filament\Actions\Action;
-use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 
-class ChildGroupsRelationManager extends RelationManager
+class MeetingStatsTable extends TableWidget
 {
-    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
-    {
-        return $pageClass === \App\Filament\Resources\Meetings\Pages\ViewMeeting::class;
-    }
-
-    protected static string $relationship = 'childGroups';
-
-    protected static ?string $title = 'Statistik per Grup Turunan';
-
-    protected static ?string $modelLabel = 'Grup Turunan';
-
+    public ?Meeting $record = null;
+    
     public $parentId = null;
+
+    protected int | string | array $columnSpan = 'full';
+
+    protected static ?string $heading = 'Statistik per Grup Turunan';
 
     public function table(Table $table): Table
     {
-        $meeting = $this->getOwnerRecord();
+        $meeting = $this->record;
+
+        if (!$meeting) {
+            return $table->query(fn() => Group::whereRaw('1 = 0'));
+        }
 
         return $table
             ->query(function () use ($meeting) {
@@ -47,7 +47,6 @@ class ChildGroupsRelationManager extends RelationManager
                 // Jika punya anak, tampilkan anak-anaknya (perilaku default)
                 return $meeting->group->children();
             })
-            ->recordTitleAttribute('name')
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Grup')
@@ -135,7 +134,7 @@ class ChildGroupsRelationManager extends RelationManager
                     ->label('Lihat Nama')
                     ->icon('heroicon-m-users')
                     ->color('info')
-                    ->url(fn (Group $record) => \App\Filament\Resources\Meetings\MeetingResource::getUrl('attendance-details', [
+                    ->url(fn (Group $record) => MeetingResource::getUrl('attendance-details', [
                         'record' => $meeting->id,
                     ]) . "?group={$record->id}"),
                 Action::make('view_subgroups')

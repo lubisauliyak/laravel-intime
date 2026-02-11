@@ -39,18 +39,7 @@ class MembersTable
                     ->label('Panggilan')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                ...(\App\Models\Level::orderBy('level_number', 'desc')->get()->map(function ($level) {
-                    if ($level->level_number === 1) {
-                        return TextColumn::make('group.name')
-                            ->label(ucwords(strtolower($level->name)))
-                            ->sortable();
-                    }
-                    return TextColumn::make("level_{$level->level_number}")
-                        ->label(ucwords(strtolower($level->name)))
-                        ->getStateUsing(fn ($record) => $record->group?->getParentAtLevel($level->level_number)?->name)
-                        ->placeholder('-')
-                        ->toggleable(isToggledHiddenByDefault: true);
-                })->toArray()),                
+                ...(static::getDynamicLevelColumns()),                
                 TextColumn::make('birth_date')
                     ->label('Tgl Lahir')
                     ->date('d/m/Y')
@@ -139,5 +128,22 @@ class MembersTable
                         ->label('Hapus Permanen Terpilih'),
                 ])->label('Aksi Massal'),
             ]);
+    }
+
+    protected static function getDynamicLevelColumns(): array
+    {
+        return \App\Models\Level::orderBy('level_number', 'desc')->get()->map(function ($level) {
+            if ($level->level_number === 1) {
+                return TextColumn::make('group.name')
+                    ->label(ucwords(strtolower($level->name)))
+                    ->sortable();
+            }
+            
+            return TextColumn::make("level_{$level->level_number}")
+                ->label(ucwords(strtolower($level->name)))
+                ->getStateUsing(fn ($record) => $record->group?->getParentAtLevel($level->level_number)?->name)
+                ->placeholder('-')
+                ->toggleable(isToggledHiddenByDefault: true);
+        })->toArray();
     }
 }

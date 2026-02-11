@@ -15,32 +15,41 @@ class Group extends Model
         'status',
     ];
 
-    public function level()
+    protected static function booted()
+    {
+        static::saving(function ($group) {
+            if ($group->name) {
+                $group->name = strtoupper($group->name);
+            }
+        });
+    }
+
+    public function level(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Level::class);
     }
 
-    public function parent()
+    public function parent(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Group::class, 'parent_id');
     }
 
-    public function children()
+    public function children(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Group::class, 'parent_id');
     }
 
-    public function members()
+    public function members(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Member::class);
     }
 
-    public function users()
+    public function users(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    public function meetings()
+    public function meetings(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Meeting::class);
     }

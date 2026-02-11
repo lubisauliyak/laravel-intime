@@ -32,9 +32,10 @@ class MeetingAttendanceExport implements FromQuery, WithHeadings, WithMapping
             'ID Anggota',
             'Nama Lengkap',
             'Grup',
+            'Status',
             'Waktu Absen',
             'Metode',
-            'Tipe',
+            'Keterangan',
         ];
     }
 
@@ -44,9 +45,10 @@ class MeetingAttendanceExport implements FromQuery, WithHeadings, WithMapping
             $attendance->member->member_code,
             $attendance->member->full_name,
             $attendance->member->group->name,
-            $attendance->checkin_time->format('Y-m-d H:i:s'),
-            $attendance->method,
-            $attendance->attendance_type,
+            strtoupper($attendance->status),
+            $attendance->checkin_time ? $attendance->checkin_time->format('Y-m-d H:i:s') : '-',
+            strtoupper($attendance->method),
+            $attendance->notes ?? '-',
         ];
     }
 }

@@ -6,6 +6,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 class UserForm
 {
@@ -64,9 +66,13 @@ class UserForm
                     )
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->label('Grup')
-                    ->placeholder('Pilih grup jika ada')
+                    ->placeholder('Pilih grup')
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->validationMessages([
+                        'required' => 'Grup wajib diisi untuk Admin dan Operator.',
+                    ])
+                    ->required(fn (Get $get) => in_array($get('role'), ['admin', 'operator'])),
                 Select::make('role')
                     ->label('Hak Akses (Peran)')
                     ->options(function () {
@@ -85,7 +91,8 @@ class UserForm
                     })
                     ->helperText('Superadmin memiliki akses penuh, Admin untuk manajemen, dan Operator untuk input data.')
                     ->default('operator')
-                    ->required(),
+                    ->required()
+                    ->live(),
                 Toggle::make('status')
                     ->label('Status Akun Aktif')
                     ->onColor('success')

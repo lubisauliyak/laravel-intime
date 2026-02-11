@@ -72,7 +72,7 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $attendance->member->member_code }}</td>
                     <td>{{ $attendance->member->full_name }}</td>
-                    <td>{{ $attendance->checkin_time->format('H:i:s') }}</td>
+                    <td>{{ $attendance->checkin_time?->format('H:i:s') ?? '-' }}</td>
                     <td>{{ ucfirst($attendance->method) }}</td>
                 </tr>
             @empty

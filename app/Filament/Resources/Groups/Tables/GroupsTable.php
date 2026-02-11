@@ -14,6 +14,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
+use Illuminate\Database\Eloquent\Builder;
 
 class GroupsTable
 {
@@ -40,7 +41,8 @@ class GroupsTable
                 TextColumn::make('parent.full_name')
                     ->label('Induk Grup')
                     ->searchable(['name'])
-                    ->sortable(),
+                    ->sortable()
+                    ->placeholder('-'),
                 IconColumn::make('status')
                     ->label('Aktif')
                     ->boolean()
@@ -50,6 +52,13 @@ class GroupsTable
                 SelectFilter::make('level_id')
                     ->label('Tingkat')
                     ->relationship('level', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('parent_id')
+                    ->label('Induk Grup')
+                    ->relationship('parent', 'name', fn ($query) => $query->whereHas('children'))
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->searchable()
                     ->preload(),
                 TernaryFilter::make('status')

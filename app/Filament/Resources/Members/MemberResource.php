@@ -30,6 +30,11 @@ class MemberResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'full_name';
 
+    public static function canViewAny(): bool
+    {
+        return !auth()->user()->hasRole('operator');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return MemberForm::configure($schema);
@@ -96,10 +101,18 @@ class MemberResource extends Resource
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->with([
+                'group.level', 
+                'group.parent.level', 
+                'group.parent.parent.level',
+                'group.parent.parent.parent.level',
+                'group.parent.parent.parent.parent.level',
+                'ageGroup'
+            ]);
         $user = auth()->user();
 
-        if ($user && $user->hasRole('admin') && $user->group_id) {
+        if ($user && ($user->hasRole('admin') || $user->hasRole('operator')) && $user->group_id) {
             $descendantGroupIds = $user->group->getAllDescendantIds();
             $query->whereIn('group_id', $descendantGroupIds);
         }

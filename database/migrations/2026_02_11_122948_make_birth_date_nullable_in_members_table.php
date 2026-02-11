@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('members', function (Blueprint $table) {
-            $table->boolean('status')->default(true)->change();
+            $table->date('birth_date')->nullable()->change();
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('members', function (Blueprint $table) {
-            $table->enum('status', ['active', 'inactive', 'moved'])->default('active')->change();
+            $table->date('birth_date')->nullable(false)->change();
         });
     }
 };

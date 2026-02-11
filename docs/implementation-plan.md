@@ -6,10 +6,10 @@ Web app **inTime** adalah sistem manajemen pendataan anggota dan absensi pertemu
 ### Spesifikasi Teknologi
 *   **Framework:** Laravel 12
 *   **Admin Panel:** Filament PHP 5
-*   **Database:** MySQL / PostgreSQL
+*   **Database:** MySQL
 *   **Library Utama:** 
     *   `simplesoftwareio/simple-qrcode` (QR Generation)
-    *   `spatie/laravel-permission` (Role & Access Control)
+    *   `bezhansalleh/filament-shield` (Role & Access Control)
     *   Sistem Hierarchy (Single Table Groups with `parent_id`)
 
 ---
@@ -60,11 +60,12 @@ Menggunakan satu tabel `groups` untuk fleksibilitas level (Unlimited Depth).
 | member_code | string | Unique (Misal: IT-2024-001) |
 | full_name | string | Nama Lengkap |
 | nick_name | string | Nama Panggilan |
-| group_id | foreign | FK ke `groups` (Biasanya level terendah/T1) |
-| birth_date | date | Untuk kalkulasi kategori usia |
-| age_group | string | Indikator kategori (misal: REMAJA, DEWASA, dst) |
+| group_id | foreign | FK ke `groups` |
+| birth_date | date | Untuk kalkulasi usia |
+| age | integer | Usia otomatis (kalkulasi) |
+| age_group_id | foreign | FK ke `age_groups` |
 | gender | enum | `male`, `female` |
-| status | enum | `active`, `inactive`, `moved` |
+| status | boolean | Aktif (true) / Non-aktif (false) |
 | membership_type | enum | `anggota`, `pengurus` |
 | qr_code_path | string | Path file image QR Code |
 
@@ -74,9 +75,11 @@ Menggunakan satu tabel `groups` untuk fleksibilitas level (Unlimited Depth).
 | id | bigint | Primary Key |
 | name | string | Judul Pertemuan |
 | meeting_date | date | Tanggal Pelaksanaan |
-| group_id | foreign | FK ke `groups` (Scope kelompok yang mengadakan) |
-| target_gender | enum | `all`, `male`, `female` (Filter target peserta) |
-| target_age_groups | json | Array kategori usia (misal: `["REMAJA", "DEWASA"]`) |
+| start_time | time | Jam Mulai (H:i) |
+| end_time | time | Jam Selesai (H:i) |
+| group_id | foreign | FK ke `groups` |
+| target_gender | enum | `all`, `male`, `female` |
+| target_age_groups | json | Array kategori usia (misal: `["Anak", "Remaja"]`) |
 | created_by | foreign | FK ke `users.id` |
 
 ### 3.5 Tabel `attendances` (Data Kehadiran)
@@ -87,7 +90,10 @@ Menggunakan satu tabel `groups` untuk fleksibilitas level (Unlimited Depth).
 | member_id | foreign | FK ke `members` |
 | checkin_time | datetime | Waktu scan/input |
 | method | enum | `manual`, `qr_code` |
-| attendance_type | enum | `wajib`, `opsional`, `istimewa` |
+| status | string | `hadir`, `izin`, `sakit` |
+| notes | text | Catatan/Keterangan |
+| evidence_path | string | Bukti foto lampiran |
+| ~~attendance_type~~ | ~~enum~~ | ~~`wajib`, `opsional`, `istimewa`~~ ❌ **DIHAPUS** |
 
 ---
 
@@ -101,8 +107,10 @@ Sistem menggunakan **Query Scoping** dan **Policy** berdasarkan `role` dan `grou
     *   **Meeting Management:** **HANYA** dapat membuat pertemuan untuk kelompoknya sendiri (`meeting.group_id` harus sama dengan `user.group_id`). Tidak boleh membuat pertemuan untuk kelompok di bawahnya atau di atasnya.
     *   **Visibility:** Dapat melihat dashboard statistik untuk kelompoknya dan turunannya.
 3.  **Operator:**
-    *   **Attendance Only:** Tidak bisa mengelola Member atau Group.
-    *   **Action:** Hanya bisa login untuk membuka halaman scanner dan mencatat kehadiran pada pertemuan yang sudah dibuat oleh Admin.
+    *   **Wajib punya `group_id`** (validasi di form).
+    *   **Data Scoping:** Hanya bisa melihat/scan pertemuan di grup sendiri + turunannya.
+    *   **Navigation:** Menu **Kelompok & Anggota DIHILANGKAN** dari sidebar.
+    *   **Action:** Fokus pada Live Scanner dan Dashboard Statistik.
 
 ---
 
@@ -124,8 +132,8 @@ Sistem menggunakan **Query Scoping** dan **Policy** berdasarkan `role` dan `grou
     *   Apakah sudah absen sebelumnya?
 5.  Berhasil: Notifikasi sukses & data singkat anggota muncul di layar.
 
-### 5.3 Migrasi Anggota (Scalable Management)
-Tabel `member_migrations` (Optional but Recommended) untuk mencatat histori perpindahan anggota antar kelompok tanpa merusak data absensi lama.
+### 5.3 Histori Perpindahan
+(Batal diimplementasikan sesuai keputusan QA - 11 Feb 2026)
 
 ---
 
@@ -149,17 +157,18 @@ Tabel `member_migrations` (Optional but Recommended) untuk mencatat histori perp
 *   [ ] Real-time validation & feedback notifications.
 *   [x] **Catatan:** Logika status presensi otomatis ('BELUM HADIR' ke 'TIDAK HADIR') akan diimplementasikan di fase ini atau fase berikutnya.
 
-### Phase 4: Reporting & QR Management (Week 4)
+### Phase 4: Reporting & Mobile UX (Selesai)
 *   [x] Statistik per grup turunan (Drill-down).
 *   [x] Detail Presensi per grup (Infolist & Table).
 *   [x] Logika otomatis 'BELUM HADIR' vs 'TIDAK HADIR' berdasarkan waktu.
-*   [ ] **QR Code Management:** Download QR Code per anggota (Single/Bulk).
-*   [ ] Live Scanner Enhancements (Late detection, filter target).
-*   [ ] UI/UX Polishing & Performance Optimization.
+*   [x] Sistem Lampiran Bukti Izin (Foto/Keterangan).
+*   [x] Optimasi Mobile UX untuk Scanner & Tables.
 
-### Phase 5: Final: Advanced Export & Member Cards (Week 5)
+### Phase 5: QR Management, Deep Reporting & Cards (Current)
+*   [ ] **QR Code Management:** Download QR Code PNG (Single/Bulk Zip).
+*   [ ] **Live Scanner Enhancements:** Deteksi Terlambat & Filter Target Search.
 *   [ ] **Custom Excel Export:** Multi-sheet report (Summary & Member Details).
-*   [ ] **Cetak Kartu Anggota (Member Cards):** Bulk print selected members to PDF layout.
+*   [ ] **Cetak Kartu Anggota (Member Cards):** Bulk print selected members to PDF ready-to-print.
 *   [ ] Project documentation & handover preparation.
 
 ---

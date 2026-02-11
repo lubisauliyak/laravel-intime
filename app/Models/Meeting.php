@@ -47,8 +47,8 @@ class Meeting extends Model
         return $this->hasMany(Attendance::class);
     }
 
-    public function childGroups(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function getTargetGroupIds(): array
     {
-        return $this->group->children();
+        return $this->group->getAllDescendantIds();
     }
 }
