@@ -32,10 +32,14 @@ class AgeGroupResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Data Master';
 
+    protected static ?int $navigationSort = 3;
+
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?string $pluralLabel = 'Kategori Usia';
     protected static ?string $modelLabel = 'Kategori Usia';
+
+
 
     public static function form(Schema $schema): Schema
     {

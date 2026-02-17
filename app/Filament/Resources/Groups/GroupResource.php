@@ -21,6 +21,8 @@ class GroupResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Data Master';
 
+    protected static ?int $navigationSort = 1;
+
     protected static ?string $modelLabel = 'Grup';
 
     protected static ?string $pluralModelLabel = 'Grup';
@@ -29,10 +31,7 @@ class GroupResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    public static function canViewAny(): bool
-    {
-        return !auth()->user()->hasRole('operator');
-    }
+
 
     public static function form(Schema $schema): Schema
     {
@@ -49,7 +48,7 @@ class GroupResource extends Resource
         $user = auth()->user();
         
         // Super Admin can always create
-        if ($user->hasRole('super_admin')) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
         
@@ -79,7 +78,7 @@ class GroupResource extends Resource
         $query = parent::getEloquentQuery();
         $user = auth()->user();
 
-        if ($user && ($user->hasRole('admin') || $user->hasRole('operator')) && $user->group_id) {
+        if ($user && !$user->isSuperAdmin() && $user->group_id) {
             $descendantIds = $user->group->getAllDescendantIds();
             $ancestorIds = $user->group->getAllAncestorIds();
             

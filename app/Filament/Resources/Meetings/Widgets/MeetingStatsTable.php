@@ -21,7 +21,7 @@ class MeetingStatsTable extends TableWidget
 
     protected int | string | array $columnSpan = 'full';
 
-    protected static ?string $heading = 'Statistik per Grup Turunan';
+    protected static ?string $heading = 'Statistik Kehadiran per Grup';
 
     public function table(Table $table): Table
     {
@@ -33,19 +33,13 @@ class MeetingStatsTable extends TableWidget
 
         return $table
             ->query(function () use ($meeting) {
-                // Jika sedang melihat sub-grup (setelah klik 'Lihat Sub-Grup')
                 if ($this->parentId) {
                     return Group::where('parent_id', $this->parentId);
                 }
 
-                // Cek apakah grup penyelenggara punya anak
-                if ($meeting->group->children()->count() === 0) {
-                    // Jika tidak punya anak (level paling bawah), tampilkan dirinya sendiri
-                    return Group::where('id', $meeting->group_id);
-                }
-
-                // Jika punya anak, tampilkan anak-anaknya (perilaku default)
-                return $meeting->group->children();
+                // Tampilkan HANYA grup penyelenggara di level awal
+                return Group::query()
+                    ->where('id', $meeting->group_id);
             })
             ->columns([
                 TextColumn::make('name')
@@ -61,7 +55,14 @@ class MeetingStatsTable extends TableWidget
                 TextColumn::make('subgroup_count')
                     ->label('Sub-Grup')
                     ->alignCenter()
-                    ->getStateUsing(fn (Group $record) => $record->children()->count() . ' grup'),
+                    ->getStateUsing(fn (Group $record) => $record->children()->count() . ' grup')
+                    ->toggleable()
+                    ->visible(function () use ($meeting) {
+                        if ($this->parentId) {
+                            return Group::where('parent_id', $this->parentId)->whereHas('children')->exists();
+                        }
+                        return $meeting->group->children()->exists();
+                    }),
 
                 TextColumn::make('members_count')
                     ->label('Total Anggota')
@@ -130,19 +131,21 @@ class MeetingStatsTable extends TableWidget
                     ->action(fn () => $this->parentId = null),
             ])
             ->actions([
-                Action::make('view_members')
-                    ->label('Lihat Nama')
-                    ->icon('heroicon-m-users')
-                    ->color('info')
-                    ->url(fn (Group $record) => MeetingResource::getUrl('attendance-details', [
-                        'record' => $meeting->id,
-                    ]) . "?group={$record->id}"),
-                Action::make('view_subgroups')
-                    ->label('Lihat Sub-Grup')
-                    ->icon('heroicon-m-chevron-right')
-                    ->color('primary')
-                    ->visible(fn (Group $record) => $record->children()->exists())
-                    ->action(fn (Group $record) => $this->parentId = $record->id),
+                \Filament\Actions\ActionGroup::make([
+                    \Filament\Actions\Action::make('view_members')
+                        ->label('Lihat Nama')
+                        ->icon('heroicon-m-users')
+                        ->color('info')
+                        ->url(fn (Group $record) => MeetingResource::getUrl('attendance-details', [
+                            'record' => $meeting->id,
+                        ]) . "?group={$record->id}"),
+                    \Filament\Actions\Action::make('view_subgroups')
+                        ->label('Lihat Sub-Grup')
+                        ->icon('heroicon-m-chevron-right')
+                        ->color('primary')
+                        ->visible(fn (Group $record) => $record->children()->exists())
+                        ->action(fn (Group $record) => $this->parentId = $record->id),
+                ])
             ])
             ->paginated(false);
     }

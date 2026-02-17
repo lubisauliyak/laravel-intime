@@ -2,37 +2,41 @@
 
 ## 🚀 Foundation & Setup (22 - 25 Januari 2026)
 *   **Inisialisasi Project**: Setup Laravel 12 dan Filament PHP v5.
-*   **Arsitektur Database**: Perancangan skema tabel `groups`, `members`, dan `users` dengan dukungan hierarki.
-*   **Hierarki Organisasi**: Implementasi struktur kelompok bertingkat (Unlimited Depth) menggunakan `parent_id`.
+*   **Arsitektur Database**: Perancangan skema tabel `groups`, `members`, dan `users`.
 
-## 🏗️ Phase 1 & 2: Core, Security & QR (26 - 31 Januari 2026)
-*   **Hierarchy Engine**: 
-    *   Implementasi breadcrumbs dan navigasi tree-view.
-    *   **Dynamic Group Columns**: Tabel anggota menampilkan kolom tingkat secara dinamis.
-*   **QR Code Integration**: Otomatisasi pembuatan QR Code (SVG) untuk identitas anggota.
-*   **RBAC (Role-Based Access Control)**: filament-shield & hierarchical scoping.
-*   **Refinement**: Kategori usia otomatis, soft deletes, dan normalisasi data.
+## 🏗️ Phase 1 & 2: Core & Security (26 - 31 Januari 2026)
+*   **Hierarchy Engine**: Breadcrumbs dan navigasi tree-view.
+*   **QR Code Integration**: Otomatisasi pembuatan QR Code (SVG) -> di-upgrade ke (PNG) di P5.
+*   **RBAC**: filament-shield & hierarchical scoping.
 
 ## 📡 Phase 3: Attendance Operations (1 - 3 Februari 2026)
-*   **Manajemen Pertemuan (Meetings)**: Modul jadwal terintegrasi dengan filter target (Gender & Usia).
-*   **Custom Live Scanner Station**:
-    *   HUD kamera futuristik dengan batch processing.
-    *   Tabel kehadiran real-time dan feedback suara.
-    *   **Logic SC-5**: Validasi otomatis keaktifan, target kriteria, dan scan ganda.
+*   **Manajemen Pertemuan (Meetings)**: Filter target (Gender & Usia).
+*   **Custom Live Scanner Station**: HUD kamera futuristik dan batch processing.
 
 ## 📊 Phase 4: Reporting & Mobile UX (4 - 10 Februari 2026)
-*   **Advanced Attendance Details**:
-    *   **Drill-down Statistics**: Tabel statistik per sub-grup secara hierarkis (refactored to Widget).
-    *   **Smart Attendance Status**: Otomatisasi status 'BELUM HADIR' ke 'TIDAK HADIR'.
-    *   **Manual Management**: Fitur 'Set Status' susulan & 'Lampiran Bukti' (Sakit/Izin).
-*   **Optimization**: Penataan ulang navigasi & mobile-responsive enhancements.
+*   **Advanced Attendance Details**: Drill-down Statistics & Widgets.
+*   **Manual Management**: Fitur 'Set Status' susulan & 'Lampiran Bukti'.
 
-## 🏁 Phase 5: QR Management, Deep Reporting & Cards (11 Februari 2026 - Present)
-*   **SSOT Alignment**: Sinkronisasi seluruh dokumentasi dan perbaikan arsitektur (Security & Scoping).
-*   **QR Management (Current)**: Fitur pengunduhan aset gambar QR Code PNG (Single/Bulk).
-*   **Scanner Enhancements**: Deteksi keterlambatan & filter target search.
-*   **Unified Excel Report**: Laporan multi-sheet (Ringkasan Statistik + Detail Rincian Nama).
-*   **Bulk Member Cards**: Cetak kartu fisik masal via PDF (Layout A4).
+## 🏁 Phase 5: QR Management & Advanced Export (11 - 16 Februari 2026)
+*   ✅ **Download QR Assets**: Penomoran unduhan QR PNG (Single/Bulk ZIP).
+*   ✅ **Scanner Enhancement**: Filter pencarian manual berdasarkan kriteria meeting.
+*   ✅ **Unified Excel Report**: Laporan multi-sheet (Ringkasan Statistik + Detail Nama).
+
+## 📥 Phase 6: Import Data Anggota dari Excel (Current)
+*   **Bulk Import**: Fitur import massal via Excel (.xlsx) menggunakan Filament Importer.
+*   **Auto-Mapping**: Logika pencarian ID Grup berdasarkan nama kelompok di Excel.
+
+## 📈 Phase 7: Advanced Analytics & Attendance Insights (Future)
+*   **Attendance Matrix Grid**: Visualisasi pola absensi berbasis tanggal.
+*   **Group Leaderboard**: Analisis keaktifan antar kelompok.
+
+## 💳 Phase 8: Member Cards & Optimization (Future)
+*   **Bulk Member Cards**: Cetak kartu fisik masal via PDF layout A4.
+*   **Branding Laporan Excel**: Custom header dan logo pada output Excel.
+*   **Large Dataset Scaling**: Optimasi memori (Chunking) untuk ribuan data.
+
+## 📝 Phase 9: Self-Permit System (Future)
+*   **Public Permit Form**: Sistem pengajuan izin mandiri oleh anggota tanpa login.
 
 ---
-*Terakhir diperbarui: 11 Februari 2026*
+*Terakhir diperbarui: 16 Februari 2026*

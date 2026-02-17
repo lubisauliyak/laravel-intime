@@ -2,53 +2,28 @@
 
 namespace App\Exports;
 
-use App\Models\Attendance;
-use Maatwebsite\Excel\Concerns\FromQuery;
+use App\Models\Meeting;
+use App\Exports\Sheets\MeetingAttendanceSummarySheet;
+use App\Exports\Sheets\MeetingAttendanceDetailSheet;
 use Maatwebsite\Excel\Concerns\Exportable;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class MeetingAttendanceExport implements FromQuery, WithHeadings, WithMapping
+class MeetingAttendanceExport implements WithMultipleSheets
 {
     use Exportable;
 
-    protected $meetingId;
+    protected $meeting;
 
     public function __construct($meetingId)
     {
-        $this->meetingId = $meetingId;
+        $this->meeting = Meeting::findOrFail($meetingId);
     }
 
-    public function query()
-    {
-        return Attendance::query()
-            ->where('meeting_id', $this->meetingId)
-            ->with(['member', 'member.group']);
-    }
-
-    public function headings(): array
+    public function sheets(): array
     {
         return [
-            'ID Anggota',
-            'Nama Lengkap',
-            'Grup',
-            'Status',
-            'Waktu Absen',
-            'Metode',
-            'Keterangan',
-        ];
-    }
-
-    public function map($attendance): array
-    {
-        return [
-            $attendance->member->member_code,
-            $attendance->member->full_name,
-            $attendance->member->group->name,
-            strtoupper($attendance->status),
-            $attendance->checkin_time ? $attendance->checkin_time->format('Y-m-d H:i:s') : '-',
-            strtoupper($attendance->method),
-            $attendance->notes ?? '-',
+            new MeetingAttendanceSummarySheet($this->meeting),
+            new MeetingAttendanceDetailSheet($this->meeting),
         ];
     }
 }

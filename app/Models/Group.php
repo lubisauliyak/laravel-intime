@@ -111,7 +111,7 @@ class Group extends Model
      */
     public function canBeManagedBy(\App\Models\User $user): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 

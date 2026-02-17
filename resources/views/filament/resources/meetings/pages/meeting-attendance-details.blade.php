@@ -1,7 +1,8 @@
 <x-filament-panels::page>
     <div class="space-y-6">
-        {{ $this->getInfolist('infolist') }}
-
-        {{ $this->table }}
+        {{ $this->getSchema('infolist') }}
+        <div style="margin-top: 24px;">
+            {{ $this->table }}
+        </div>
     </div>
 </x-filament-panels::page>

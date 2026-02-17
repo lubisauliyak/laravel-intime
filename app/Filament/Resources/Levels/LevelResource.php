@@ -30,6 +30,8 @@ class LevelResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Data Master';
 
+    protected static ?int $navigationSort = 2;
+
     protected static ?string $modelLabel = 'Tingkat Hirarki';
 
     protected static ?string $pluralModelLabel = 'Tingkat Hirarki';
@@ -37,6 +39,8 @@ class LevelResource extends Resource
     protected static ?string $navigationLabel = 'Tingkat Hirarki';
 
     protected static ?string $recordTitleAttribute = 'name';
+
+
 
     public static function form(Schema $schema): Schema
     {

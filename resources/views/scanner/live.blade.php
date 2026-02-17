@@ -28,6 +28,12 @@
 </head>
 @php
     $isFinished = $meeting->meeting_date->setTimeFrom($meeting->end_time)->isPast();
+    $isCheckinOpen = $meeting->isCheckinOpen();
+    $hasCheckinTime = !is_null($meeting->checkin_open_time);
+    $effectiveOpenTime = $meeting->checkin_open_time ?? $meeting->start_time;
+    $isBeforeCheckin = $meeting->meeting_date->isToday() && $effectiveOpenTime && now()->isBefore($meeting->meeting_date->copy()->setTimeFrom($effectiveOpenTime));
+    $isOperator = auth()->user()?->hasRole('operator');
+    $canScan = !$isFinished && !$isBeforeCheckin;
 @endphp
 
 <body class="bg-[#0a0a0c] text-white min-h-screen overflow-x-hidden">
@@ -39,7 +45,7 @@
             </a>
             <div class="truncate">
                 <h1 class="text-base md:text-lg font-extrabold tracking-tight truncate">{{ $meeting->name }}</h1>
-                <p class="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest truncate">{{ $meeting->group->name }} • {{ $meeting->meeting_date->format('d M Y') }}</p>
+                <p class="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-widest truncate">{{ $meeting->group->name }} • {{ $meeting->meeting_date->format('d M Y') }} • {{ $meeting->start_time->format('H:i') }}-{{ $meeting->end_time->format('H:i') }}@if($hasCheckinTime) • Presensi {{ $meeting->checkin_open_time->format('H:i') }}@endif</p>
             </div>
         </div>
         <div class="flex items-center gap-2 md:gap-3 shrink-0">
@@ -47,6 +53,11 @@
                 <div class="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full">
                     <div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
                     <span class="text-[9px] md:text-[10px] font-black text-rose-400 uppercase tracking-widest">Sesi Berakhir</span>
+                </div>
+            @elseif($isBeforeCheckin)
+                <div class="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-nowrap">
+                    <div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                    <span class="text-[9px] md:text-[10px] font-black text-amber-400 uppercase tracking-widest">Presensi Dimulai {{ $effectiveOpenTime->format('H:i') }}</span>
                 </div>
             @else
                 <div class="flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-nowrap">
@@ -58,9 +69,27 @@
     </nav>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        <div class="grid grid-cols-1 {{ $isFinished ? '' : 'lg:grid-cols-12' }} gap-8 md:gap-12 items-start">
+        <div class="grid grid-cols-1 {{ $canScan ? 'lg:grid-cols-12' : ($isBeforeCheckin ? 'lg:grid-cols-12' : '') }} gap-8 md:gap-12 items-start">
             
-            @if(!$isFinished)
+            @if($isBeforeCheckin)
+            {{-- Waiting Card: Presensi belum dimulai --}}
+            <div class="lg:col-span-5 animate-in fade-in duration-1000">
+                <div class="glass p-10 md:p-14 rounded-2xl border-white/5 relative overflow-hidden text-center shadow-2xl">
+                    <div class="relative mb-8">
+                        <div class="absolute -inset-6 bg-amber-500/20 blur-2xl rounded-full animate-pulse"></div>
+                        <div class="relative w-24 h-24 mx-auto bg-amber-500/20 rounded-[2rem] flex items-center justify-center shadow-2xl border border-amber-500/30">
+                            <svg class="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-black mb-3 tracking-tighter uppercase text-amber-400">Menunggu Presensi</h3>
+                    <p class="text-gray-400 text-sm mb-6 max-w-xs mx-auto leading-relaxed font-medium">Presensi akan dibuka pada jam <span class="text-amber-400 font-black">{{ $effectiveOpenTime->format('H:i') }}</span></p>
+                    <div class="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/></svg>
+                        <span class="text-[10px] font-black text-amber-400 uppercase tracking-widest">Pertemuan {{ $meeting->start_time->format('H:i') }} - {{ $meeting->end_time->format('H:i') }}</span>
+                    </div>
+                </div>
+            </div>
+            @elseif($canScan)
             <!-- Area Scanner (Kiri) -->
             <div class="lg:col-span-5 space-y-8 animate-in fade-in duration-1000">
                 <!-- Camera Container -->
@@ -117,10 +146,15 @@
                     </div>
                     <div class="space-y-5 relative z-10">
                         <select id="manual-search" class="w-full"></select>
-                        <div class="grid grid-cols-3 gap-3">
+                        @php
+                            $canSetExcused = auth()->user()->can('set_excused_attendance');
+                        @endphp
+                        <div class="grid {{ $canSetExcused ? 'grid-cols-3' : '' }} gap-3">
                             <button onclick="recordManual('hadir')" class="py-4 md:py-3 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white font-black rounded-xl transition-all border border-emerald-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">HADIR</button>
+                            @if($canSetExcused)
                             <button onclick="recordManual('izin')" class="py-4 md:py-3 bg-amber-500/20 hover:bg-amber-500 text-amber-400 hover:text-white font-black rounded-xl transition-all border border-amber-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">IZIN</button>
                             <button onclick="recordManual('sakit')" class="py-4 md:py-3 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white font-black rounded-xl transition-all border border-red-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">SAKIT</button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -165,17 +199,23 @@
                                                     'sakit' => 'text-red-400 border-red-500/20 bg-red-500/5',
                                                     default => 'text-gray-500 border-white/10 bg-white/5',
                                                 };
+                                                $isLate = str_contains(strtoupper($attendance->notes ?? ''), 'TERLAMBAT');
+                                                // Bukti shows if there is a file OR notes that are NOT just "TERLAMBAT"
+                                                $hasRealNotes = $attendance->notes && strtoupper($attendance->notes) !== 'TERLAMBAT';
+                                                $hasEvidence = $attendance->evidence_path || $hasRealNotes;
                                             @endphp
                                             <div class="flex flex-col items-end gap-1.5">
-                                                <span class="inline-block text-[8px] md:text-[9px] font-black border {{ $statusColor }} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">{{ $attendance->status ?? 'HADIR' }}</span>
-                                                <div class="flex items-center justify-end gap-2">
-                                                    @if(str_contains(strtoupper($attendance->notes ?? ''), 'TERLAMBAT'))
-                                                        <div class="px-1.5 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">TERLAMBAT</div>
+                                                <div class="flex items-center gap-1.5">
+                                                    @if($isLate)
+                                                        <span class="inline-block text-[8px] md:text-[9px] font-black border border-rose-500/20 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-md uppercase tracking-tighter">TERLAMBAT</span>
                                                     @endif
-                                                    @if($attendance->evidence_path || $attendance->notes)
-                                                        <div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">BUKTI</div>
+                                                    <span class="inline-block text-[8px] md:text-[9px] font-black border {{ $statusColor }} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">{{ $attendance->status ?? 'HADIR' }}</span>
+                                                </div>
+                                                <div class="flex items-center justify-end gap-2 text-[8px] font-bold text-gray-600">
+                                                    @if($hasEvidence)
+                                                        <div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 uppercase tracking-tighter">LAMPIRAN</div>
                                                     @endif
-                                                    <div class="hidden sm:block text-[8px] font-bold text-gray-600 uppercase tracking-widest">{{ strtoupper(str_replace('_', ' ', $attendance->method)) }}</div>
+                                                    <div class="hidden md:block uppercase tracking-widest">{{ str_replace('_', ' ', $attendance->method) }}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -278,10 +318,6 @@
                 }
             });
 
-            // Auto-focus and open Select2 on page load
-            setTimeout(() => {
-                $manualSearch.select2('open');
-            }, 500);
         });
 
         function recordManual(status) {
@@ -455,11 +491,13 @@
                     <td class="px-4 py-4 md:px-8 md:py-5 font-black text-[10px] md:text-xs text-gray-200 whitespace-nowrap">${time}</td>
                     <td class="px-4 py-4 md:px-8 md:py-5 text-right">
                         <div class="flex flex-col items-end gap-1.5">
-                            <span class="inline-block text-[8px] md:text-[9px] font-black border ${statusColor} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">${status.toUpperCase()}</span>
-                            <div class="flex items-center justify-end gap-2">
-                                ${isLate ? '<div class="px-1.5 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-rose-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">TERLAMBAT</div>' : ''}
-                                ${hasEvidence ? '<div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 text-[7px] md:text-[8px] font-black uppercase tracking-tighter">BUKTI</div>' : ''}
-                                <div class="hidden sm:block text-[8px] font-bold text-gray-600 uppercase tracking-widest">${method.toUpperCase()}</div>
+                            <div class="flex items-center gap-1.5">
+                                ${isLate ? '<span class="inline-block text-[8px] md:text-[9px] font-black border border-rose-500/20 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-md uppercase tracking-tighter">TERLAMBAT</span>' : ''}
+                                <span class="inline-block text-[8px] md:text-[9px] font-black border ${statusColor} px-2 py-0.5 md:px-3 md:py-1 rounded-full uppercase tracking-tighter">${status.toUpperCase()}</span>
+                            </div>
+                            <div class="flex items-center justify-end gap-2 text-[8px] font-bold text-gray-600">
+                                ${hasEvidence ? '<div class="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400 uppercase tracking-tighter">LAMPIRAN</div>' : ''}
+                                <div class="hidden md:block uppercase tracking-widest">${method.replace('_', ' ').toUpperCase()}</div>
                             </div>
                         </div>
                     </td>

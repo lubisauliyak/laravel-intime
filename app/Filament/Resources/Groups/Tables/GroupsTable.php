@@ -57,7 +57,7 @@ class GroupsTable
                     ->preload(),
                 SelectFilter::make('parent_id')
                     ->label('Induk Grup')
-                    ->relationship('parent', 'name', fn ($query) => $query->whereHas('children'))
+                    ->relationship('parent', 'groups.name', fn ($query) => $query->whereHas('children'))
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->searchable()
                     ->preload(),

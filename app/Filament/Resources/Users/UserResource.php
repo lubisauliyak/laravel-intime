@@ -25,7 +25,9 @@ class UserResource extends Resource
 
     protected static ?string $navigationLabel = 'Pengguna';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Keanggotaan';
+    protected static string|UnitEnum|null $navigationGroup = 'Akses Pengguna';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -41,7 +43,14 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->leftJoin('groups', 'users.group_id', '=', 'groups.id')
+            ->leftJoin('levels', 'groups.level_id', '=', 'levels.id')
+            ->select('users.*')
+            ->orderByRaw('CASE WHEN users.group_id IS NULL THEN 0 ELSE 1 END ASC')
+            ->orderBy('levels.level_number', 'desc')
+            ->orderByRaw("FIELD(users.role, 'super_admin', 'admin', 'operator')");
+
         $user = auth()->user();
 
         if (!$user) {
@@ -49,24 +58,30 @@ class UserResource extends Resource
         }
 
         // Super Admin sees everything
-        if ($user->hasRole('super_admin')) {
+        if ($user->isSuperAdmin()) {
             return $query;
         }
 
         // Non-Super Admins NEVER see Super Admins
-        $query->where('role', '!=', 'super_admin');
+        $query->where('role', '!=', config('filament-shield.super_admin.name', 'super_admin'));
 
-        // Admin/Operator sees users in their own group, descendant groups, OR users with no group
+        // Operator can ONLY see themselves
+        if ($user->isOperator()) {
+            return $query->where('id', $user->id);
+        }
+
+        // Admin sees users in their own group, descendant groups, OR users with no group
         if ($user->group_id) {
             $allowedGroupIds = $user->group->getAllDescendantIds();
-            return $query->where(function($q) use ($allowedGroupIds) {
-                $q->whereIn('group_id', $allowedGroupIds)
-                  ->orWhereNull('group_id');
+            $query->where(function($q) use ($allowedGroupIds) {
+                $q->whereIn('users.group_id', $allowedGroupIds)
+                  ->orWhereNull('users.group_id');
             });
+            return $query;
         }
 
         // If user has no group and is not super_admin, they can only see themselves
-        return $query->where('id', $user->id);
+        return $query->where('users.id', $user->id);
     }
 
     public static function getPages(): array

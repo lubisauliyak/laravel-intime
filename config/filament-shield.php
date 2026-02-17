@@ -17,13 +17,15 @@ return [
 
     'shield_resource' => [
         'slug' => 'shield/roles',
+        'navigation_group' => 'Akses Pengguna',
+        'navigation_sort' => 2,
         'show_model_path' => true,
         'cluster' => null,
         'tabs' => [
             'pages' => true,
             'widgets' => true,
             'resources' => true,
-            'custom_permissions' => false,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -172,6 +174,12 @@ return [
                 'update',
                 'delete',
             ],
+            \App\Filament\Resources\Members\MemberResource::class => [
+                'viewAny', 'view', 'create', 'update', 'delete', 'export',
+            ],
+            \App\Filament\Resources\Meetings\MeetingResource::class => [
+                'viewAny', 'view', 'create', 'update', 'delete', 'export',
+            ],
         ],
         'exclude' => [
             //
@@ -228,7 +236,10 @@ return [
     |
     */
 
-    'custom_permissions' => [],
+    'custom_permissions' => [
+        'scan_attendance',
+        'set_excused_attendance',
+    ],
 
     /*
     |--------------------------------------------------------------------------

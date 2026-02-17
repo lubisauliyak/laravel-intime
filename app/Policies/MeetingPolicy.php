@@ -67,4 +67,9 @@ class MeetingPolicy
         return $authUser->can('Reorder:Meeting');
     }
 
+    public function export(AuthUser $authUser, Meeting $meeting): bool
+    {
+        return $authUser->can('Export:Meeting');
+    }
+
 }

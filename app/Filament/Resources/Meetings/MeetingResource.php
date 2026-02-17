@@ -13,6 +13,7 @@ use App\Filament\Resources\Meetings\Tables\MeetingsTable;
 use App\Filament\Resources\Meetings\RelationManagers;
 use App\Models\Meeting;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -25,6 +26,10 @@ class MeetingResource extends Resource
     protected static ?string $model = Meeting::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calendar-days';
+    
+    protected static string|UnitEnum|null $navigationGroup = 'Presensi & Laporan';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $modelLabel = 'Pertemuan';
 
@@ -71,10 +76,13 @@ class MeetingResource extends Resource
     {
         return parent::getEloquentQuery()
             ->when(auth()->user(), function (Builder $query, $user) {
-                if (!$user->hasRole('super_admin')) {
+                if (!$user->isSuperAdmin()) {
                     if ($user->group_id) {
-                        $descendantGroupIds = $user->group->getAllDescendantIds();
-                        $query->whereIn('group_id', $descendantGroupIds);
+                        $descendantIds = $user->group->getAllDescendantIds();
+                        $ancestorIds = $user->group->getAllAncestorIds();
+                        $allowedGroupIds = array_unique(array_merge($descendantIds, $ancestorIds));
+                        
+                        $query->whereIn('group_id', $allowedGroupIds);
                     } else {
                         // Non-super admin with no group sees nothing
                         $query->whereRaw('1 = 0');

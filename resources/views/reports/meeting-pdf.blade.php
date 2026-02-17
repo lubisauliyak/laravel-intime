@@ -33,24 +33,18 @@
                 <td>: {{ $meeting->name }}</td>
             </tr>
             <tr>
-                <td class="label">Tanggal</td>
-                <td>: {{ $meeting->meeting_date->format('d F Y') }}</td>
+                <td class="label">Tanggal/Waktu</td>
+                <td>: {{ $meeting->meeting_date->translatedFormat('d F Y') }} ({{ $meeting->start_time?->format('H:i') ?? '-' }} s.d {{ $meeting->end_time?->format('H:i') ?? '-' }})</td>
             </tr>
             <tr>
-                <td class="label">Grup Penyelenggara</td>
+                <td class="label">Penyelenggara</td>
                 <td>: {{ $meeting->group->name }}</td>
-            </tr>
-            <tr>
-                <td class="label">Dibuat Oleh</td>
-                <td>: {{ $meeting->creator->name }}</td>
             </tr>
             <tr>
                 <td class="label">Target Peserta</td>
                 <td>: 
-                    Gender: {{ $meeting->target_gender === 'all' ? 'Semua' : ($meeting->target_gender === 'male' ? 'Laki-laki' : 'Perempuan') }}
-                    @if($meeting->target_age_groups)
-                        | Usia: {{ implode(', ', $meeting->target_age_groups) }}
-                    @endif
+                    Jenis Kelamin: {{ $meeting->target_gender === 'all' ? 'Laki-laki dan Perempuan' : ($meeting->target_gender === 'male' ? 'Laki-laki' : 'Perempuan') }}
+                    | Usia: {{ !empty($meeting->target_age_groups) ? implode(', ', $meeting->target_age_groups) : 'Semua Kategori' }}
                 </td>
             </tr>
         </table>
@@ -60,10 +54,11 @@
         <thead>
             <tr>
                 <th style="width: 30px;">No</th>
-                <th>ID Anggota</th>
+                <th style="width: 60px;">ID</th>
                 <th>Nama Lengkap</th>
-                <th>Waktu Absen</th>
-                <th>Metode</th>
+                <th>Kelompok</th>
+                <th style="width: 50px;">Waktu</th>
+                <th style="width: 60px;">Metode</th>
             </tr>
         </thead>
         <tbody>
@@ -72,12 +67,19 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $attendance->member->member_code }}</td>
                     <td>{{ $attendance->member->full_name }}</td>
-                    <td>{{ $attendance->checkin_time?->format('H:i:s') ?? '-' }}</td>
-                    <td>{{ ucfirst($attendance->method) }}</td>
+                    <td>{{ $attendance->member->group->name }}</td>
+                    <td>{{ $attendance->checkin_time?->format('H:i') ?? '-' }}</td>
+                    <td>
+                        {{ match($attendance->method) {
+                            'qr_code' => 'QR-Code',
+                            'manual' => 'Manual',
+                            default => str_replace('_', ' ', ucfirst($attendance->method))
+                        } }}
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" style="text-align: center;">Belum ada data kehadiran.</td>
+                    <td colspan="6" style="text-align: center;">Belum ada data kehadiran.</td>
                 </tr>
             @endforelse
         </tbody>

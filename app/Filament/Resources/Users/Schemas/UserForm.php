@@ -38,26 +38,27 @@ class UserForm
                 Select::make('group_id')
                     ->relationship(
                         name: 'group',
-                        titleAttribute: 'name',
+                        titleAttribute: 'groups.name',
                         modifyQueryUsing: function (\Illuminate\Database\Eloquent\Builder $query) {
                             $user = auth()->user();
                             
                             $query->where('groups.status', true)
+                                ->leftJoin('groups as parents', 'groups.parent_id', '=', 'parents.id')
                                 ->join('levels', 'groups.level_id', '=', 'levels.id')
                                 ->select('groups.*')
                                 ->orderBy('levels.level_number', 'desc')
+                                ->orderBy('parents.name', 'asc')
                                 ->orderBy('groups.name', 'asc');
                             
                             // Super Admin can see all active groups
-                            if ($user->hasRole('super_admin')) {
+                            if ($user->isSuperAdmin()) {
                                 return $query;
                             }
                             
-                            // Admin/Operator can only see groups at or below their level
-                            $userLevelNumber = $user->group?->level?->level_number;
-                            
-                            if ($userLevelNumber) {
-                                return $query->where('levels.level_number', '<=', $userLevelNumber);
+                            // Admin/Operator can only see their own group or groups below them
+                            if ($user->group_id) {
+                                $descendantIds = $user->group->getAllDescendantIds();
+                                return $query->whereIn('groups.id', $descendantIds);
                             }
                             
                             // If user has no group and not super admin, show no groups
@@ -77,18 +78,20 @@ class UserForm
                     ->label('Hak Akses (Peran)')
                     ->options(function () {
                         $user = auth()->user();
-                        $options = [
-                            'super_admin' => 'SUPER ADMIN',
-                            'admin' => 'ADMIN',
-                            'operator' => 'OPERATOR'
-                        ];
-
-                        if (!$user->hasRole('super_admin')) {
-                            unset($options['super_admin']);
+                        $superAdminRole = config('filament-shield.super_admin.name', 'super_admin');
+                        
+                        $query = \Spatie\Permission\Models\Role::query();
+                        
+                        if (!$user->isSuperAdmin()) {
+                            $query->where('name', '!=', $superAdminRole);
                         }
 
-                        return $options;
+                        return $query->pluck('name', 'name')
+                            ->mapWithKeys(fn ($name) => [$name => strtoupper(str_replace('_', ' ', $name))])
+                            ->toArray();
                     })
+                    ->disabled(fn () => auth()->user()->isOperator())
+                    ->dehydrated()
                     ->helperText('Superadmin memiliki akses penuh, Admin untuk manajemen, dan Operator untuk input data.')
                     ->default('operator')
                     ->required()

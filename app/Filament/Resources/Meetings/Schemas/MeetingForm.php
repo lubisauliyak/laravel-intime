@@ -58,18 +58,32 @@ class MeetingForm
                         TimePicker::make('start_time')
                             ->label('Jam Dimulai')
                             ->seconds(false)
-                            ->required(),
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
+                                    $checkinTime = \Carbon\Carbon::parse($state)->subMinutes(30)->format('H:i');
+                                    $set('checkin_open_time', $checkinTime);
+                                }
+                            }),
                         TimePicker::make('end_time')
                             ->label('Jam Berakhir')
                             ->seconds(false)
                             ->required(),
+                        TimePicker::make('checkin_open_time')
+                            ->label('Presensi Dibuka')
+                            ->seconds(false)
+                            ->nullable()
+                            ->helperText('Otomatis 30 menit sebelum jam dimulai. Bisa diubah manual. Jika dikosongkan, presensi dibuka saat jam dimulai.')
+                            ->before('start_time')
+                            ->columnSpan(2),
                         Select::make('level_id')
                             ->label('Tingkat Grup')
                             ->options(function () {
                                 $user = auth()->user();
                                 $query = Level::orderBy('level_number', 'desc');
                                 
-                                if ($user && $user->group_id && !$user->hasRole('super_admin')) {
+                                if ($user && $user->group_id && !$user->isSuperAdmin()) {
                                     $userLevelNumber = $user->group->level->level_number;
                                     $query->where('level_number', '<=', $userLevelNumber);
                                 }
@@ -92,7 +106,7 @@ class MeetingForm
                             ->options(fn (Get $get) => 
                                 Group::query()
                                     ->when($get('level_id'), fn ($query) => $query->where('level_id', $get('level_id')))
-                                    ->when(auth()->user() && auth()->user()->group_id && !auth()->user()->hasRole('super_admin'), function ($query) {
+                                    ->when(auth()->user() && auth()->user()->group_id && !auth()->user()->isSuperAdmin(), function ($query) {
                                         $groupIds = auth()->user()->group->getAllDescendantIds();
                                         $query->whereIn('id', $groupIds);
                                     })

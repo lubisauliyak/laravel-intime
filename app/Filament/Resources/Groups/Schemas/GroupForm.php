@@ -23,7 +23,7 @@ class GroupForm
                             $user = auth()->user();
                             
                             // Super Admin can select all levels
-                            if ($user->hasRole('super_admin')) {
+                            if ($user->isSuperAdmin()) {
                                 return $query->orderBy('level_number', 'desc');
                             }
                             
@@ -48,7 +48,7 @@ class GroupForm
                 Select::make('parent_id')
                     ->relationship(
                         name: 'parent',
-                        titleAttribute: 'name',
+                        titleAttribute: 'groups.name',
                         modifyQueryUsing: function (\Illuminate\Database\Eloquent\Builder $query, Get $get) {
                             $levelId = $get('level_id');
                             if (! $levelId) {
@@ -62,10 +62,22 @@ class GroupForm
 
                             // Parent must be exactly one level higher (level_number + 1)
                             $targetLevelNumber = $level->level_number + 1;
+                            $user = auth()->user();
 
-                            return $query->whereHas('level', function ($q) use ($targetLevelNumber) {
+                            $query->whereHas('level', function ($q) use ($targetLevelNumber) {
                                 $q->where('level_number', $targetLevelNumber);
                             });
+
+                            if (!$user->isSuperAdmin()) {
+                                if ($user->group_id) {
+                                    $allowedGroupIds = $user->group->getAllDescendantIds();
+                                    $query->whereIn('groups.id', $allowedGroupIds);
+                                } else {
+                                    $query->whereRaw('1 = 0');
+                                }
+                            }
+
+                            return $query;
                         }
                     )
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)

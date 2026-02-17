@@ -14,12 +14,26 @@ class AttendanceTrend extends ChartWidget
 
     protected function getData(): array
     {
+        $user = auth()->user();
         $startDate = now()->subDays(10);
         
-        $data = Attendance::query()
+        $query = Attendance::query()
             ->selectRaw('DATE(checkin_time) as date, count(*) as aggregate')
-            ->where('checkin_time', '>=', $startDate)
-            ->groupBy('date')
+            ->where('checkin_time', '>=', $startDate);
+
+        if (!$user->isSuperAdmin() && $user->group_id) {
+            $group = $user->group;
+            $descendantIds = $group->getAllDescendantIds();
+            $childrenIds = array_diff($descendantIds, [$group->id]);
+
+            if (!empty($childrenIds)) {
+                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $childrenIds));
+            } else {
+                $query->whereHas('member', fn($q) => $q->where('group_id', $group->id));
+            }
+        }
+
+        $data = $query->groupBy('date')
             ->orderBy('date')
             ->get();
 

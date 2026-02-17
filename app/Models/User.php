@@ -18,7 +18,8 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'admin') {
-            return $this->hasRole('super_admin') || $this->hasRole('admin') || $this->hasRole('operator');
+            // Menggunakan permission check atau role check yang terpusat
+            return $this->hasAnyRole(['super_admin', 'admin', 'operator']);
         }
 
         return false;
@@ -34,7 +35,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'group_id',
-        'role',
+        'role', // Tetap dipertahankan sementara sebagai jembatan/info
         'status',
     ];
 
@@ -58,11 +59,51 @@ class User extends Authenticatable implements FilamentUser
      *
      * @return array<string, string>
      */
-    protected function casts(): array
+    public function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Helper to check if user is a super admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole(config('filament-shield.super_admin.name', 'super_admin'));
+    }
+
+    /**
+     * Helper check for admin role
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    /**
+     * Helper check for operator role
+     */
+    public function isOperator(): bool
+    {
+        return $this->hasRole('operator');
+    }
+
+    /**
+     * Apakah pengguna memiliki akses manajemen (Super Admin atau Admin)
+     */
+    public function isManagement(): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdmin();
+    }
+
+    /**
+     * Memusatkan otoritas untuk fitur export
+     */
+    public function canExport(): bool
+    {
+        return $this->can('Export:Member') || $this->can('Export:Meeting');
     }
 }

@@ -3,13 +3,13 @@
 namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
+use App\Filament\Resources\Meetings\Schemas\MeetingAttendanceInfolist;
 use App\Models\Attendance;
 use App\Models\Group;
 use App\Models\Meeting;
 use App\Models\Member;
 use Filament\Resources\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Table;
@@ -17,17 +17,14 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Illuminate\Database\Eloquent\Builder;
 
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Infolist;
-use Filament\Infolists\Contracts\HasInfolists;
-use Filament\Infolists\Concerns\InteractsWithInfolists;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Schemas\Concerns\InteractsWithSchemas;
 
-class MeetingAttendanceDetails extends Page implements HasTable, HasInfolists
+class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
 {
     use InteractsWithTable;
-    use InteractsWithInfolists;
+    use InteractsWithSchemas;
 
     protected static string $resource = MeetingResource::class;
 
@@ -51,7 +48,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasInfolists
 
     public function getTitle(): string
     {
-        return "Detail Presensi Grup: {$this->group->name}";
+        return "Detail Presensi";
     }
 
     public function getBreadcrumbs(): array
@@ -65,58 +62,14 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasInfolists
         ];
     }
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
-        $descendantIds = $this->group->getAllDescendantIds();
-        $totalMembers = Member::whereIn('group_id', $descendantIds)->where('status', true)->count();
-        $present = Attendance::where('meeting_id', $this->meeting->id)
-            ->whereIn('member_id', Member::whereIn('group_id', $descendantIds)->pluck('id'))
-            ->where('status', 'hadir')
-            ->count();
-
-        return $infolist
-            ->state([
-                'meeting_name' => $this->meeting->name,
-                'meeting_date' => $this->meeting->meeting_date->translatedFormat('l, d F Y'),
-                'group_name' => $this->group->name,
-                'total_members' => $totalMembers,
-                'present_count' => $present,
-                'absent_count' => $totalMembers - $present,
-            ])
-            ->schema([
-                Section::make('Informasi Pertemuan')
-                    ->schema([
-                        Grid::make(3)
-                            ->schema([
-                                TextEntry::make('meeting_name')
-                                    ->label('Nama Pertemuan')
-                                    ->weight('bold'),
-                                TextEntry::make('meeting_date')
-                                    ->label('Tanggal Pelaksanaan'),
-                                TextEntry::make('group_name')
-                                    ->label('Grup Penyelenggara'),
-                            ]),
-                    ]),
-                Section::make('Ringkasan Kehadiran Grup')
-                    ->schema([
-                        Grid::make(3)
-                            ->schema([
-                                TextEntry::make('total_members')
-                                    ->label('Total Seluruh Anggota')
-                                    ->badge()
-                                    ->color('gray'),
-                                TextEntry::make('present_count')
-                                    ->label('Anggota Hadir')
-                                    ->badge()
-                                    ->color('success'),
-                                TextEntry::make('absent_count')
-                                    ->label($this->isMeetingOver() ? 'Anggota Tidak Hadir' : 'Belum Melakukan Scan')
-                                    ->badge()
-                                    ->color('danger'),
-                            ]),
-                    ])
-                    ->compact(),
-            ]);
+        return MeetingAttendanceInfolist::configure(
+            $schema, 
+            $this->meeting, 
+            $this->group, 
+            $this->isMeetingOver()
+        );
     }
 
     public function table(Table $table): Table
@@ -249,24 +202,6 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasInfolists
                             );
                         }),
 
-                    Action::make('view_evidence')
-                        ->label('Lihat Lampiran')
-                        ->icon('heroicon-m-eye')
-                        ->color('success')
-                        ->url(function (Member $record) {
-                            $attendance = Attendance::where('meeting_id', $this->meeting->id)
-                                ->where('member_id', $record->id)
-                                ->first();
-                            return $attendance ? \Illuminate\Support\Facades\Storage::url($attendance->evidence_path) : '#';
-                        })
-                        ->openUrlInNewTab()
-                        ->visible(function (Member $record) {
-                            return Attendance::where('meeting_id', $this->meeting->id)
-                                ->where('member_id', $record->id)
-                                ->whereNotNull('evidence_path')
-                                ->exists();
-                        }),
-
                     Action::make('clear_status')
                         ->label('Hapus Presensi')
                         ->icon('heroicon-m-trash')
@@ -283,8 +218,60 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasInfolists
                                 ->delete();
                         }),
                 ])
+                ->visible(fn () => auth()->user()->can('update', $this->meeting))
                 ->icon('heroicon-m-ellipsis-vertical')
-                ->tooltip('Menu Aksi')
+                ->tooltip('Menu Aksi'),
+
+                Action::make('view_details')
+                    ->label('Lihat Lampiran')
+                    ->icon('heroicon-m-eye')
+                    ->color('success')
+                    ->visible(function (Member $record) {
+                        $attendance = Attendance::where('meeting_id', $this->meeting->id)
+                            ->where('member_id', $record->id)
+                            ->first();
+                        
+                        return $attendance && ($attendance->evidence_path || $attendance->notes);
+                    })
+                    ->modalHeading('Detail Lampiran & Keterangan')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->infolist(function (Member $record) {
+                        $attendance = Attendance::where('meeting_id', $this->meeting->id)
+                            ->where('member_id', $record->id)
+                            ->first();
+
+                        return \Filament\Schemas\Schema::make($this)
+                            ->record($attendance)
+                            ->components([
+                                \Filament\Schemas\Components\Grid::make(1)
+                                    ->schema([
+                                        \Filament\Infolists\Components\TextEntry::make('status')
+                                            ->label('Status Presensi')
+                                            ->badge()
+                                            ->color(fn (string $state): string => match ($state) {
+                                                'hadir' => 'success',
+                                                'izin', 'sakit' => 'warning',
+                                                default => 'gray',
+                                            })
+                                            ->formatStateUsing(fn ($state) => strtoupper($state)),
+                                        \Filament\Infolists\Components\TextEntry::make('notes')
+                                            ->label('Keterangan / Alasan')
+                                            ->prose()
+                                            ->placeholder('Tidak ada keterangan tambahan'),
+                                        \Filament\Infolists\Components\ImageEntry::make('evidence_path')
+                                            ->label('Foto Lampiran')
+                                            ->disk('public')
+                                            ->height(250)
+                                            ->extraImgAttributes([
+                                                'class' => 'rounded-xl shadow-lg cursor-zoom-in border border-gray-200 dark:border-white/10',
+                                            ])
+                                            ->url(fn ($record) => $record->evidence_path ? \Illuminate\Support\Facades\Storage::url($record->evidence_path) : null)
+                                            ->openUrlInNewTab()
+                                            ->placeholder('Tidak ada foto lampiran'),
+                                    ]),
+                            ]);
+                    }),
             ]);
     }
 }

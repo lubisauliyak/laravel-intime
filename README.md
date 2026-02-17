@@ -49,11 +49,15 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
 -   [x] Smart Status (BELUM HADIR -> TIDAK HADIR) otomatis.
 -   [x] Optimasi Mobile UX (Responsive Scanner & Tables).
 
-### ⏳ Phase 5: QR Management, Reporting & Member Cards (Current)
--   [ ] **QR Management**: Download PNG QR Code (Single/Bulk Zip).
--   [ ] **Deep Reporting**: Multi-sheet Excel report (Summary & Member Details).
--   [ ] **Scanner Enhancements**: Deteksi Terlambat & Filter Target Search.
--   [ ] **Cetak Kartu Anggota**: Bulk print selected members to PDF ready-to-print.
+### ✅ Phase 5: QR Management & Advanced Export (Selesai)
+-   [x] **QR Management**: Download PNG QR Code (Single/Bulk Zip).
+-   [x] **Deep Reporting**: Multi-sheet Excel report (Summary & Member Details).
+-   [x] **Scanner Enhancements**: Deteksi Terlambat & Filter Target Search.
+
+### ⏳ Phase 6: Import Data Anggota dari Excel (Current)
+-   [ ] **Bulk Import**: Fitur import massal anggota via Excel (.xlsx).
+-   [ ] **Auto-Mapping**: Logika pencarian grup otomatis berdasarkan nama di Excel.
+-   [ ] **Auto-QR**: Generate QR Code otomatis untuk seluruh hasil import.
 
 ## ⚙️ Instalasi
 

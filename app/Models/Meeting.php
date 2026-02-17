@@ -18,6 +18,7 @@ class Meeting extends Model
         'description',
         'meeting_date',
         'start_time',
+        'checkin_open_time',
         'end_time',
         'group_id',
         'target_gender',
@@ -28,6 +29,7 @@ class Meeting extends Model
     protected $casts = [
         'meeting_date' => 'date',
         'start_time' => 'datetime:H:i',
+        'checkin_open_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
         'target_age_groups' => 'array',
     ];
@@ -50,5 +52,39 @@ class Meeting extends Model
     public function getTargetGroupIds(): array
     {
         return $this->group->getAllDescendantIds();
+    }
+
+    public function isExpired(): bool
+    {
+        if (!$this->meeting_date || !$this->end_time) {
+            return false;
+        }
+
+        $endDateTime = $this->meeting_date->copy()->setTimeFrom($this->end_time);
+        
+        return now()->isAfter($endDateTime);
+    }
+
+    /**
+     * Check if check-in/attendance is currently open.
+     * Uses checkin_open_time if set, otherwise defaults to start_time.
+     */
+    public function isCheckinOpen(): bool
+    {
+        if (!$this->meeting_date || !$this->meeting_date->isToday()) {
+            return false;
+        }
+
+        if ($this->isExpired()) {
+            return false;
+        }
+
+        $openTime = $this->checkin_open_time ?? $this->start_time;
+        if ($openTime) {
+            $openDateTime = $this->meeting_date->copy()->setTimeFrom($openTime);
+            return now()->isAfter($openDateTime);
+        }
+
+        return true;
     }
 }

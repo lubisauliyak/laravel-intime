@@ -34,6 +34,12 @@ class MeetingsTable
                     ->label('Mulai')
                     ->dateTime('H:i')
                     ->sortable(),
+                TextColumn::make('checkin_open_time')
+                    ->label('Presensi Buka')
+                    ->dateTime('H:i')
+                    ->placeholder('Jam dimulai')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('end_time')
                     ->label('Selesai')
                     ->dateTime('H:i')
@@ -87,18 +93,18 @@ class MeetingsTable
                         ->label('Lihat'),
                     EditAction::make()
                         ->label('Ubah')
-                        ->visible(fn ($record) => auth()->user()->hasRole('super_admin') || (auth()->user()->group_id && $record->group?->parent_id !== auth()->user()->group?->parent_id)),
+                        ->visible(fn (Meeting $record) => auth()->user()->can('update', $record)),
                     Action::make('export_excel')
                         ->label('Export Excel')
                         ->icon('heroicon-o-document-arrow-down')
                         ->color('success')
-                        ->visible(fn ($record) => auth()->user()->hasRole('super_admin') || (auth()->user()->group_id && $record->group?->parent_id !== auth()->user()->group?->parent_id))
-                        ->action(fn ($record) => (new \App\Exports\MeetingAttendanceExport($record->id))->download("Kehadiran-{$record->name}.xlsx")),
+                        ->visible(fn (Meeting $record) => auth()->user()->can('export', $record))
+                        ->action(fn ($record) => (new \App\Exports\MeetingAttendanceExport($record->id))->download("Kehadiran-{$record->name}-{$record->group->name}-" . $record->meeting_date->format('Y-m-d') . ".xlsx")),
                     Action::make('export_pdf')
                         ->label('Cetak PDF')
                         ->icon('heroicon-o-printer')
                         ->color('info')
-                        ->visible(fn ($record) => auth()->user()->hasRole('super_admin') || (auth()->user()->group_id && $record->group?->parent_id !== auth()->user()->group?->parent_id))
+                        ->visible(fn (Meeting $record) => auth()->user()->can('export', $record))
                         ->url(fn ($record) => route('meeting.report.pdf', $record))
                         ->openUrlInNewTab(),
                     Action::make('open_scanner')
@@ -106,7 +112,8 @@ class MeetingsTable
                         ->icon('heroicon-o-qr-code')
                         ->color('emerald')
                         ->url(fn ($record) => route('scanner.live', $record))
-                        ->openUrlInNewTab(),
+                        ->openUrlInNewTab()
+                        ->visible(fn (Meeting $record) => !$record->isExpired() && auth()->user()->can('update', $record)),
                 ])
             ])
             ->bulkActions([

@@ -23,7 +23,7 @@ class LiveScannerController extends Controller
 
     public function process(Request $request, Meeting $meeting)
     {
-        $this->authorizeGroupAccess($meeting);
+        $this->authorizeGroupAccess($meeting, 'manage');
         $code = $request->code;
         $member = Member::where('member_code', $code)->first();
 
@@ -85,7 +85,19 @@ class LiveScannerController extends Controller
             ]);
         }
 
-        // 2. Validation: Meeting session has ended
+        // 2. Validation: Check-in not yet open
+        $openTime = $meeting->checkin_open_time ?? $meeting->start_time;
+        if ($openTime) {
+            $openDateTime = $meeting->meeting_date->copy()->setTimeFrom($openTime);
+            if (now()->isBefore($openDateTime)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Presensi belum dibuka. Presensi dibuka mulai jam {$openTime->format('H:i')}."
+                ]);
+            }
+        }
+
+        // 3. Validation: Meeting session has ended
         if ($meeting->meeting_date->setTimeFrom($meeting->end_time)->isPast()) {
             return response()->json([
                 'status' => 'error',
@@ -93,7 +105,7 @@ class LiveScannerController extends Controller
             ]);
         }
 
-        // 3. Validation: Member status
+        // 4. Validation: Member status
         if (!$member->status) {
             return response()->json([
                 'status' => 'error',
@@ -101,7 +113,7 @@ class LiveScannerController extends Controller
             ]);
         }
 
-        // 4. Validation: Group Hierarchy (Member must belong to meeting's group or its descendants)
+        // 5. Validation: Group Hierarchy (Member must belong to meeting's group or its descendants)
         $allowedGroupIds = $meeting->group->getAllDescendantIds();
         if (!in_array($member->group_id, $allowedGroupIds)) {
             return response()->json([
@@ -136,7 +148,7 @@ class LiveScannerController extends Controller
 
     public function search(Request $request, Meeting $meeting)
     {
-        $this->authorizeGroupAccess($meeting);
+        $this->authorizeGroupAccess($meeting, 'manage');
         $query = $request->q;
         
         // Only return members that belong to the meeting's group or its descendants
@@ -147,6 +159,14 @@ class LiveScannerController extends Controller
                   ->orWhere('member_code', 'like', "%$query%");
             })
             ->whereIn('group_id', $allowedGroupIds)
+            ->when($meeting->target_gender !== 'all', function($q) use ($meeting) {
+                return $q->where('gender', $meeting->target_gender);
+            })
+            ->when(!empty($meeting->target_age_groups), function($q) use ($meeting) {
+                return $q->whereHas('ageGroup', function($aq) use ($meeting) {
+                    return $aq->whereIn('name', $meeting->target_age_groups);
+                });
+            })
             ->where('status', true) // Only active members
             ->limit(10)
             ->get()
@@ -162,7 +182,7 @@ class LiveScannerController extends Controller
 
     public function manualStore(Request $request, Meeting $meeting)
     {
-        $this->authorizeGroupAccess($meeting);
+        $this->authorizeGroupAccess($meeting, 'manage');
         $memberId = $request->member_id;
         $member = Member::find($memberId);
 
@@ -174,6 +194,14 @@ class LiveScannerController extends Controller
         if ($validation) return $validation;
 
         $status = $request->status ?? 'hadir';
+
+        if (in_array($status, ['izin', 'sakit']) && !auth()->user()->can('set_excused_attendance')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Anda tidak memiliki hak akses untuk menginput status ' . strtoupper($status) . '.'
+            ], 403);
+        }
+
         $evidencePath = null;
 
 
@@ -235,24 +263,42 @@ class LiveScannerController extends Controller
 
     /**
      * Validate that the authenticated user has group hierarchy access to the given meeting.
-     * Super Admin bypasses this check. Admin/Operator must belong to the meeting's group or its ancestors.
+     * 
+     * @param string $mode 'view' for seeing, 'manage' for scanning/updating
      */
-    private function authorizeGroupAccess(Meeting $meeting): void
+    private function authorizeGroupAccess(Meeting $meeting, string $mode = 'view'): void
     {
         $user = auth()->user();
 
-        if (!$user || $user->hasRole('super_admin')) {
+        if (!$user || $user->isSuperAdmin()) {
             return;
+        }
+
+        // Cek permission khusus scanner dari Spatie
+        if ($mode === 'manage' && !$user->can('scan_attendance')) {
+            abort(403, 'Role Anda tidak diizinkan untuk melakukan scan presensi.');
         }
 
         if (!$user->group_id) {
             abort(403, 'Akun Anda belum ditempatkan di grup manapun.');
         }
 
-        $allowedGroupIds = $user->group->getAllDescendantIds();
-
-        if (!in_array($meeting->group_id, $allowedGroupIds)) {
-            abort(403, 'Anda tidak memiliki akses ke pertemuan ini.');
+        // 1. Cek Descendant (Grup Anda & Anak-anaknya) -> Selalu punya akses View & Manage
+        $descendantIds = $user->group->getAllDescendantIds();
+        if (in_array($meeting->group_id, $descendantIds)) {
+            return;
         }
+
+        // 2. Cek Ancestor (Induk / Atasan Anda) -> Hanya punya akses VIEW
+        if ($mode === 'view') {
+            $ancestorIds = $user->group->getAllAncestorIds();
+            if (in_array($meeting->group_id, $ancestorIds)) {
+                return;
+            }
+        }
+
+        abort(403, $mode === 'manage' 
+            ? 'Hanya penyelenggara (atau atasan langsung) yang dapat melakukan presensi.' 
+            : 'Anda tidak memiliki akses ke pertemuan ini.');
     }
 }

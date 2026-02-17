@@ -81,6 +81,7 @@ class MemberObserver
             return;
         }
 
+        // Standardized name and size
         $fileName = 'qrcodes/' . $member->member_code . '.png';
         
         // Ensure directory exists
@@ -88,15 +89,11 @@ class MemberObserver
             Storage::disk('public')->makeDirectory('qrcodes');
         }
 
-        // Generate QR code
-        $qrCode = QrCode::format('png')
-            ->size(500)
-            ->margin(2)
-            ->errorCorrection('H')
-            ->generate($member->member_code);
+        // Generate REAL PNG using custom GD-based generator
+        $qrContent = \App\Services\QrGenerator::generatePng($member->member_code, 500, 2);
 
         // Save file
-        Storage::disk('public')->put($fileName, $qrCode);
+        Storage::disk('public')->put($fileName, $qrContent);
 
         // Update path in database
         $member->updateQuietly(['qr_code_path' => $fileName]);

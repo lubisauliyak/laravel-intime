@@ -1,6 +1,6 @@
 # 📘 SSOT — Single Source of Truth: inTime
 
-> **Terakhir diperbarui:** 11 Februari 2026 (Revisi 1 — Keputusan Bottleneck)  
+> **Terakhir diperbarui:** 16 Februari 2026 (Revisi 2 — Sinkronisasi Phase 5)  
 > **Prinsip:** Dokumen ini adalah **satu-satunya sumber kebenaran** proyek inTime. Semua dokumen lain tunduk pada informasi di sini. Jika ada konflik, **dokumen ini yang benar**.
 
 ---
@@ -96,7 +96,7 @@ inTime/
 │       ├── test-phase-2.md       📦 Arsip (passed 100%)
 │       ├── test-phase-3.md       📦 Arsip (passed 100%)
 │       ├── test-phase-4.md       📦 Arsip (passed 100%)
-│       └── (test-phase-5.md)     ❌ Belum dibuat
+│       └── test-phase-5.md       📦 Arsip (passed 100%)
 ```
 
 ### 2.3 Aturan Pembaruan
@@ -331,51 +331,45 @@ User tanpa group_id → Tidak mungkin terjadi (validasi di form UserResource)
 | Phase 2 | QR & Authorization | ✅ **Selesai** | 26–31 Jan 2026 |
 | Phase 3 | Attendance Engine | ✅ **Selesai** | 1–3 Feb 2026 |
 | Phase 4 | Reporting & Mobile UX | ✅ **Selesai** | 4–10 Feb 2026 |
-| **Phase 5** | **QR Management, Export & Member Cards** | **⏳ Berikutnya** | 11 Feb 2026 ~ |
+| Phase 5 | QR Management & Advanced Export | ✅ **Selesai** | 11–16 Feb 2026 |
+| **Phase 6** | **Import Data Anggota dari Excel** | **⏳ Berikutnya** | 16 Feb 2026 ~ |
+| Phase 7 | Advanced Analytics & Attendance Insights | Direncanakan | — |
+| Phase 8 | Member Cards & Optimization | Direncanakan | — |
+| Phase 9 | Self-Permit System | Direncanakan | — |
+| **Phase 10** | **On-the-Spot Registration** | **Direncanakan** | — |
 
-### 5.2 Detail Fitur — Telah Selesai (P1–P4)
+### 5.2 Detail Fitur — Telah Selesai (P1–P5)
 
 | Fitur | Phase | Status |
 |:------|:-----:|:------:|
-| Hierarki organisasi (unlimited depth, adjacency list) | P1 | ✅ |
-| Dynamic group-level columns di tabel anggota | P1 | ✅ |
-| Auto-age calculation & age group matching | P1 | ✅ |
-| QR Code auto-generation (SVG) | P2 | ✅ |
-| Role-Based Access Control (Filament Shield) | P2 | ✅ |
-| Hierarchical data scoping (query level) | P2 | ✅ |
-| Live Scanner Station (QR + Manual Search) | P3 | ✅ |
-| Real-time attendance validation (gender, age, status, group) | P3 | ✅ |
-| Dashboard widgets (hari ini, tren, ranking) | P3 | ✅ |
-| Drill-down statistics per sub-group | P4 | ✅ |
-| Detail attendance per group (Infolist + Table) | P4 | ✅ |
-| Manual set status (Izin/Sakit) + evidence upload | P4 | ✅ |
-| Smart status (BELUM HADIR → TIDAK HADIR) berdasarkan waktu | P4 | ✅ |
-| Basic PDF export (meeting attendance report) | P4 | ✅ |
-| Basic Excel export (single-sheet) | P4 | ✅ |
-| Mobile UX optimization (responsive scanner + tables) | P4 | ✅ |
+| Hierarki organisasi, Dynamic columns, Auto-age calculation | P1 | ✅ |
+| QR Code auto-generation, Shield RBAC, Scoping logic | P2 | ✅ |
+| Live Scanner, Real-time validation, Dashboard widgets | P3 | ✅ |
+| Drill-down stats, Manual status (Izin/Sakit), Smart status | P4 | ✅ |
+| Download QR (Single/Bulk), Scanner search filters, Multi-sheet Excel | P5 | ✅ |
 
-### 5.3 Detail Fitur — Phase 5 (Aktif)
+### 5.3 Detail Fitur — Phase Aktif & Mendatang
 
-> **SSOT tugas aktif:** `docs/todolist/phase-5-todolist.md`
+> **SSOT tugas aktif:** `docs/todolist/phase-6-todolist.md`
 
-| Fitur | Status |
-|:------|:------:|
-| Download QR single (PNG/JPG) | [ ] |
-| Download QR bulk (.ZIP) | [ ] |
-| Deteksi terlambat (badge TERLAMBAT) | [ ] |
-| Filter search scanner (kriteria target) | [ ] |
-| Multi-sheet Excel export (ringkasan + detail) | [ ] |
-| Branding laporan (header, logo) | [ ] |
-| Cetak kartu anggota (template desain) | [ ] |
-| Bulk member cards PDF (A4 layout) | [ ] |
-| Query optimization untuk dataset besar | [ ] |
+| Fitur | Phase | Status |
+|:------|:-----:|:------:|
+| **Import data anggota massal (Excel/CSV)** | P6 | [ ] |
+| Auto-mapping grup & auto-QR pada import | P6 | [ ] |
+| Attendance Grid (Matrix), Dashboard Leaderboard | P7 | [ ] |
+| Early Warning System (Low participation) | P7 | [ ] |
+| Cetak kartu anggota (Bulk PDF A4) | P8 | [ ] |
+| Branding laporan Excel (Header/Logo) | P8 | [ ] |
+| Query optimization (Chunking/LazyCollection) | P8 | [ ] |
+| Self-Permit Public Form & Approval system | P9 | [ ] |
+| **Registrasi Anggota Baru Langsung di Scanner (On-the-spot)** | **P10** | **[ ]** |
 
 ### 5.4 Catatan Perpindahan Fitur
 
 Fitur berikut **awalnya di Phase 4**, dipindahkan ke Phase 5 atas keputusan USER:
 - Download QR Code (Single/Bulk) — *Alasan: Prioritas reporting lebih tinggi*
-- Deteksi Terlambat — *Alasan: Scope Phase 4 sudah penuh*
-- Filter Search Scanner — *Alasan: Ditunda bersama scanner enhancements*
+- ~~Deteksi Terlambat~~ — ✅ **Ternyata sudah diimplementasi** di Phase 4 (ditemukan di `LiveScannerController.process()` dan `manualStore()`)
+- Filter Search Scanner — *Alasan: Ditunda bersama scanner enhancements. Filter grup sudah ada, perlu tambah filter gender & usia.*
 
 ---
 
@@ -534,6 +528,7 @@ Keputusan yang telah disahkan oleh Product Owner dan dicatat di SSOT:
 |:--------|:----------|
 | 11 Feb 2026 | 📄 Dokumen SSOT dibuat — konsolidasi dari seluruh 14 file dokumentasi dan 22 migration files |
 | 11 Feb 2026 | 📝 Revisi 1 — 8 keputusan arsitektur dicatat dari sesi QA bottleneck |
+| 16 Feb 2026 | 🔄 Revisi 2 — Sinkronisasi §5.3 Phase 5: Deteksi Terlambat di-checklist (sudah ada di kode), QR format dikoreksi ke PNG saja, filter search diperjelas scope-nya |
 
 ---
 

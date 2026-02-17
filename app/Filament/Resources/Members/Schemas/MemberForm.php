@@ -38,8 +38,20 @@ class MemberForm
                     ->label('Kelompok')
                     ->relationship(
                         name: 'group',
-                        titleAttribute: 'name',
-                        modifyQueryUsing: fn ($query) => $query->whereHas('level', fn ($q) => $q->where('level_number', 1))
+                        titleAttribute: 'groups.name',
+                        modifyQueryUsing: function ($query) {
+                            $user = auth()->user();
+                            $query->whereHas('level', fn ($q) => $q->where('level_number', 1))
+                                ->leftJoin('groups as desa', 'groups.parent_id', '=', 'desa.id')
+                                ->select('groups.*')
+                                ->orderBy('desa.name', 'asc')
+                                ->orderBy('groups.name', 'asc');
+
+                            if ($user && !$user->isSuperAdmin() && $user->group_id) {
+                                $descendantIds = $user->group->getAllDescendantIds();
+                                $query->whereIn('groups.id', $descendantIds);
+                            }
+                        }
                     )
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->required()
@@ -49,9 +61,8 @@ class MemberForm
                     ->label('Tanggal Lahir')
                     ->displayFormat('d/m/Y')
                     ->format('Y-m-d')
-                    ->required()
-                    ->native(false)
-                    ->closeOnDateSelection()
+                    ->placeholder('HH/BB/TTTT')
+                    ->nullable()
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, $state) {
                         if (!$state) return;
@@ -75,8 +86,25 @@ class MemberForm
                 TextInput::make('age')
                     ->label('Usia Saat Ini')
                     ->suffix(' Tahun')
-                    ->readOnly()
-                    ->numeric(),
+                    ->numeric()
+                    ->live()
+                    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        if (!$state) return;
+                        
+                        $age = (int) $state;
+                        
+                        // Auto-select category based on manual age entry
+                        $matchingGroup = \App\Models\AgeGroup::where('min_age', '<=', $age)
+                            ->where(function ($query) use ($age) {
+                                $query->where('max_age', '>=', $age)
+                                    ->orWhereNull('max_age');
+                            })
+                            ->first();
+
+                        if ($matchingGroup) {
+                            $set('age_group_id', $matchingGroup->id);
+                        }
+                    }),
                 Select::make('age_group_id')
                     ->label('Kategori Usia')
                     ->relationship('ageGroup', 'name')
@@ -91,14 +119,12 @@ class MemberForm
                         'female' => 'PEREMPUAN',
                     ])
                     ->required(),
-                Select::make('membership_type')
-                    ->label('Tipe Keanggotaan')
-                    ->options([
-                        'anggota' => 'ANGGOTA',
-                        'pengurus' => 'PENGURUS',
-                    ])
-                    ->default('anggota')
-                    ->required(),
+                TextInput::make('membership_type')
+                    ->label('Kepengurusan')
+                    ->placeholder('Contoh: Ketua, Sekretaris (Biarkan kosong jika Anggota)')
+                    ->extraInputAttributes(['style' => 'text-transform: uppercase'])
+                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : 'ANGGOTA')
+                    ->default('ANGGOTA'),
                 Toggle::make('status')
                     ->label('Status Aktif Anggota')
                     ->onColor('success')

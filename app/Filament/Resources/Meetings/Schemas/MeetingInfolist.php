@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Meetings\Schemas;
 use App\Models\Meeting;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
 
 class MeetingInfolist
 {
@@ -12,9 +14,9 @@ class MeetingInfolist
     {
         return $schema
             ->components([
-                \Filament\Schemas\Components\Section::make('Detail Pertemuan')
+                Section::make('Detail Pertemuan')
                     ->schema([
-                        \Filament\Schemas\Components\Grid::make(['default' => 1, 'md' => 2])
+                        Grid::make(['default' => 1, 'md' => 2])
                             ->schema([
                                 TextEntry::make('name')
                                     ->label('Nama Pertemuan')
@@ -43,6 +45,11 @@ class MeetingInfolist
                                     ->label('Jam Dimulai')
                                     ->time('H:i')
                                     ->icon('heroicon-m-clock'),
+                                TextEntry::make('checkin_open_time')
+                                    ->label('Presensi Dibuka')
+                                    ->time('H:i')
+                                    ->icon('heroicon-m-clock')
+                                    ->placeholder('Saat jam dimulai'),
                                 TextEntry::make('end_time')
                                     ->label('Jam Berakhir')
                                     ->time('H:i')
@@ -52,7 +59,7 @@ class MeetingInfolist
                                     ->icon('heroicon-m-user'),
                                 TextEntry::make('created_at')
                                     ->label('Waktu Dibuat')
-                                    ->dateTime()
+                                    ->dateTime('d F Y H:i')
                                     ->color('gray'),
                             ]),
                         TextEntry::make('description')
@@ -61,6 +68,7 @@ class MeetingInfolist
                             ->columnSpanFull()
                             ->prose(),
                     ])
+                    ->columnSpanFull(),
             ]);
     }
 }

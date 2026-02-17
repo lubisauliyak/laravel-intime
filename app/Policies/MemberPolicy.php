@@ -67,4 +67,9 @@ class MemberPolicy
         return $authUser->can('Reorder:Member');
     }
 
+    public function export(AuthUser $authUser, Member $member): bool
+    {
+        return $authUser->can('Export:Member');
+    }
+
 }

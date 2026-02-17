@@ -72,6 +72,7 @@ class UserTable
                 \Filament\Actions\ActionGroup::make([
                     EditAction::make()
                         ->label('Ubah')
+                        ->hidden(fn ($record) => $record->trashed())
                         ->after(function ($record) {
                             // Sync Spatie role when role column is changed
                             if ($record->role) {

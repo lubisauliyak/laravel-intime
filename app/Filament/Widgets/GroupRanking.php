@@ -18,10 +18,24 @@ class GroupRanking extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $user = auth()->user();
+        $query = Group::query()->whereHas('members');
+
+        if (!$user->isSuperAdmin() && $user->group_id) {
+            $group = $user->group;
+            $descendantIds = $group->getAllDescendantIds();
+            $childrenIds = array_diff($descendantIds, [$group->id]);
+
+            if (!empty($childrenIds)) {
+                $query->whereIn('id', $childrenIds);
+            } else {
+                $query->where('id', $group->id);
+            }
+        }
+
         return $table
             ->query(
-                Group::query()
-                    ->whereHas('members')
+                $query
                     ->addSelect([
                         'total_attendance' => Attendance::selectRaw('count(*)')
                             ->whereHas('member', function (Builder $query) {

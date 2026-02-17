@@ -19,7 +19,8 @@ class ViewMeeting extends ViewRecord
                 ->icon('heroicon-o-qr-code')
                 ->color('emerald')
                 ->url(fn ($record) => route('scanner.live', $record))
-                ->openUrlInNewTab(),
+                ->openUrlInNewTab()
+                ->visible(fn ($record) => !$record->isExpired()),
         ];
     }
 
