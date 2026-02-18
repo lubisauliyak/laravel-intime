@@ -1,6 +1,6 @@
 # 📘 SSOT — Single Source of Truth: inTime
 
-> **Terakhir diperbarui:** 16 Februari 2026 (Revisi 2 — Sinkronisasi Phase 5)  
+> **Terakhir diperbarui:** 18 Februari 2026 (Revisi 3 — Dashboard Optimization & Role Migration)  
 > **Prinsip:** Dokumen ini adalah **satu-satunya sumber kebenaran** proyek inTime. Semua dokumen lain tunduk pada informasi di sini. Jika ada konflik, **dokumen ini yang benar**.
 
 ---
@@ -89,7 +89,8 @@ inTime/
 │   │   ├── phase-2-todolist.md   📦 Arsip (selesai 100%)
 │   │   ├── phase-3-todolist.md   📦 Arsip (selesai 100%)
 │   │   ├── phase-4-todolist.md   📦 Arsip (selesai 100%)
-│   │   └── phase-5-todolist.md   🎯 SSOT: Tugas aktif saat ini
+│   │   ├── phase-5-todolist.md   📦 Arsip (selesai 100%)
+│   │   └── phase-6-todolist.md   🎯 SSOT: Tugas aktif saat ini
 │   │
 │   └── test/
 │       ├── test-phase-1.md       📦 Arsip (passed 100%)
@@ -154,7 +155,7 @@ inTime/
 | `email_verified_at` | timestamp | nullable | — |
 | `password` | string | — | Bcrypt hash |
 | `group_id` | bigint | FK → `groups.id`, nullable, set null | Penempatan grup |
-| `role` | enum | `super_admin`, `admin`, `operator` — default: `operator` | Role utama |
+| `role` | string | nullable | Role utama (Sync dengan Spatie Roles) |
 | `status` | boolean | default: true | Aktif / Suspend |
 | `deleted_at` | timestamp | nullable | Soft delete |
 | `remember_token` | string | nullable | — |
@@ -332,7 +333,7 @@ User tanpa group_id → Tidak mungkin terjadi (validasi di form UserResource)
 | Phase 3 | Attendance Engine | ✅ **Selesai** | 1–3 Feb 2026 |
 | Phase 4 | Reporting & Mobile UX | ✅ **Selesai** | 4–10 Feb 2026 |
 | Phase 5 | QR Management & Advanced Export | ✅ **Selesai** | 11–16 Feb 2026 |
-| **Phase 6** | **Import Data Anggota dari Excel** | **⏳ Berikutnya** | 16 Feb 2026 ~ |
+| **Phase 6** | **Monitoring & Optimization** | ⏳ **Current** | 18 Feb 2026 ~ |
 | Phase 7 | Advanced Analytics & Attendance Insights | Direncanakan | — |
 | Phase 8 | Member Cards & Optimization | Direncanakan | — |
 | Phase 9 | Self-Permit System | Direncanakan | — |
@@ -357,6 +358,9 @@ User tanpa group_id → Tidak mungkin terjadi (validasi di form UserResource)
 | **Import data anggota massal (Excel/CSV)** | P6 | [ ] |
 | Auto-mapping grup & auto-QR pada import | P6 | [ ] |
 | Attendance Grid (Matrix), Dashboard Leaderboard | P7 | [ ] |
+| **Performance Tuning (Lazy Loading & Caching)** | **P6** | **✅** |
+| **Hierarchical Dashboard (Ancestor Support)** | **P6** | **✅** |
+| **Role Flexibility (ENUM to String)** | **P6** | **✅** |
 | Early Warning System (Low participation) | P7 | [ ] |
 | Cetak kartu anggota (Bulk PDF A4) | P8 | [ ] |
 | Branding laporan Excel (Header/Logo) | P8 | [ ] |
@@ -519,6 +523,9 @@ Keputusan yang telah disahkan oleh Product Owner dan dicatat di SSOT:
 | 6 | 11 Feb 2026 | Kolom `attendance_type` **dihapus** | Perlu migration drop column |
 | 7 | 11 Feb 2026 | QR Code format diubah dari **SVG ke PNG** | Perlu update MemberObserver, QR generation logic |
 | 8 | 11 Feb 2026 | `ChildGroupsRelationManager` → **custom Livewire component** | Refactor arsitektur ViewMeeting page |
+| 9 | 18 Feb 2026 | **Dashboard Lazy Loading** | Mengurangi beban CPU serentak di shared hosting |
+| 10 | 18 Feb 2026 | **Hierarchical Dashboard Logic** | Menampilkan pertemuan pusat untuk user cabang (dengan filter data cabang) |
+| 11 | 18 Feb 2026 | **Role Column Migration (String)** | Mendukung peran kustom tanpa batas tanpa modifikasi schema enum |
 
 ---
 
@@ -529,6 +536,7 @@ Keputusan yang telah disahkan oleh Product Owner dan dicatat di SSOT:
 | 11 Feb 2026 | 📄 Dokumen SSOT dibuat — konsolidasi dari seluruh 14 file dokumentasi dan 22 migration files |
 | 11 Feb 2026 | 📝 Revisi 1 — 8 keputusan arsitektur dicatat dari sesi QA bottleneck |
 | 16 Feb 2026 | 🔄 Revisi 2 — Sinkronisasi §5.3 Phase 5: Deteksi Terlambat di-checklist (sudah ada di kode), QR format dikoreksi ke PNG saja, filter search diperjelas scope-nya |
+| 18 Feb 2026 | 🚀 Revisi 3 — Implementasi Dashbord Optimization (Lazy Loading, Caching) & Role Migration (ENUM to String) |
 
 ---
 

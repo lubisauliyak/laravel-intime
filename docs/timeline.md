@@ -22,7 +22,10 @@
 *   ✅ **Scanner Enhancement**: Filter pencarian manual berdasarkan kriteria meeting.
 *   ✅ **Unified Excel Report**: Laporan multi-sheet (Ringkasan Statistik + Detail Nama).
 
-## 📥 Phase 6: Import Data Anggota dari Excel (Current)
+## 🚀 Phase 6: Monitoring & Optimization (18 Februari 2026 - Present)
+*   ✅ **Dashboard Optimization**: Lazy loading widgets dan caching data statistik.
+*   ✅ **Hierarchical Dashboard**: Perluasan scope data untuk user di level induk.
+*   ✅ **Role Migration**: Transisi role ke basis string dan permission sistem.
 *   **Bulk Import**: Fitur import massal via Excel (.xlsx) menggunakan Filament Importer.
 *   **Auto-Mapping**: Logika pencarian ID Grup berdasarkan nama kelompok di Excel.
 
@@ -39,4 +42,4 @@
 *   **Public Permit Form**: Sistem pengajuan izin mandiri oleh anggota tanpa login.
 
 ---
-*Terakhir diperbarui: 16 Februari 2026*
+*Terakhir diperbarui: 18 Februari 2026*

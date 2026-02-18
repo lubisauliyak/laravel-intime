@@ -54,10 +54,12 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
 -   [x] **Deep Reporting**: Multi-sheet Excel report (Summary & Member Details).
 -   [x] **Scanner Enhancements**: Deteksi Terlambat & Filter Target Search.
 
-### ⏳ Phase 6: Import Data Anggota dari Excel (Current)
+### ⏳ Phase 6: Monitoring & Optimization (Current)
+-   [x] **Dashboard Tuning**: Implementasi Lazy Loading & Caching (Target Shared Hosting).
+-   [x] **Hierarchical Dashboard**: Sinkronisasi data berjenjang untuk atasan (Ancestors).
+-   [x] **Role Flexibility**: Migrasi ke sistem role dinamis (Spatie sync).
 -   [ ] **Bulk Import**: Fitur import massal anggota via Excel (.xlsx).
 -   [ ] **Auto-Mapping**: Logika pencarian grup otomatis berdasarkan nama di Excel.
--   [ ] **Auto-QR**: Generate QR Code otomatis untuk seluruh hasil import.
 
 ## ⚙️ Instalasi
 

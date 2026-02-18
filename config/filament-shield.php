@@ -149,7 +149,7 @@ return [
     */
 
     'localization' => [
-        'enabled' => false,
+        'enabled' => true,
         'key' => 'filament-shield::filament-shield.resource_permission_prefixes_labels',
     ],
 
@@ -237,8 +237,7 @@ return [
     */
 
     'custom_permissions' => [
-        'scan_attendance',
-        'set_excused_attendance',
+        'SetExcusedAttendance',
     ],
 
     /*

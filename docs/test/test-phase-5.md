@@ -27,6 +27,7 @@ Dokumen ini berisi panduan pengujian manual untuk seluruh fitur di Phase 5.
 | Akses Scanner (Group Barrier) | User hanya bisa men-scan meeting yang masuk dalam hierarki grupnya. | [x] |
 | Dashboard Widgets | Statistik di dashboard hanya menampilkan grup yang diizinkan (berbasis permission/hierarki). | [x] |
 
+
 ---
 ## 5. Catatan Penting
 - **Branding Laporan Excel** & **Cetak Kartu Anggota** tetap di **Phase 8**.

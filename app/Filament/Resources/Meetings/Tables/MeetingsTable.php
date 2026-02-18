@@ -113,7 +113,7 @@ class MeetingsTable
                         ->color('emerald')
                         ->url(fn ($record) => route('scanner.live', $record))
                         ->openUrlInNewTab()
-                        ->visible(fn (Meeting $record) => !$record->isExpired() && auth()->user()->can('update', $record)),
+                        ->visible(fn (Meeting $record) => !$record->isExpired() && auth()->user()->can('View:ScanAttendance')),
                 ])
             ])
             ->bulkActions([

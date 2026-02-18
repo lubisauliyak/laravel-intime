@@ -20,7 +20,7 @@ class ViewMeeting extends ViewRecord
                 ->color('emerald')
                 ->url(fn ($record) => route('scanner.live', $record))
                 ->openUrlInNewTab()
-                ->visible(fn ($record) => !$record->isExpired()),
+                ->visible(fn ($record) => !$record->isExpired() && auth()->user()->can('View:ScanAttendance')),
         ];
     }
 

@@ -22,6 +22,9 @@ class Group extends Model
                 $group->name = strtoupper($group->name);
             }
         });
+
+        static::saved(fn() => \Illuminate\Support\Facades\Cache::flush());
+        static::deleted(fn() => \Illuminate\Support\Facades\Cache::flush());
     }
 
     public function level(): \Illuminate\Database\Eloquent\Relations\BelongsTo
@@ -76,18 +79,28 @@ class Group extends Model
         return $this->parent->getParentAtLevel($levelNumber);
     }
 
+    protected static array $_descendant_cache = [];
+
     /**
      * Get IDs of this group and all its descendants.
      */
     public function getAllDescendantIds(): array
     {
-        $ids = [$this->id];
-        
-        foreach ($this->children as $child) {
-            $ids = array_merge($ids, $child->getAllDescendantIds());
+        if (isset(static::$_descendant_cache[$this->id])) {
+            return static::$_descendant_cache[$this->id];
         }
+
+        $cacheKey = "group_descendants_{$this->id}";
         
-        return $ids;
+        return static::$_descendant_cache[$this->id] = \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () {
+            $ids = [$this->id];
+            
+            foreach ($this->children as $child) {
+                $ids = array_merge($ids, $child->getAllDescendantIds());
+            }
+            
+            return $ids;
+        });
     }
 
     /**

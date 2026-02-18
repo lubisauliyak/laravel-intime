@@ -38,12 +38,7 @@ class UserTable
                 TextColumn::make('role')
                     ->label('Hak Akses')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'super_admin' => 'SUPER ADMIN',
-                        'admin' => 'ADMIN',
-                        'operator' => 'OPERATOR',
-                        default => $state,
-                    })
+                    ->formatStateUsing(fn (string $state): string => strtoupper(str_replace('_', ' ', $state)))
                     ->color(fn (string $state): string => match ($state) {
                         'super_admin' => 'danger',
                         'admin' => 'warning',

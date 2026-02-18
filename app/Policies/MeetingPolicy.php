@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
+use App\Models\User;
 use App\Models\Meeting;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -12,64 +12,84 @@ class MeetingPolicy
 {
     use HandlesAuthorization;
     
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(User $user): bool
     {
-        return $authUser->can('ViewAny:Meeting');
+        return $user->can('ViewAny:Meeting');
     }
 
-    public function view(AuthUser $authUser, Meeting $meeting): bool
+    public function view(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('View:Meeting');
+        return $user->can('View:Meeting');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(User $user): bool
     {
-        return $authUser->can('Create:Meeting');
+        return $user->can('Create:Meeting');
     }
 
-    public function update(AuthUser $authUser, Meeting $meeting): bool
+    public function update(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('Update:Meeting');
+        if (!$user->can('Update:Meeting')) {
+            return false;
+        }
+
+        return $meeting->group?->canBeManagedBy($user) ?? false;
     }
 
-    public function delete(AuthUser $authUser, Meeting $meeting): bool
+    public function delete(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('Delete:Meeting');
+        if (!$user->can('Delete:Meeting')) {
+            return false;
+        }
+
+        return $meeting->group?->canBeManagedBy($user) ?? false;
     }
 
-    public function restore(AuthUser $authUser, Meeting $meeting): bool
+    public function restore(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('Restore:Meeting');
+        if (!$user->can('Restore:Meeting')) {
+            return false;
+        }
+
+        return $meeting->group?->canBeManagedBy($user) ?? false;
     }
 
-    public function forceDelete(AuthUser $authUser, Meeting $meeting): bool
+    public function forceDelete(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('ForceDelete:Meeting');
+        if (!$user->can('ForceDelete:Meeting')) {
+            return false;
+        }
+
+        return $meeting->group?->canBeManagedBy($user) ?? false;
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $authUser->can('ForceDeleteAny:Meeting');
+        return $user->can('ForceDeleteAny:Meeting');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(User $user): bool
     {
-        return $authUser->can('RestoreAny:Meeting');
+        return $user->can('RestoreAny:Meeting');
     }
 
-    public function replicate(AuthUser $authUser, Meeting $meeting): bool
+    public function replicate(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('Replicate:Meeting');
+        if (!$user->can('Replicate:Meeting')) {
+            return false;
+        }
+
+        return $meeting->group?->canBeManagedBy($user) ?? false;
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(User $user): bool
     {
-        return $authUser->can('Reorder:Meeting');
+        return $user->can('Reorder:Meeting');
     }
 
-    public function export(AuthUser $authUser, Meeting $meeting): bool
+    public function export(User $user, Meeting $meeting): bool
     {
-        return $authUser->can('Export:Meeting');
+        return $user->can('Export:Meeting');
     }
 
 }

@@ -147,7 +147,7 @@
                     <div class="space-y-5 relative z-10">
                         <select id="manual-search" class="w-full"></select>
                         @php
-                            $canSetExcused = auth()->user()->can('set_excused_attendance');
+                            $canSetExcused = auth()->user()->can('SetExcusedAttendance');
                         @endphp
                         <div class="grid {{ $canSetExcused ? 'grid-cols-3' : '' }} gap-3">
                             <button onclick="recordManual('hadir')" class="py-4 md:py-3 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white font-black rounded-xl transition-all border border-emerald-500/30 text-[11px] md:text-[10px] uppercase tracking-tighter">HADIR</button>

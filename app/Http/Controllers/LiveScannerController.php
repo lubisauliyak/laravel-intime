@@ -195,7 +195,7 @@ class LiveScannerController extends Controller
 
         $status = $request->status ?? 'hadir';
 
-        if (in_array($status, ['izin', 'sakit']) && !auth()->user()->can('set_excused_attendance')) {
+        if (in_array($status, ['izin', 'sakit']) && !auth()->user()->can('SetExcusedAttendance')) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Anda tidak memiliki hak akses untuk menginput status ' . strtoupper($status) . '.'
@@ -274,9 +274,8 @@ class LiveScannerController extends Controller
             return;
         }
 
-        // Cek permission khusus scanner dari Spatie
-        if ($mode === 'manage' && !$user->can('scan_attendance')) {
-            abort(403, 'Role Anda tidak diizinkan untuk melakukan scan presensi.');
+        if (!$user->can('View:ScanAttendance')) {
+            abort(403, 'Role Anda tidak diizinkan untuk mengakses fitur scanner.');
         }
 
         if (!$user->group_id) {
