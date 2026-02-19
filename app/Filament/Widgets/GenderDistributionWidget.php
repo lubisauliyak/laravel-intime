@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\Member;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 
 class GenderDistributionWidget extends ChartWidget
 {
@@ -22,8 +23,9 @@ class GenderDistributionWidget extends ChartWidget
         $user = auth()->user();
         $cacheKey = 'gender_dist_' . ($user->group_id ?? 'all');
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($user) {
-            $query = Member::where('status', true);
+        return Cache::remember($cacheKey, 3600, function () use ($user) {
+            $query = Member::where('status', true)
+                ->where('membership_type', '!=', 'pengurus');
 
             if (!$user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();

@@ -36,4 +36,38 @@ class Member extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function positions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MemberPosition::class);
+    }
+
+    public function isPengurus(): bool
+    {
+        return strcasecmp($this->membership_type, 'pengurus') === 0 || $this->positions()->exists();
+    }
+
+    /**
+     * Check if member has a position in a specific group or its ancestors.
+     */
+    public function hasPositionIn(Group $group): bool
+    {
+        if (!$this->isPengurus()) return false;
+
+        $lineageIds = array_unique(array_merge(
+            [$group->id],
+            $group->getAllAncestorIds(),
+            $group->getAllDescendantIds()
+        ));
+
+        // 1. Direct check: Is their primary group in the meeting lineage?
+        if (strcasecmp($this->membership_type, 'pengurus') === 0 && in_array($this->group_id, $lineageIds)) {
+            return true;
+        }
+
+        // 2. Position check: Do they have a specific position in the meeting lineage?
+        return $this->positions()
+            ->whereIn('group_id', $lineageIds)
+            ->exists();
+    }
 }

@@ -4,7 +4,9 @@ namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
 use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ViewRecord;
+use App\Filament\Resources\Meetings\Widgets\MeetingStatsTable;
 
 class ViewMeeting extends ViewRecord
 {
@@ -14,7 +16,7 @@ class ViewMeeting extends ViewRecord
     {
         return [
             EditAction::make(),
-            \Filament\Actions\Action::make('open_scanner')
+            Action::make('open_scanner')
                 ->label('Buka Scanner')
                 ->icon('heroicon-o-qr-code')
                 ->color('emerald')
@@ -27,7 +29,7 @@ class ViewMeeting extends ViewRecord
     protected function getFooterWidgets(): array
     {
         return [
-            \App\Filament\Resources\Meetings\Widgets\MeetingStatsTable::class,
+            MeetingStatsTable::class,
         ];
     }
 }

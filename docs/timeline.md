@@ -29,17 +29,12 @@
 *   **Bulk Import**: Fitur import massal via Excel (.xlsx) menggunakan Filament Importer.
 *   **Auto-Mapping**: Logika pencarian ID Grup berdasarkan nama kelompok di Excel.
 
-## 📈 Phase 7: Advanced Analytics & Attendance Insights (Future)
+## 🚀 Phase 7: Analytics & System Refinement (20 Februari 2026 - Present)
+*   ✅ **Scanner Vertical Lineage**: Pengurus cabang (child) bisa presensi di pertemuan induk (parent).
+*   ✅ **Dynamic Scanner Widget**: Grafik beban scanner dengan sumbu X dinamis (pertama & terakhir scan).
+*   ✅ **Auto-Verified Users**: Pengguna baru otomatis terverifikasi dan bisa langsung login.
+*   ✅ **Dashboard Optimization**: Riwayat kehadiran 30 hari kini menyesuaikan rentang pertemuan aktual.
 *   **Attendance Matrix Grid**: Visualisasi pola absensi berbasis tanggal.
-*   **Group Leaderboard**: Analisis keaktifan antar kelompok.
-
-## 💳 Phase 8: Member Cards & Optimization (Future)
-*   **Bulk Member Cards**: Cetak kartu fisik masal via PDF layout A4.
-*   **Branding Laporan Excel**: Custom header dan logo pada output Excel.
-*   **Large Dataset Scaling**: Optimasi memori (Chunking) untuk ribuan data.
-
-## 📝 Phase 9: Self-Permit System (Future)
-*   **Public Permit Form**: Sistem pengajuan izin mandiri oleh anggota tanpa login.
 
 ---
-*Terakhir diperbarui: 18 Februari 2026*
+*Terakhir diperbarui: 20 Februari 2026*

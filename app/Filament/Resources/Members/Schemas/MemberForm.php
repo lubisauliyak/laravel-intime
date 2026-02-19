@@ -3,12 +3,18 @@
 namespace App\Filament\Resources\Members\Schemas;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use App\Models\AgeGroup;
+use App\Models\PositionCategory;
+use App\Models\Group;
+use Illuminate\Support\Carbon;
 
 class MemberForm
 {
@@ -21,7 +27,7 @@ class MemberForm
                     ->nullable()
                     ->unique(ignoreRecord: true)
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state))
+                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : null)
                     ->validationMessages([
                         'unique' => 'ID Anggota ini sudah terdaftar. Silakan gunakan ID lain.',
                     ]),
@@ -29,11 +35,11 @@ class MemberForm
                     ->label('Nama Lengkap')
                     ->required()
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state)),
+                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : null),
                 TextInput::make('nick_name')
                     ->label('Nama Panggilan')
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state)),
+                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : null),
                 Select::make('group_id')
                     ->label('Kelompok')
                     ->relationship(
@@ -66,13 +72,12 @@ class MemberForm
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, $state) {
                         if (!$state) return;
-                        
-                        $birthDate = \Carbon\Carbon::parse($state);
+
+                        $birthDate = Carbon::parse($state);
                         $age = $birthDate->age;
                         $set('age', $age);
 
-                        // Auto-select category based on new age
-                        $matchingGroup = \App\Models\AgeGroup::where('min_age', '<=', $age)
+                        $matchingGroup = AgeGroup::where('min_age', '<=', $age)
                             ->where(function ($query) use ($age) {
                                 $query->where('max_age', '>=', $age)
                                     ->orWhereNull('max_age');
@@ -90,11 +95,10 @@ class MemberForm
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, $state) {
                         if (!$state) return;
-                        
+
                         $age = (int) $state;
-                        
-                        // Auto-select category based on manual age entry
-                        $matchingGroup = \App\Models\AgeGroup::where('min_age', '<=', $age)
+
+                        $matchingGroup = AgeGroup::where('min_age', '<=', $age)
                             ->where(function ($query) use ($age) {
                                 $query->where('max_age', '>=', $age)
                                     ->orWhereNull('max_age');
@@ -107,7 +111,7 @@ class MemberForm
                     }),
                 Select::make('age_group_id')
                     ->label('Kategori Usia')
-                    ->relationship('ageGroup', 'name')
+                    ->relationship('ageGroup', 'name', fn($query) => $query->orderBy('sort_order'))
                     ->required()
                     ->searchable()
                     ->preload()
@@ -119,12 +123,82 @@ class MemberForm
                         'female' => 'PEREMPUAN',
                     ])
                     ->required(),
-                TextInput::make('membership_type')
-                    ->label('Kepengurusan')
-                    ->placeholder('Contoh: Ketua, Sekretaris (Biarkan kosong jika Anggota)')
-                    ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : 'ANGGOTA')
-                    ->default('ANGGOTA'),
+                Select::make('membership_type')
+                    ->label('Tipe Keanggotaan')
+                    ->options([
+                        'anggota' => 'ANGGOTA',
+                        'pengurus' => 'PENGURUS',
+                    ])
+                    ->required()
+                    ->live()
+                    ->default('anggota'),
+                
+                // Simple Section for positions - collapsible popup style
+                Section::make('Struktur Kepengurusan')
+                    ->description('Klik tombol di bawah untuk mengelola dapukan anggota.')
+                    ->visible(fn (Get $get) => $get('membership_type') === 'pengurus')
+                    ->collapsible()
+                    ->collapsed()
+                    ->headerActions([
+                        // Optional header actions if needed
+                    ])
+                    ->schema([
+                        Repeater::make('positions')
+                            ->relationship('positions')
+                            ->label('Dapukan')
+                            ->addActionLabel('Tambah Dapukan')
+                            ->schema([
+                                Select::make('position_category_id')
+                                    ->label('Kategori')
+                                    ->relationship('category', 'name', modifyQueryUsing: fn ($query) => $query->orderBy('sort_order')->orderBy('name'))
+                                    ->required()
+                                    ->searchable()
+                                    ->preload(),
+                                Select::make('group_id')
+                                    ->label('Grup')
+                                    ->relationship(
+                                        name: 'group',
+                                        titleAttribute: 'name',
+                                        modifyQueryUsing: fn ($query) => $query->with('level')->orderBy('level_id')
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
+                                    ->required()
+                                    ->searchable()
+                                    ->preload(),
+                                TextInput::make('position_name')
+                                    ->label('Nama Dapukan')
+                                    ->placeholder('CONTOH: KETUA')
+                                    ->extraInputAttributes(['style' => 'text-transform: uppercase'])
+                                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : null),
+                            ])
+                            ->columns(3)
+                            ->defaultItems(1)
+                            ->collapsed()
+                            ->itemLabel(function (array $state): string {
+                                $positionName = $state['position_name'] ?? '';
+                                $categoryName = '';
+                                $levelName = '';
+
+                                // Get category name
+                                if (!empty($state['position_category_id'])) {
+                                    $category = PositionCategory::find($state['position_category_id']);
+                                    if ($category) {
+                                        $categoryName = $category->name;
+                                    }
+                                }
+
+                                // Get level name from group
+                                if (!empty($state['group_id'])) {
+                                    $group = Group::find($state['group_id']);
+                                    if ($group && $group->level) {
+                                        $levelName = $group->level->name;
+                                    }
+                                }
+
+                                $parts = array_filter([$positionName, $categoryName, $levelName]);
+                                return !empty($parts) ? implode(' ', $parts) : 'Dapukan';
+                            }),
+                    ])->columnSpanFull(),
                 Toggle::make('status')
                     ->label('Status Aktif Anggota')
                     ->onColor('success')

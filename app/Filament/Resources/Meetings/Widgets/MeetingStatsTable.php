@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\Meeting;
 use App\Filament\Resources\Meetings\MeetingResource;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 class MeetingStatsTable extends TableWidget
 {
     public ?Meeting $record = null;
-    
+
     public $parentId = null;
 
     protected int | string | array $columnSpan = 'full';
@@ -31,22 +32,32 @@ class MeetingStatsTable extends TableWidget
             return $table->query(fn() => Group::whereRaw('1 = 0'));
         }
 
+        $user = auth()->user();
+
         return $table
-            ->query(function () use ($meeting) {
+            ->query(function () use ($meeting, $user) {
                 if ($this->parentId) {
                     return Group::where('parent_id', $this->parentId);
                 }
 
-                // Tampilkan HANYA grup penyelenggara di level awal
-                return Group::query()
-                    ->where('id', $meeting->group_id);
+                // Phased Screening: Tentukan titik start berdasarkan hierarki user
+                $startGroupId = $meeting->group_id;
+
+                if (!$user->isSuperAdmin() && $user->group_id) {
+                    // Jika user berada di bawah level penyelenggara, mulai dari grup user tersebut
+                    if ($user->group_id === $meeting->group_id || in_array($meeting->group_id, $user->group->getAllAncestorIds())) {
+                        $startGroupId = $user->group_id;
+                    }
+                }
+
+                return Group::query()->where('id', $startGroupId);
             })
             ->columns([
                 TextColumn::make('name')
                     ->label('Nama Grup')
                     ->weight('bold')
                     ->searchable(),
-                
+
                 TextColumn::make('level.name')
                     ->label('Level')
                     ->badge()
@@ -80,7 +91,7 @@ class MeetingStatsTable extends TableWidget
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
                         $memberIds = Member::whereIn('group_id', $descendantIds)->pluck('id');
-                        
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('member_id', $memberIds)
                             ->where('status', 'hadir')
@@ -95,7 +106,7 @@ class MeetingStatsTable extends TableWidget
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
                         $memberIds = Member::whereIn('group_id', $descendantIds)->pluck('id');
-                        
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('member_id', $memberIds)
                             ->whereIn('status', ['izin', 'sakit'])
@@ -109,7 +120,7 @@ class MeetingStatsTable extends TableWidget
                         $descendantIds = $record->getAllDescendantIds();
                         $memberIds = Member::whereIn('group_id', $descendantIds)->pluck('id');
                         $totalMembers = $memberIds->count();
-                        
+
                         if ($totalMembers === 0) return '0%';
 
                         $isPresent = Attendance::where('meeting_id', $meeting->id)
@@ -131,15 +142,15 @@ class MeetingStatsTable extends TableWidget
                     ->action(fn () => $this->parentId = null),
             ])
             ->actions([
-                \Filament\Actions\ActionGroup::make([
-                    \Filament\Actions\Action::make('view_members')
+                ActionGroup::make([
+                    Action::make('view_members')
                         ->label('Lihat Nama')
                         ->icon('heroicon-m-users')
                         ->color('info')
                         ->url(fn (Group $record) => MeetingResource::getUrl('attendance-details', [
                             'record' => $meeting->id,
                         ]) . "?group={$record->id}"),
-                    \Filament\Actions\Action::make('view_subgroups')
+                    Action::make('view_subgroups')
                         ->label('Lihat Sub-Grup')
                         ->icon('heroicon-m-chevron-right')
                         ->color('primary')

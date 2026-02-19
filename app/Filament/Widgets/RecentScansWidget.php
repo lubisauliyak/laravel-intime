@@ -7,6 +7,7 @@ use App\Models\Meeting;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentScansWidget extends BaseWidget
@@ -49,21 +50,29 @@ class RecentScansWidget extends BaseWidget
 
         if (!$user->isSuperAdmin() && $user->group_id) {
             $allowedGroupIds = $user->group->getAllDescendantIds();
-            $query->whereHas('member', fn($q) => $q->whereIn('group_id', $allowedGroupIds));
+            $authGroupIds = array_merge([$user->group_id], $user->group->getAllAncestorIds());
+
+            $query->whereHas('member', function($q) use ($allowedGroupIds, $authGroupIds) {
+                $q->whereIn('group_id', $allowedGroupIds)
+                  ->orWhere(function($sq) use ($authGroupIds) {
+                      $sq->where('membership_type', 'pengurus')
+                         ->whereHas('positions', fn($pq) => $pq->whereIn('group_id', $authGroupIds));
+                  });
+            });
         }
 
         return $table
             ->heading($heading)
             ->query($query->limit(10))
             ->columns([
-                Tables\Columns\TextColumn::make('member.full_name')
+                TextColumn::make('member.full_name')
                     ->label('Nama Anggota'),
-                Tables\Columns\TextColumn::make('member.group.name')
+                TextColumn::make('member.group.name')
                     ->label('Grup'),
-                Tables\Columns\TextColumn::make('checkin_time')
+                TextColumn::make('checkin_time')
                     ->label('Jam Presensi')
                     ->time('H:i:s'),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('Status')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => match ($state) {
@@ -79,7 +88,7 @@ class RecentScansWidget extends BaseWidget
                         'alpha' => 'danger',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('notes')
+                TextColumn::make('notes')
                     ->label('Keterangan')
                     ->badge()
                     ->color(fn ($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),

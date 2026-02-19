@@ -175,7 +175,7 @@ return [
                 'delete',
             ],
             \App\Filament\Resources\Members\MemberResource::class => [
-                'viewAny', 'view', 'create', 'update', 'delete', 'export',
+                'viewAny', 'view', 'create', 'update', 'delete', 'export', 'import',
             ],
             \App\Filament\Resources\Meetings\MeetingResource::class => [
                 'viewAny', 'view', 'create', 'update', 'delete', 'export',

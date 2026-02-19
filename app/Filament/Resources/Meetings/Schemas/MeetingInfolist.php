@@ -7,6 +7,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
+use Filament\Support\Enums\FontWeight;
 
 class MeetingInfolist
 {
@@ -20,7 +21,7 @@ class MeetingInfolist
                             ->schema([
                                 TextEntry::make('name')
                                     ->label('Nama Pertemuan')
-                                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                                    ->weight(FontWeight::Bold),
                                 TextEntry::make('group.name')
                                     ->label('Grup Penyelenggara'),
                                 TextEntry::make('meeting_date')
@@ -39,6 +40,24 @@ class MeetingInfolist
                                     ->color(fn (string $state): string => match ($state) {
                                         'male' => 'info',
                                         'female' => 'danger',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('target_age_groups')
+                                    ->label('Target Kategori Usia')
+                                    ->state(function ($record) {
+                                        $groups = $record->target_age_groups;
+                                        if (empty($groups)) return null;
+                                        return \App\Models\AgeGroup::whereIn('name', (array) $groups)
+                                            ->orderBy('sort_order')
+                                            ->pluck('name')
+                                            ->toArray();
+                                    })
+                                    ->placeholder('Semua')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match (true) {
+                                        str_contains(strtolower($state), 'pra remaja') => 'info',
+                                        str_contains(strtolower($state), 'remaja') => 'warning',
+                                        str_contains(strtolower($state), 'pra nikah') => 'success',
                                         default => 'gray',
                                     }),
                                 TextEntry::make('start_time')

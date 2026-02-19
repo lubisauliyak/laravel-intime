@@ -19,6 +19,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use Illuminate\Support\Carbon;
 
 class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents, WithCustomStartCell
 {
@@ -106,12 +107,14 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
                     ->orWhere('target_gender', $member->gender);
             })
             ->where(function ($query) use ($member) {
-                $query->whereNull('target_age_groups')
-                    ->orWhere(function ($q) use ($member) {
-                        if (!$member->age_group_id) return $q->whereRaw('1=1');
-                        return $q->whereJsonLength('target_age_groups', 0)
-                            ->orWhereJsonContains('target_age_groups', (string)$member->age_group_id);
-                    });
+                $query->where(function ($q) {
+                    $q->whereNull('target_age_groups')
+                        ->orWhereJsonLength('target_age_groups', 0);
+                });
+
+                if ($member->ageGroup) {
+                    $query->orWhereJsonContains('target_age_groups', $member->ageGroup->name);
+                }
             })
             ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
             ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until))
@@ -203,11 +206,11 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
                 
                 $periodeText = 'Semua Waktu';
                 if ($from && $until) {
-                    $periodeText = \Carbon\Carbon::parse($from)->translatedFormat('d F Y') . ' s.d ' . \Carbon\Carbon::parse($until)->translatedFormat('d F Y');
+                    $periodeText = Carbon::parse($from)->translatedFormat('d F Y') . ' s.d ' . Carbon::parse($until)->translatedFormat('d F Y');
                 } elseif ($from) {
-                    $periodeText = 'Mulai ' . \Carbon\Carbon::parse($from)->translatedFormat('d F Y');
+                    $periodeText = 'Mulai ' . Carbon::parse($from)->translatedFormat('d F Y');
                 } elseif ($until) {
-                    $periodeText = 'Sampai ' . \Carbon\Carbon::parse($until)->translatedFormat('d F Y');
+                    $periodeText = 'Sampai ' . Carbon::parse($until)->translatedFormat('d F Y');
                 }
 
                 $sheet->mergeCells('A2:I2');

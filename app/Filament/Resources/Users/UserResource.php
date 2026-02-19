@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
 {
@@ -41,7 +42,7 @@ class UserResource extends Resource
         return UserTable::configure($table);
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
             ->leftJoin('groups', 'users.group_id', '=', 'groups.id')
@@ -63,11 +64,11 @@ class UserResource extends Resource
         }
 
         // Non-Super Admins NEVER see Super Admins
-        $query->where('role', '!=', config('filament-shield.super_admin.name', 'super_admin'));
+        $query->where('users.role', '!=', config('filament-shield.super_admin.name', 'super_admin'));
 
         // Operator can ONLY see themselves
         if ($user->isOperator()) {
-            return $query->where('id', $user->id);
+            return $query->where('users.id', $user->id);
         }
 
         // Admin sees users in their own group, descendant groups, OR users with no group

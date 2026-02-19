@@ -3,16 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class AgeGroup extends Model
+class PositionCategory extends Model
 {
     use SoftDeletes;
+
     protected $fillable = [
         'name',
-        'code',
         'sort_order',
-        'min_age',
-        'max_age',
     ];
+
+    public function memberPositions(): HasMany
+    {
+        return $this->hasMany(MemberPosition::class);
+    }
 }

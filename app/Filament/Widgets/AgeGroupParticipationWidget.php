@@ -9,6 +9,7 @@ use App\Models\Meeting;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class AgeGroupParticipationWidget extends ChartWidget
 {
@@ -57,9 +58,9 @@ class AgeGroupParticipationWidget extends ChartWidget
 
         $cacheKey = 'age_participation_' . ($user->group_id ?? 'all') . '_' . $ref->id;
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($user, $ref) {
+        return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
             // Get all age groups that have members
-            $ageGroups = AgeGroup::orderBy('name')->get();
+            $ageGroups = AgeGroup::orderBy('sort_order')->get();
             
             // Get descendant IDs if not super admin
             $allowedGroupIds = null;
@@ -67,17 +68,19 @@ class AgeGroupParticipationWidget extends ChartWidget
                 $allowedGroupIds = $user->group->getAllDescendantIds();
             }
 
-            // Get total members per age group
+            // Get total members per age group (Excluding Pengurus)
             $memberCounts = Member::where('status', true)
+                ->where('membership_type', '!=', 'pengurus')
                 ->when($allowedGroupIds, fn($q) => $q->whereIn('group_id', $allowedGroupIds))
                 ->select('age_group_id', DB::raw('count(*) as total'))
                 ->groupBy('age_group_id')
                 ->pluck('total', 'age_group_id');
 
-            // Get attendance counts per age group and status
+            // Get attendance counts per age group and status (Excluding Pengurus)
             $attendanceCounts = Attendance::where('meeting_id', $ref->id)
                 ->whereHas('member', function ($q) use ($allowedGroupIds) {
-                    $q->where('status', true);
+                    $q->where('status', true)
+                      ->where('membership_type', '!=', 'pengurus');
                     if ($allowedGroupIds) {
                         $q->whereIn('group_id', $allowedGroupIds);
                     }

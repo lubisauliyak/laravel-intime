@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
 use App\Filament\Resources\Meetings\Schemas\MeetingAttendanceInfolist;
+use App\Models\AgeGroup;
 use App\Models\Attendance;
 use App\Models\Group;
 use App\Models\Meeting;
@@ -15,11 +16,18 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Illuminate\Database\Eloquent\Builder;
-
 use Filament\Schemas\Schema;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
+use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Forms\Components\Select as FormSelect;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ImageEntry;
+use Filament\Schemas\Components\Grid as SchemaGrid;
+use Illuminate\Support\Facades\Storage;
 
 class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
 {
@@ -75,21 +83,51 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
     public function table(Table $table): Table
     {
         $descendantGroupIds = $this->group->getAllDescendantIds();
+        $meetingId = $this->meeting->id;
 
         return $table
             ->query(
                 Member::query()
-                    ->whereIn('group_id', $descendantGroupIds)
-                    ->where('status', true)
+                    ->select('members.*')
+                    ->whereIn('members.group_id', $descendantGroupIds)
+                    ->where('members.status', true)
+                    ->leftJoin('attendances', function ($join) use ($meetingId) {
+                        $join->on('attendances.member_id', '=', 'members.id')
+                            ->where('attendances.meeting_id', '=', $meetingId);
+                    })
+                    ->orderByRaw('attendances.checkin_time IS NULL ASC')
+                    ->orderBy('attendances.checkin_time', 'ASC')
+                    ->orderBy('members.id', 'ASC')
             )
             ->columns([
                 TextColumn::make('member_code')
-                    ->label('Kode')
+                    ->label('ID')
                     ->searchable(),
                 TextColumn::make('full_name')
                     ->label('Nama Lengkap')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(),
+                TextColumn::make('gender')
+                    ->label('L/P')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'male' => 'L',
+                        'female' => 'P',
+                        default => $state,
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'male' => 'info',
+                        'female' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('ageGroup.name')
+                    ->label('Kategori Usia')
+                    ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        str_contains(strtolower($state), 'pra remaja') => 'info',
+                        str_contains(strtolower($state), 'remaja') => 'warning',
+                        str_contains(strtolower($state), 'pra nikah') => 'success',
+                        default => 'gray',
+                    }),
                 TextColumn::make('group.name')
                     ->label('Grup'),
                 TextColumn::make('attendance_status')
@@ -103,7 +141,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                         if (!$attendance) {
                             return $this->isMeetingOver() ? 'TIDAK HADIR' : 'BELUM HADIR';
                         }
-                        
+
                         return strtoupper($attendance->status);
                     })
                     ->color(fn (string $state): string => match ($state) {
@@ -125,7 +163,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                             ->first()?->method === 'manual' ? 'Input Manual' : ''),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Filter Kehadiran')
                     ->options([
                         'hadir' => 'Hadir',
@@ -144,7 +182,26 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                         } elseif ($data['value'] === 'belum_hadir') {
                             $query->whereDoesntHave('attendances', fn ($q) => $q->where('meeting_id', $meetingId));
                         }
+                    }),
+                SelectFilter::make('gender')
+                    ->label('Filter Gender')
+                    ->options([
+                        'male' => 'Laki-laki',
+                        'female' => 'Perempuan',
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        if (!$data['value']) return;
+                        $query->where('gender', $data['value']);
+                    }),
+                SelectFilter::make('age_group_id')
+                    ->label('Filter Kategori Usia')
+                    ->options(function () {
+                        return \App\Models\AgeGroup::orderBy('sort_order')->pluck('name', 'id');
                     })
+                    ->query(function (Builder $query, array $data) {
+                        if (!$data['value']) return;
+                        $query->where('age_group_id', $data['value']);
+                    }),
             ])
             ->actions([
                 ActionGroup::make([
@@ -153,7 +210,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                         ->icon('heroicon-m-pencil-square')
                         ->color('info')
                         ->form([
-                            \Filament\Forms\Components\Select::make('status')
+                            FormSelect::make('status')
                                 ->label('Status Presensi')
                                 ->options([
                                     'hadir' => 'Hadir',
@@ -167,7 +224,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                                         ->first()?->status ?? 'hadir'
                                 )
                                 ->live(),
-                            \Filament\Forms\Components\FileUpload::make('evidence_path')
+                            FileUpload::make('evidence_path')
                                 ->label('Lampiran Foto/Gambar')
                                 ->image()
                                 ->directory('attendance-evidences')
@@ -179,7 +236,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                                         ->first()?->evidence_path
                                 )
                                 ->visible(fn ($get) => in_array($get('status'), ['izin', 'sakit'])),
-                            \Filament\Forms\Components\Textarea::make('notes')
+                            Textarea::make('notes')
                                 ->label('Keterangan')
                                 ->placeholder('Contoh: Sedang keluar kota / Sakit demam')
                                 ->default(fn (Member $record) => 
@@ -241,12 +298,12 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                             ->where('member_id', $record->id)
                             ->first();
 
-                        return \Filament\Schemas\Schema::make($this)
+                        return Schema::make($this)
                             ->record($attendance)
                             ->components([
-                                \Filament\Schemas\Components\Grid::make(1)
+                                SchemaGrid::make(1)
                                     ->schema([
-                                        \Filament\Infolists\Components\TextEntry::make('status')
+                                        TextEntry::make('status')
                                             ->label('Status Presensi')
                                             ->badge()
                                             ->color(fn (string $state): string => match ($state) {
@@ -255,18 +312,18 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                                                 default => 'gray',
                                             })
                                             ->formatStateUsing(fn ($state) => strtoupper($state)),
-                                        \Filament\Infolists\Components\TextEntry::make('notes')
+                                        TextEntry::make('notes')
                                             ->label('Keterangan / Alasan')
                                             ->prose()
                                             ->placeholder('Tidak ada keterangan tambahan'),
-                                        \Filament\Infolists\Components\ImageEntry::make('evidence_path')
+                                        ImageEntry::make('evidence_path')
                                             ->label('Foto Lampiran')
                                             ->disk('public')
                                             ->height(250)
                                             ->extraImgAttributes([
                                                 'class' => 'rounded-xl shadow-lg cursor-zoom-in border border-gray-200 dark:border-white/10',
                                             ])
-                                            ->url(fn ($record) => $record->evidence_path ? \Illuminate\Support\Facades\Storage::url($record->evidence_path) : null)
+                                            ->url(fn ($record) => $record->evidence_path ? Storage::url($record->evidence_path) : null)
                                             ->openUrlInNewTab()
                                             ->placeholder('Tidak ada foto lampiran'),
                                     ]),

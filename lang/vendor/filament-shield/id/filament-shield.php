@@ -9,11 +9,11 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'column.name' => 'Nama',
-    'column.guard_name' => 'Nama Penjaga',
+    'column.name' => 'Nama Peran',
+    'column.guard_name' => 'Guard',
     'column.roles' => 'Peran',
-    'column.permissions' => 'Izin',
-    'column.updated_at' => 'Dirubah',
+    'column.permissions' => 'Hak Akses',
+    'column.updated_at' => 'Diperbarui',
 
     /*
     |--------------------------------------------------------------------------
@@ -21,11 +21,11 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'field.name' => 'Nama',
-    'field.guard_name' => 'Nama Penjaga',
-    'field.permissions' => 'Izin',
+    'field.name' => 'Nama Peran',
+    'field.guard_name' => 'Guard',
+    'field.permissions' => 'Hak Akses',
     'field.select_all.name' => 'Pilih Semua',
-    'field.select_all.message' => 'Aktifkan semua izin yang <span class="text-primary font-medium">Tersedia</span> untuk Peran ini.',
+    'field.select_all.message' => 'Aktifkan semua hak akses yang <span class="text-primary font-medium">Tersedia</span> untuk Peran ini.',
 
     /*
     |--------------------------------------------------------------------------
@@ -33,7 +33,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'nav.group' => 'Pelindung',
+    'nav.group' => 'Akses Pengguna',
     'nav.role.label' => 'Peran',
     'nav.role.icon' => 'heroicon-o-shield-check',
     'resource.label.role' => 'Peran',
@@ -46,10 +46,10 @@ return [
     */
 
     'section' => 'Entitas',
-    'resources' => 'Sumber Daya',
+    'resources' => 'Data Master',
     'widgets' => 'Widget Dasbor',
     'pages' => 'Halaman',
-    'custom' => 'Widget Scanner',
+    'custom' => 'Hak Akses Khusus',
 
     /*
     |--------------------------------------------------------------------------
@@ -57,7 +57,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'forbidden' => 'Kamu tidak punya izin akses',
+    'forbidden' => 'Anda tidak memiliki izin akses',
 
     /*
     |--------------------------------------------------------------------------
@@ -76,16 +76,18 @@ return [
 
     'resource_permission_prefixes_labels' => [
         'view' => 'Lihat',
-        'view_any' => 'Lihat Apa Saja',
-        'create' => 'Buat',
-        'update' => 'Perbarui',
+        'view_any' => 'Lihat Semua',
+        'create' => 'Tambah',
+        'update' => 'Ubah',
         'delete' => 'Hapus',
-        'delete_any' => 'Hapus Apa Saja',
-        'force_delete' => 'Paksa Hapus',
-        'force_delete_any' => 'Paksa Hapus Apa Saja',
+        'delete_any' => 'Hapus Semua',
+        'force_delete' => 'Hapus Permanen',
+        'force_delete_any' => 'Hapus Permanen Semua',
         'restore' => 'Pulihkan',
-        'replicate' => 'Replikasi',
-        'reorder' => 'Susun Ulang',
-        'restore_any' => 'Pulihkan Apa Saja',
+        'replicate' => 'Duplikasi',
+        'reorder' => 'Urutkan Ulang',
+        'restore_any' => 'Pulihkan Semua',
+        'export' => 'Ekspor',
+        'import' => 'Impor',
     ],
 ];

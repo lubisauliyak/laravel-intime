@@ -113,17 +113,22 @@ class LiveScannerController extends Controller
             ]);
         }
 
-        // 5. Validation: Group Hierarchy (Member must belong to meeting's group or its descendants)
-        $allowedGroupIds = $meeting->group->getAllDescendantIds();
-        if (!in_array($member->group_id, $allowedGroupIds)) {
-            return response()->json([
-                'status' => 'warning',
-                'message' => "{$member->full_name} bukan anggota {$meeting->group->name} atau turunannya."
-            ]);
+        // 5. Check if Member is Pengurus for this meeting
+        $isPengurus = $member->isPengurus() && $member->hasPositionIn($meeting->group);
+
+        // 6. Validation: Group Hierarchy (For regular members)
+        if (!$isPengurus) {
+            $allowedGroupIds = $meeting->group->getAllDescendantIds();
+            if (!in_array($member->group_id, $allowedGroupIds)) {
+                return response()->json([
+                    'status' => 'warning',
+                    'message' => "{$member->full_name} bukan anggota {$meeting->group->name} atau turunannya."
+                ]);
+            }
         }
 
-        // 5. Validation: Target Gender
-        if ($meeting->target_gender !== 'all' && $member->gender !== $meeting->target_gender) {
+        // 7. Validation: Target Gender (Bypassed by Pengurus)
+        if (!$isPengurus && $meeting->target_gender !== 'all' && $member->gender !== $meeting->target_gender) {
             $targetLabel = $meeting->target_gender === 'male' ? 'Laki-laki' : 'Perempuan';
             return response()->json([
                 'status' => 'warning',
@@ -131,8 +136,8 @@ class LiveScannerController extends Controller
             ]);
         }
 
-        // 6. Validation: Target Age Groups
-        if (!empty($meeting->target_age_groups)) {
+        // 8. Validation: Target Age Groups (Bypassed by Pengurus)
+        if (!$isPengurus && !empty($meeting->target_age_groups)) {
             $memberAgeGroupName = $member->ageGroup?->name;
             if (!in_array($memberAgeGroupName, $meeting->target_age_groups)) {
                 return response()->json([
@@ -151,29 +156,52 @@ class LiveScannerController extends Controller
         $this->authorizeGroupAccess($meeting, 'manage');
         $query = $request->q;
         
-        // Only return members that belong to the meeting's group or its descendants
         $allowedGroupIds = $meeting->group->getAllDescendantIds();
-        
-        $members = Member::where(function($q) use ($query) {
+        $lineageGroupIds = array_merge($allowedGroupIds, $meeting->group->getAllAncestorIds());
+
+        $members = Member::with('ageGroup')->where(function($q) use ($query) {
                 $q->where('full_name', 'like', "%$query%")
                   ->orWhere('member_code', 'like', "%$query%");
             })
-            ->whereIn('group_id', $allowedGroupIds)
-            ->when($meeting->target_gender !== 'all', function($q) use ($meeting) {
-                return $q->where('gender', $meeting->target_gender);
-            })
-            ->when(!empty($meeting->target_age_groups), function($q) use ($meeting) {
-                return $q->whereHas('ageGroup', function($aq) use ($meeting) {
-                    return $aq->whereIn('name', $meeting->target_age_groups);
+            ->where('status', true)
+            ->where(function($q) use ($allowedGroupIds, $lineageGroupIds, $meeting) {
+                // Option A: Regular members who match meeting filters (Gender & Age)
+                $q->where(function ($sq) use ($allowedGroupIds, $meeting) {
+                    $sq->whereIn('group_id', $allowedGroupIds)
+                        ->when($meeting->target_gender !== 'all', function ($gq) use ($meeting) {
+                            return $gq->where('gender', $meeting->target_gender);
+                        })
+                        ->when(!empty($meeting->target_age_groups), function ($aq) use ($meeting) {
+                            return $aq->whereHas('ageGroup', function ($ageQ) use ($meeting) {
+                                return $ageQ->whereIn('name', $meeting->target_age_groups);
+                            });
+                        });
+                })
+                // Option B: Anyone who is a Pengurus in the vertical lineage (Bypasses filters)
+                ->orWhere(function ($pq) use ($lineageGroupIds) {
+                    $pq->whereIn('membership_type', ['pengurus', 'PENGURUS'])
+                        ->whereIn('group_id', $lineageGroupIds)
+                        ->orWhereHas('positions', function ($posQ) use ($lineageGroupIds) {
+                            $posQ->whereIn('group_id', $lineageGroupIds);
+                        });
                 });
             })
-            ->where('status', true) // Only active members
             ->limit(10)
             ->get()
-            ->map(function($m) {
+            ->map(function($m) use ($meeting) {
+                $isPengurus = $m->isPengurus();
+                $isTargetAge = false;
+
+                if (!empty($meeting->target_age_groups)) {
+                    $isTargetAge = $m->ageGroup && in_array($m->ageGroup->name, $meeting->target_age_groups);
+                }
+
+                // Hide label if they are target age group, OR if they are not pengurus
+                $label = ($isPengurus && !$isTargetAge) ? " [PENGURUS]" : "";
+                
                 return [
                     'id' => $m->id,
-                    'text' => "{$m->full_name} ({$m->member_code})"
+                    'text' => "{$m->full_name} ({$m->member_code}){$label}"
                 ];
             });
 

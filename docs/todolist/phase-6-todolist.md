@@ -20,11 +20,13 @@ Dokumen ini merinci langkah-langkah implementasi fitur monitoring dasbor untuk p
     *   Kategori "Custom" -> "Widget Scanner".
 *   [x] **Security Shield:** Penambahan `HasPageShield` & `HasWidgetShield` pada semua entitas dasbor agar sinkron dengan centang izin.
 
-## 3. Fitur Import Data Anggota dari Excel - [ON PROGRESS 🏗️]
-*   [ ] **Requirement Check:** Pastikan `maatwebsite/excel` atau library pendukung Filament Import sudah siap.
-*   [ ] **Create Importer Class:** `app/Filament/Imports/MemberImporter.php`.
-*   [ ] **Pencarian Group otomatis:** Mapping `group_id` berdasarkan nama yang diinput di Excel.
-*   [ ] **Auto-Generation QR:** Memastikan anggota yang di-import otomatis memiliki QR Code.
+## 3. Fitur Import Data Anggota dari Excel - [SELESAI ✅]
+*   [x] **Requirement Check:** Pastikan `maatwebsite/excel` atau library pendukung Filament Import sudah siap.
+*   [x] **Create Importer Class:** `app/Filament/Imports/MemberImporter.php`.
+*   [x] **Pencarian Group otomatis:** Mapping `group_id` berdasarkan nama yang diinput di Excel (case-insensitive).
+*   [x] **Auto-Generation QR:** Memastikan anggota yang di-import otomatis memiliki QR Code (via Observer).
+*   [x] **UI Import:** Tombol "Import Anggota" di halaman List Members dengan modal upload.
+*   [x] **Error Handling:** Validasi dan logging untuk baris yang error.
 
 ## 4. Optimasi Performa & Struktur Data Berjenjang - [SELESAI ✅]
 *   [x] **Dashboard Performance Tuning (Shared Hosting Ready):**
@@ -41,14 +43,27 @@ Dokumen ini merinci langkah-langkah implementasi fitur monitoring dasbor untuk p
     *   Standarisasi tampilan UI: Nama Peran otomatis **UPPERCASE** di tabel manajemen pengguna.
     *   Implementasi Hierarchical Access Policy pada Pertemuan (Cegah edit/delete data atasan oleh bawahan).
 
+## 5. Penanganan Khusus Presensi Pengurus (Special Case) - [SELESAI ✅]
+*   [x] **Arsitektur Multi-Jabatan & Kategori:**
+    *   [x] **Database Migration:** Membuat tabel `position_categories` dan `member_positions`.
+    *   [x] **Model Relationship:** Menghubungkan `Member`, `Group`, `PositionCategory`, dan `MemberPosition`.
+    *   [x] **Position Category Management:** Membuat Filament Resource untuk mengelola kategori jabatan.
+*   [x] **UI Pengurus (Member Resource):**
+    *   [x] Implementasi **Repeater** pada form anggota untuk input jabatan (Grup + Kategori + Jabatan).
+    *   [x] Kondisional UI: Hanya muncul atau lebih ditonjolkan jika `membership_type` terpilih.
+*   [x] **Refaktor Logika Scanner:**
+    *   [x] Update `checkMemberEligibility`: Meloloskan validasi kategori usia/gender jika member terdaftar sebagai pengurus di grup tersebut (atau atasan grup tersebut).
+*   [x] **Dashboard Stats Fix:**
+    *   [x] Memastikan statistik "Total Anggota" dan "Presensi" mengabaikan data Pengurus agar angka partisipasi anggota reguler tetap akurat.
+
 ---
 
-## 5. Definition of Done (DoD) - Phase 6
+## 6. Definition of Done (DoD) - Phase 6
 1. [x] Pemangku kebijakan dapat memantau data strategis dan operasional secara real-time di Dasbor.
 2. [x] Fitur "Buka Scanner" hanya muncul dan bisa diakses jika izin dicentang (Full Security).
 3. [x] Dasbor berjalan ringan di Shared Hosting berkat Lazy Loading & Caching.
 4. [x] User tidak dapat mengubah/menghapus data milik atasan (Hierarchical Integrity).
-5. [ ] Admin dapat mengunggah file anggota secara massal (Excel/CSV) tanpa error mapping.
+5. [x] Admin dapat mengunggah file anggota secara massal (Excel) tanpa error mapping.
 
 ---
 *Status: Aktif (18 Feb 2026 - Update Performance & Hierarchy).*

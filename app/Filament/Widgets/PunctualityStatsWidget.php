@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Meeting;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 
 class PunctualityStatsWidget extends ChartWidget
 {
@@ -46,7 +47,7 @@ class PunctualityStatsWidget extends ChartWidget
         $ref = $this->getReferenceMeeting();
         $cacheKey = 'punctuality_stats_' . ($user->group_id ?? 'all') . '_' . ($ref->id ?? 'today');
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($user, $ref) {
+        return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
             $query = Attendance::query();
             if ($ref) {
                 $query->where('meeting_id', $ref->id);
@@ -55,7 +56,9 @@ class PunctualityStatsWidget extends ChartWidget
             }
 
             if (!$user->isSuperAdmin() && $user->group_id) {
-                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
+                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds())->where('membership_type', '!=', 'pengurus'));
+            } else {
+                $query->whereHas('member', fn($q) => $q->where('membership_type', '!=', 'pengurus'));
             }
 
             $total = $query->count();

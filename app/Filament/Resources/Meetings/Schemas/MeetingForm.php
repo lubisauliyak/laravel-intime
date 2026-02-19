@@ -15,6 +15,8 @@ use App\Models\Level;
 use App\Models\Group;
 use App\Models\AgeGroup;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Hidden;
+use Illuminate\Support\Carbon;
 
 class MeetingForm
 {
@@ -45,7 +47,7 @@ class MeetingForm
                             ->required(),
                         CheckboxList::make('target_age_groups')
                             ->label('Target Kategori Usia')
-                            ->options(AgeGroup::all()->pluck('name', 'name'))
+                            ->options(AgeGroup::orderBy('sort_order')->pluck('name', 'name'))
                             ->columns(2)
                             ->gridDirection('vertical'),
                     ]),
@@ -62,7 +64,7 @@ class MeetingForm
                             ->live()
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if ($state) {
-                                    $checkinTime = \Carbon\Carbon::parse($state)->subMinutes(30)->format('H:i');
+                                    $checkinTime = Carbon::parse($state)->subMinutes(30)->format('H:i');
                                     $set('checkin_open_time', $checkinTime);
                                 }
                             }),
@@ -119,7 +121,7 @@ class MeetingForm
                             ->required(),
                     ])->columns(2),
 
-                \Filament\Forms\Components\Hidden::make('created_by')
+                Hidden::make('created_by')
                     ->default(auth()->id())
                     ->required(),
             ]);

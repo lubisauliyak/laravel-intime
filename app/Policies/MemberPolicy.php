@@ -72,4 +72,9 @@ class MemberPolicy
         return $authUser->can('Export:Member');
     }
 
+    public function import(AuthUser $authUser, Member $member): bool
+    {
+        return $authUser->can('Import:Member');
+    }
+
 }

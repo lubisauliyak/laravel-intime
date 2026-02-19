@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources\Groups\Schemas;
 
+use App\Models\Group;
+use App\Models\Level;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rules\Unique;
 
 class GroupForm
 {
@@ -19,7 +23,7 @@ class GroupForm
                     ->relationship(
                         name: 'level',
                         titleAttribute: 'name',
-                        modifyQueryUsing: function (\Illuminate\Database\Eloquent\Builder $query) {
+                        modifyQueryUsing: function (Builder $query) {
                             $user = auth()->user();
                             
                             // Super Admin can select all levels
@@ -49,13 +53,13 @@ class GroupForm
                     ->relationship(
                         name: 'parent',
                         titleAttribute: 'groups.name',
-                        modifyQueryUsing: function (\Illuminate\Database\Eloquent\Builder $query, Get $get) {
+                        modifyQueryUsing: function (Builder $query, Get $get) {
                             $levelId = $get('level_id');
                             if (! $levelId) {
                                 return $query->whereRaw('1 = 0');
                             }
 
-                            $level = \App\Models\Level::find($levelId);
+                            $level = Level::find($levelId);
                             if (! $level) {
                                 return $query;
                             }
@@ -89,7 +93,7 @@ class GroupForm
                     ->live()
                     ->formatStateUsing(function ($state) {
                         if (!$state) return null;
-                        return \App\Models\Group::where('id', $state)->exists() ? $state : null;
+                        return Group::where('id', $state)->exists() ? $state : null;
                     })
                     ->dehydrated(fn ($state) => filled($state)),
                 TextInput::make('name')
@@ -98,10 +102,10 @@ class GroupForm
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
                     ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state))
                     ->unique(
-                        table: \App\Models\Group::class,
+                        table: Group::class,
                         column: 'name',
                         ignorable: fn ($record) => $record,
-                        modifyRuleUsing: function (\Illuminate\Validation\Rules\Unique $rule, Get $get) {
+                        modifyRuleUsing: function (Unique $rule, Get $get) {
                             return $rule->where('parent_id', $get('parent_id'));
                         }
                     )

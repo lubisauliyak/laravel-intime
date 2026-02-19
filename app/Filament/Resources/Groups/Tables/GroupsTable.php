@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Groups\Tables;
 
+use App\Models\Level;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
@@ -74,7 +76,7 @@ class GroupsTable
                     ->label('Tempat Sampah'),
             ])
             ->actions([
-                \Filament\Actions\ActionGroup::make([
+                ActionGroup::make([
                     EditAction::make()
                         ->label('Ubah')
                         ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
@@ -84,7 +86,7 @@ class GroupsTable
                 ])
             ])
             ->modifyQueryUsing(fn ($query) => $query
-                ->addSelect(['level_sort' => \App\Models\Level::select('level_number')
+                ->addSelect(['level_sort' => Level::select('level_number')
                     ->whereColumn('levels.id', 'groups.level_id')
                     ->limit(1)
                 ])

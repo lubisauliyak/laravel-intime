@@ -3,15 +3,15 @@
 namespace App\Filament\Resources\Members\Schemas;
 
 use App\Models\Member;
-use Illuminate\Support\Facades\Storage;
-
+use Filament\Actions\Action;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Support\Enums\FontWeight;
+use Illuminate\Support\Facades\Storage;
 
 class MemberInfolist
 {
@@ -41,9 +41,11 @@ class MemberInfolist
                                 TextEntry::make('membership_type')
                                     ->label('Kepengurusan')
                                     ->badge()
-                                    ->color(fn (string $state): string => match (strtoupper($state)) {
-                                        'ANGGOTA' => 'gray',
-                                        default => 'primary',
+                                    ->formatStateUsing(fn (string $state): string => strtoupper($state))
+                                    ->color(fn (string $state): string => match (strtolower($state)) {
+                                        'anggota' => 'gray',
+                                        'pengurus' => 'primary',
+                                        default => 'gray',
                                     }),
                             ]),
                     ])->columnSpan(['default' => 'full', 'lg' => 2]),
@@ -69,7 +71,7 @@ class MemberInfolist
                     ])
                     ->columnSpan(['default' => 'full', 'lg' => 1])
                     ->headerActions([
-                        \Filament\Actions\Action::make('download_qr')
+                        Action::make('download_qr')
                             ->label('')
                             ->icon('heroicon-o-arrow-down-tray')
                             ->color('success')

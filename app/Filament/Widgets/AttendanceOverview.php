@@ -8,6 +8,7 @@ use App\Models\Meeting;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Cache;
 
 class AttendanceOverview extends StatsOverviewWidget
 {
@@ -24,7 +25,7 @@ class AttendanceOverview extends StatsOverviewWidget
         $user = auth()->user();
         $cacheKey = 'attendance_overview_' . ($user->group_id ?? 'all');
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($user) {
+        return Cache::remember($cacheKey, 60, function () use ($user) {
             // Find reference meeting (today or latest past)
             $meetingQuery = Meeting::where('meeting_date', '<=', now()->toDateString());
             if (!$user->isSuperAdmin() && $user->group_id) {

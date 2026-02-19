@@ -18,6 +18,7 @@ use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -58,6 +59,11 @@ class AgeGroupResource extends Resource
                     ->maxLength(50)
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
                     ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state)),
+                TextInput::make('sort_order')
+                    ->label('Urutan')
+                    ->numeric()
+                    ->default(0)
+                    ->minValue(0),
                 TextInput::make('min_age')
                     ->label('Usia Minimum')
                     ->numeric()
@@ -73,22 +79,23 @@ class AgeGroupResource extends Resource
     {
         return $table
             ->recordTitleAttribute('name')
+            ->defaultSort('sort_order', 'ASC')
             ->columns([
+                TextColumn::make('sort_order')
+                    ->label('Urutan')
+                    ->numeric(),
                 TextColumn::make('name')
-                    ->label('Kategori')
+                    ->label('Kategori Usia')
                     ->searchable(),
                 TextColumn::make('code')
-                    ->label('Kode')
-                    ->searchable(),
+                    ->label('Kode'),
                 TextColumn::make('min_age')
                     ->label('Min')
                     ->numeric()
-                    ->sortable()
                     ->suffix(' Thn'),
                 TextColumn::make('max_age')
                     ->label('Max')
                     ->numeric()
-                    ->sortable()
                     ->formatStateUsing(fn ($state) => $state ?? '∞')
                     ->suffix(fn ($state) => $state ? ' Thn' : ''),
             ])
@@ -97,7 +104,7 @@ class AgeGroupResource extends Resource
                     ->label('Tempat Sampah'),
             ])
             ->actions([
-                \Filament\Actions\ActionGroup::make([
+                ActionGroup::make([
                     EditAction::make()
                         ->label('Ubah'),
                     DeleteAction::make()

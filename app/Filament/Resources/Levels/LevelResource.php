@@ -30,7 +30,7 @@ class LevelResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Data Master';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $modelLabel = 'Tingkat Hirarki';
 
@@ -78,44 +78,37 @@ class LevelResource extends Resource
         return $table
             ->recordTitleAttribute('name')
             ->columns([
+                TextColumn::make('level_number')
+                    ->label('Angka Hirarki')
+                    ->numeric(),
                 TextColumn::make('name')
                     ->label('Nama Level')
                     ->searchable(),
                 TextColumn::make('code')
                     ->label('Kode')
                     ->searchable(),
-                TextColumn::make('level_number')
-                    ->label('Angka Hirarki')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->label('Dibuat Pada')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->label('Diperbarui Pada')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
-            ->actions([
-                \Filament\Actions\ActionGroup::make([
-                    EditAction::make()
-                        ->label('Ubah'),
-                    DeleteAction::make()
-                        ->label('Hapus'),
-                    RestoreAction::make()
-                        ->label('Pulihkan'),
-                    ForceDeleteAction::make()
-                        ->label('Hapus Permanen'),
-                ])
-            ])
             ->defaultSort('level_number', 'desc')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->label('Hapus Terpilih'),
+                    RestoreBulkAction::make()
+                        ->label('Pulihkan Terpilih'),
+                    ForceDeleteBulkAction::make()
+                        ->label('Hapus Permanen Terpilih'),
+                ])->label('Aksi Massal'),
+            ])
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
+            ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()

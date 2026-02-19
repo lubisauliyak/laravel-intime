@@ -16,11 +16,13 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 class AttendanceReport extends Page implements HasTable
 {
     use InteractsWithTable;
-    use \BezhanSalleh\FilamentShield\Traits\HasPageShield;
+    use HasPageShield;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
     protected static string|\UnitEnum|null $navigationGroup = 'Presensi & Laporan';
@@ -50,11 +52,14 @@ class AttendanceReport extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
+            ->defaultSort('age_group_id', 'ASC')
             ->query(function () {
                 $user = auth()->user();
-                $query = Member::query()->where('status', true);
+                $query = Member::query()
+                    ->with(['group', 'ageGroup'])
+                    ->where('status', true);
                 
-                if (!auth()->user()->isSuperAdmin()) {
+                if (!$user->isSuperAdmin()) {
                     if ($user->group_id) {
                         $descendantIds = $user->group->getAllDescendantIds();
                         $query->whereIn('group_id', $descendantIds);
@@ -79,134 +84,22 @@ class AttendanceReport extends Page implements HasTable
                     ->sortable(),
                 TextColumn::make('total_sessions')
                     ->label('Total Sesi')
-                    ->state(function (Member $record): int {
-                        $filters = $this->tableFilters;
-                        $from = $filters['meeting_date']['from'] ?? null;
-                        $until = $filters['meeting_date']['until'] ?? null;
-                        
-                        $groupIds = array_merge([$record->group_id], $record->group->getAllAncestorIds());
-                        
-                        return Meeting::whereIn('group_id', $groupIds)
-                            ->where(function ($query) use ($record) {
-                                $query->where('target_gender', 'all')
-                                    ->orWhere('target_gender', $record->gender);
-                            })
-                            ->where(function ($query) use ($record) {
-                                $query->whereNull('target_age_groups')
-                                    ->orWhere(function ($q) use ($record) {
-                                        if (!$record->age_group_id) return $q->whereRaw('1=1');
-                                        return $q->whereJsonLength('target_age_groups', 0)
-                                            ->orWhereJsonContains('target_age_groups', (string)$record->age_group_id);
-                                    });
-                            })
-                            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until))
-                            ->whereDate('meeting_date', '>=', $record->created_at->toDateString())
-                            ->count();
-                    }),
+                    ->state(fn (Member $record): int => $this->getMemberStats($record)['total']),
                 TextColumn::make('attended_count')
                     ->label('Hadir')
-                    ->state(function (Member $record): int {
-                        $filters = $this->tableFilters;
-                        $from = $filters['meeting_date']['from'] ?? null;
-                        $until = $filters['meeting_date']['until'] ?? null;
-                        
-                        return $record->attendances()
-                            ->where('status', 'hadir')
-                            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
-                            ->count();
-                    }),
+                    ->state(fn (Member $record): int => $this->getMemberStats($record)['attended']),
                 TextColumn::make('excused_count')
                     ->label('Izin / Sakit')
-                    ->state(function (Member $record): int {
-                        $filters = $this->tableFilters;
-                        $from = $filters['meeting_date']['from'] ?? null;
-                        $until = $filters['meeting_date']['until'] ?? null;
-                        
-                        return $record->attendances()
-                            ->whereIn('status', ['izin', 'sakit'])
-                            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
-                            ->count();
-                    }),
+                    ->state(fn (Member $record): int => $this->getMemberStats($record)['excused']),
                 TextColumn::make('absent_count')
                     ->label('Tanpa Keterangan')
-                    ->state(function (Member $record): int {
-                        $filters = $this->tableFilters;
-                        $from = $filters['meeting_date']['from'] ?? null;
-                        $until = $filters['meeting_date']['until'] ?? null;
-
-                        // Total targeted sessions
-                        $groupIds = array_merge([$record->group_id], $record->group->getAllAncestorIds());
-                        $total = Meeting::whereIn('group_id', $groupIds)
-                            ->where(function ($query) use ($record) {
-                                $query->where('target_gender', 'all')
-                                    ->orWhere('target_gender', $record->gender);
-                            })
-                            ->where(function ($query) use ($record) {
-                                $query->whereNull('target_age_groups')
-                                    ->orWhere(function ($q) use ($record) {
-                                        if (!$record->age_group_id) return $q->whereRaw('1=1');
-                                        return $q->whereJsonLength('target_age_groups', 0)
-                                            ->orWhereJsonContains('target_age_groups', (string)$record->age_group_id);
-                                    });
-                            })
-                            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until))
-                            ->whereDate('meeting_date', '>=', $record->created_at->toDateString())
-                            ->count();
-
-                        $attended = $record->attendances()
-                            ->where('status', 'hadir')
-                            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
-                            ->count();
-
-                        $excused = $record->attendances()
-                            ->whereIn('status', ['izin', 'sakit'])
-                            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
-                            ->count();
-
-                        return max(0, $total - $attended - $excused);
-                    }),
+                    ->state(fn (Member $record): int => $this->getMemberStats($record)['absent']),
                 TextColumn::make('attendance_rate')
                     ->label('% Kehadiran')
-                    ->state(function (Member $record, $column): string {
-                        $filters = $this->tableFilters;
-                        $from = $filters['meeting_date']['from'] ?? null;
-                        $until = $filters['meeting_date']['until'] ?? null;
-
-                        $groupIds = array_merge([$record->group_id], $record->group->getAllAncestorIds());
-                        
-                        $total = Meeting::whereIn('group_id', $groupIds)
-                            ->where(function ($query) use ($record) {
-                                $query->where('target_gender', 'all')
-                                    ->orWhere('target_gender', $record->gender);
-                            })
-                            ->where(function ($query) use ($record) {
-                                $query->whereNull('target_age_groups')
-                                    ->orWhere(function ($q) use ($record) {
-                                        if (!$record->age_group_id) return $q->whereRaw('1=1');
-                                        return $q->whereJsonLength('target_age_groups', 0)
-                                            ->orWhereJsonContains('target_age_groups', (string)$record->age_group_id);
-                                    });
-                            })
-                            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until))
-                            ->whereDate('meeting_date', '>=', $record->created_at->toDateString())
-                            ->count();
-
-                        if ($total === 0) return '0%';
-
-                        $attended = $record->attendances()
-                            ->where('status', 'hadir')
-                            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
-                            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
-                            ->count();
-
-                        return number_format(($attended / $total) * 100, 1) . '%';
+                    ->state(function (Member $record): string {
+                        $stats = $this->getMemberStats($record);
+                        if ($stats['total'] === 0) return '0%';
+                        return number_format(($stats['attended'] / $stats['total']) * 100, 1) . '%';
                     })
                     ->badge()
                     ->color(fn (string $state): string => match (true) {
@@ -250,5 +143,61 @@ class AttendanceReport extends Page implements HasTable
                         return $query;
                     })
             ]);
+    }
+
+    protected array $statsCache = [];
+
+    protected function getMemberStats(Member $record): array
+    {
+        if (isset($this->statsCache[$record->id])) {
+            return $this->statsCache[$record->id];
+        }
+
+        $filters = $this->tableFilters;
+        $from = $filters['meeting_date']['from'] ?? null;
+        $until = $filters['meeting_date']['until'] ?? null;
+
+        // 1. Total targeted sessions
+        $groupIds = array_merge([$record->group_id], $record->group->getAllAncestorIds());
+        $total = Meeting::whereIn('group_id', $groupIds)
+            ->where(function ($query) use ($record) {
+                $query->where('target_gender', 'all')
+                    ->orWhere('target_gender', $record->gender);
+            })
+            ->where(function ($query) use ($record) {
+                $query->where(function ($q) {
+                    $q->whereNull('target_age_groups')
+                        ->orWhereJsonLength('target_age_groups', 0);
+                });
+
+                if ($record->ageGroup) {
+                    $query->orWhereJsonContains('target_age_groups', $record->ageGroup->name);
+                }
+            })
+            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
+            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until))
+            ->whereDate('meeting_date', '>=', $record->created_at->toDateString())
+            ->count();
+
+        // 2. Attended count
+        $attended = $record->attendances()
+            ->where('status', 'hadir')
+            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
+            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
+            ->count();
+
+        // 3. Excused count
+        $excused = $record->attendances()
+            ->whereIn('status', ['izin', 'sakit'])
+            ->when($from, fn ($q) => $q->whereDate('checkin_time', '>=', $from))
+            ->when($until, fn ($q) => $q->whereDate('checkin_time', '<=', $until))
+            ->count();
+
+        return $this->statsCache[$record->id] = [
+            'total' => $total,
+            'attended' => $attended,
+            'excused' => $excused,
+            'absent' => max(0, $total - $attended - $excused),
+        ];
     }
 }

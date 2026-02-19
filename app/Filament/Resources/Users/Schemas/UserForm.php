@@ -8,6 +8,8 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Database\Eloquent\Builder;
+use Spatie\Permission\Models\Role;
 
 class UserForm
 {
@@ -39,7 +41,7 @@ class UserForm
                     ->relationship(
                         name: 'group',
                         titleAttribute: 'groups.name',
-                        modifyQueryUsing: function (\Illuminate\Database\Eloquent\Builder $query) {
+                        modifyQueryUsing: function (Builder $query) {
                             $user = auth()->user();
                             
                             $query->where('groups.status', true)
@@ -79,9 +81,9 @@ class UserForm
                     ->options(function () {
                         $user = auth()->user();
                         $superAdminRole = config('filament-shield.super_admin.name', 'super_admin');
-                        
-                        $query = \Spatie\Permission\Models\Role::query();
-                        
+
+                        $query = Role::query();
+
                         if (!$user->isSuperAdmin()) {
                             $query->where('name', '!=', $superAdminRole);
                         }

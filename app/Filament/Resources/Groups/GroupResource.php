@@ -6,12 +6,14 @@ use App\Filament\Resources\Groups\Pages\ManageGroups;
 use App\Filament\Resources\Groups\Schemas\GroupForm;
 use App\Filament\Resources\Groups\Tables\GroupsTable;
 use App\Models\Group;
+use App\Models\Level;
 use BackedEnum;
 use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class GroupResource extends Resource
 {
@@ -21,7 +23,7 @@ class GroupResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Data Master';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $modelLabel = 'Grup';
 
@@ -60,7 +62,7 @@ class GroupResource extends Resource
         }
         
         // Check if there are any levels below the user's level
-        $lowestLevelNumber = \App\Models\Level::min('level_number');
+        $lowestLevelNumber = Level::min('level_number');
         
         // If user is at the lowest level, they cannot create groups
         return $userLevelNumber > $lowestLevelNumber;
@@ -73,7 +75,7 @@ class GroupResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
         $user = auth()->user();

@@ -19,10 +19,20 @@ class User extends Authenticatable implements FilamentUser
     {
         if ($panel->getId() === 'admin') {
             // Menggunakan permission check atau role check yang terpusat
-            return $this->hasAnyRole(['super_admin', 'admin', 'operator']);
+            return $this->hasAnyRole(['super_admin', 'admin', 'operator', 'pengurus']);
         }
 
         return false;
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            // Auto-verify email so new users can login immediately
+            if (! $user->email_verified_at) {
+                $user->email_verified_at = now();
+            }
+        });
     }
 
     /**

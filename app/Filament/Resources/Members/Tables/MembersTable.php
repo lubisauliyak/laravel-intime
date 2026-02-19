@@ -24,15 +24,19 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use App\Models\Member;
 use App\Models\AgeGroup;
+use App\Models\Level;
+use Filament\Actions\ActionGroup;
+use ZipArchive;
 
 class MembersTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('age_group_id', 'ASC')
             ->columns([
                 TextColumn::make('member_code')
-                    ->label('ID')
+                    ->label('ID Anggota')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
@@ -83,7 +87,7 @@ class MembersTable
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => strtoupper($state))
                     ->color(fn (string $state): string => match (strtoupper($state)) {
-                        'ANGGOTA' => 'gray',
+                        'anggota' => 'gray',
                         default => 'primary',
                     })
                     ->sortable()
@@ -122,31 +126,28 @@ class MembersTable
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->searchable()
                     ->preload(),
-                SelectFilter::make('age')
-                    ->label('Usia')
-                    ->multiple()
-                    ->options(fn () => Member::query()->distinct()->whereNotNull('age')->orderBy('age')->pluck('age', 'age')->toArray()),
                 SelectFilter::make('age_group_id')
-                    ->label('Kategori')
+                    ->label('Kategori Usia')
                     ->multiple()
                     ->relationship('ageGroup', 'name')
                     ->preload(),
                 SelectFilter::make('gender')
                     ->label('L/P')
-                    ->multiple()
                     ->options([
                         'male' => 'Laki-laki',
                         'female' => 'Perempuan',
                     ]),
                 SelectFilter::make('membership_type')
                     ->label('Keanggotaan')
-                    ->multiple()
-                    ->options(fn () => Member::query()->distinct()->whereNotNull('membership_type')->orderBy('membership_type')->pluck('membership_type', 'membership_type')->toArray()),
+                    ->options([
+                        'anggota' => 'Anggota',
+                        'pengurus' => 'Pengurus',
+                    ]),
                 TrashedFilter::make()
                     ->label('Tempat Sampah'),
             ])
             ->actions([
-                \Filament\Actions\ActionGroup::make([
+                ActionGroup::make([
                     ViewAction::make()
                         ->label('Lihat'),
                     Action::make('download_qr')
@@ -185,9 +186,9 @@ class MembersTable
                         ->action(function (Collection $records) {
                             $zipName = 'QR_Codes_' . now()->format('Ymd_His') . '.zip';
                             $zipPath = storage_path('app/public/' . $zipName);
-                            $zip = new \ZipArchive;
+                            $zip = new ZipArchive;
                             
-                            if ($zip->open($zipPath, \ZipArchive::CREATE) === TRUE) {
+                            if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
                                 foreach ($records as $record) {
                                     if ($record->qr_code_path && Storage::disk('public')->exists($record->qr_code_path)) {
                                         $filePath = Storage::disk('public')->path($record->qr_code_path);
@@ -211,7 +212,7 @@ class MembersTable
 
     protected static function getDynamicLevelColumns(): array
     {
-        return \App\Models\Level::orderBy('level_number', 'desc')->get()->map(function ($level) {
+        return Level::orderBy('level_number', 'desc')->get()->map(function ($level) {
             if ($level->level_number === 1) {
                 return TextColumn::make('group.name')
                     ->label(ucwords(strtolower($level->name)))
