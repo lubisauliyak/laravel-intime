@@ -35,4 +35,24 @@ class Attendance extends Model
     {
         return $this->belongsTo(Member::class);
     }
+
+    /**
+     * Scope for attendances that match meeting target age groups.
+     */
+    public function scopeTargetOnly($query, Meeting $meeting)
+    {
+        return $query->whereHas('member', function ($q) use ($meeting) {
+            $q->whereIn('age_group_id', $meeting->target_age_groups ?? []);
+        });
+    }
+
+    /**
+     * Scope for attendances by members with 'pengurus' membership type.
+     */
+    public function scopePengurusOnly($query)
+    {
+        return $query->whereHas('member', function ($q) {
+            $q->where('membership_type', 'pengurus');
+        });
+    }
 }

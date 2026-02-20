@@ -51,6 +51,10 @@ class LiveScannerController extends Controller
         $isLate = now()->greaterThan($meeting->meeting_date->setTimeFrom($meeting->start_time));
         $notes = $isLate ? 'TERLAMBAT' : null;
 
+        $isGlobalPengurus = strcasecmp($member->membership_type, 'pengurus') === 0;
+        $isLineagePengurus = $member->hasPositionIn($meeting->group);
+        $isTargetAge = empty($meeting->target_age_groups) || ($member->ageGroup && in_array($member->ageGroup->name, $meeting->target_age_groups));
+
         Attendance::create([
             'meeting_id' => $meeting->id,
             'member_id' => $member->id,
@@ -60,7 +64,8 @@ class LiveScannerController extends Controller
             'notes' => $notes,
         ]);
 
-        $message = "Berhasil absen: {$member->full_name}";
+        $label = ($isGlobalPengurus || $isLineagePengurus) && !$isTargetAge ? " [PENGURUS]" : "";
+        $message = "Berhasil absen: {$member->full_name}{$label}";
         if ($isLate) {
             $message .= " (TERLAMBAT)";
         }
@@ -113,11 +118,13 @@ class LiveScannerController extends Controller
             ]);
         }
 
-        // 5. Check if Member is Pengurus for this meeting
-        $isPengurus = $member->isPengurus() && $member->hasPositionIn($meeting->group);
+        // 5. Check if Member is Pengurus (Lineage or Global)
+        $isGlobalPengurus = strcasecmp($member->membership_type, 'pengurus') === 0;
+        $isPengurusLineage = $member->hasPositionIn($meeting->group);
+        $canBypassFilters = $isGlobalPengurus || $isPengurusLineage;
 
-        // 6. Validation: Group Hierarchy (For regular members)
-        if (!$isPengurus) {
+        // 6. Validation: Group Hierarchy (Bypassed by Pengurus)
+        if (!$canBypassFilters) {
             $allowedGroupIds = $meeting->group->getAllDescendantIds();
             if (!in_array($member->group_id, $allowedGroupIds)) {
                 return response()->json([
@@ -128,7 +135,7 @@ class LiveScannerController extends Controller
         }
 
         // 7. Validation: Target Gender (Bypassed by Pengurus)
-        if (!$isPengurus && $meeting->target_gender !== 'all' && $member->gender !== $meeting->target_gender) {
+        if (!$canBypassFilters && $meeting->target_gender !== 'all' && $member->gender !== $meeting->target_gender) {
             $targetLabel = $meeting->target_gender === 'male' ? 'Laki-laki' : 'Perempuan';
             return response()->json([
                 'status' => 'warning',
@@ -137,7 +144,7 @@ class LiveScannerController extends Controller
         }
 
         // 8. Validation: Target Age Groups (Bypassed by Pengurus)
-        if (!$isPengurus && !empty($meeting->target_age_groups)) {
+        if (!$canBypassFilters && !empty($meeting->target_age_groups)) {
             $memberAgeGroupName = $member->ageGroup?->name;
             if (!in_array($memberAgeGroupName, $meeting->target_age_groups)) {
                 return response()->json([
@@ -177,10 +184,9 @@ class LiveScannerController extends Controller
                             });
                         });
                 })
-                // Option B: Anyone who is a Pengurus in the vertical lineage (Bypasses filters)
+                // Option B: Anyone who is a Pengurus (Global or in Lineage)
                 ->orWhere(function ($pq) use ($lineageGroupIds) {
                     $pq->whereIn('membership_type', ['pengurus', 'PENGURUS'])
-                        ->whereIn('group_id', $lineageGroupIds)
                         ->orWhereHas('positions', function ($posQ) use ($lineageGroupIds) {
                             $posQ->whereIn('group_id', $lineageGroupIds);
                         });
@@ -282,8 +288,13 @@ class LiveScannerController extends Controller
             'notes' => $finalNotes,
         ]);
 
+        $isGlobalPengurus = strcasecmp($member->membership_type, 'pengurus') === 0;
+        $isLineagePengurus = $member->hasPositionIn($meeting->group);
+        $isTargetAge = empty($meeting->target_age_groups) || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
+        $label = ($isGlobalPengurus || $isLineagePengurus) && !$isTargetAge ? " [PENGURUS]" : "";
+
         $statusLabel = strtoupper($status);
-        $message = "Berhasil ($statusLabel): {$member->full_name}";
+        $message = "Berhasil ($statusLabel): {$member->full_name}{$label}";
         if ($isLate) $message .= " (TERLAMBAT)";
 
         return response()->json(['status' => 'success', 'message' => $message]);

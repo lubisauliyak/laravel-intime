@@ -9,3 +9,396 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* =========================================
+   Mobile Responsive Enhancements for inTime
+   ========================================= */
+
+/* 
+ * MOBILE (< 768px)
+ * Stack everything vertically
+ */
+@media (max-width: 767px) {
+    /* Stats Overview Widget - Stack cards vertically */
+    .fi-stats-overview-widget .fi-stats-overview-widget-stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem;
+    }
+    
+    /* Stat card - full width */
+    .fi-stats-overview-widget-stat {
+        min-width: 100% !important;
+    }
+
+    /* Chart widgets - full width */
+    .fi-widget.chart-widget {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* Table widgets - full width */
+    .fi-widget.table-widget {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* Reduce main container padding */
+    .fi-main-ctnr {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    /* Page heading - smaller on mobile */
+    .fi-header-heading {
+        font-size: 1.25rem !important;
+    }
+
+    /* Hide non-essential elements on mobile */
+    .fi-header-description {
+        font-size: 0.875rem !important;
+    }
+}
+
+/* 
+ * TABLET (768px - 1024px)
+ * 2-column layout
+ */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .fi-stats-overview-widget .fi-stats-overview-widget-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .fi-dashboard-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* 
+ * DESKTOP (> 1024px) - KEEP ORIGINAL LAYOUT
+ * No changes - let Filament handle default layout
+ */
+
+/* =========================================
+   Touch-Friendly Improvements (Mobile & Tablet)
+   ========================================= */
+@media (max-width: 1024px) {
+    /* Buttons - min 44px touch target */
+    .fi-btn, 
+    .fi-action,
+    .fi-btn-group-btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0.5rem 1rem !important;
+    }
+
+    /* Icon buttons */
+    .fi-icon-btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0.5rem !important;
+    }
+
+    /* Table rows - more padding */
+    .fi-table-row {
+        min-height: 56px;
+    }
+
+    /* Table cells - more padding */
+    .fi-table-cell {
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    /* Form inputs - larger on mobile (prevents iOS zoom) */
+    .fi-input, 
+    .fi-select-input, 
+    .fi-textarea,
+    .fi-toggle-input,
+    .fi-checkbox-input {
+        min-height: 44px;
+        font-size: 16px !important;
+        padding: 0.75rem 1rem !important;
+    }
+
+    /* Select dropdowns */
+    .fi-select {
+        min-height: 44px;
+    }
+
+    /* Search inputs */
+    .fi-search-input {
+        min-height: 44px;
+        font-size: 16px !important;
+    }
+
+    /* Filter badges - easier to tap */
+    .fi-badge {
+        min-height: 32px;
+        padding: 0.25rem 0.75rem !important;
+    }
+
+    /* Action buttons in tables */
+    .fi-table-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+}
+
+/* =========================================
+   Table Horizontal Scroll (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    .fi-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 0.5rem;
+    }
+
+    .fi-table {
+        min-width: 600px; /* Forces scroll on small screens */
+    }
+
+    /* Sticky first column for context */
+    .fi-table-cell:first-child {
+        position: sticky;
+        left: 0;
+        background: inherit;
+        z-index: 10;
+    }
+}
+
+/* =========================================
+   Dashboard Grid Layout
+   ========================================= */
+@media (max-width: 640px) {
+    .fi-dashboard-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+    .fi-dashboard-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* Desktop keeps default Filament layout */
+
+/* =========================================
+   Navigation & Sidebar (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    /* Sidebar hidden by default on mobile */
+    .fi-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .fi-sidebar-open .fi-sidebar {
+        transform: translateX(0);
+    }
+
+    /* Overlay when sidebar is open */
+    .fi-sidebar-open .fi-main {
+        position: relative;
+    }
+
+    .fi-sidebar-open .fi-main::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+    }
+
+    /* Top bar adjustments */
+    .fi-topbar {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    /* Hamburger menu button - ensure visible */
+    .fi-sidebar-open-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* =========================================
+   Forms (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    /* Form layout - single column */
+    .fi-form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Field wrapper - full width */
+    .fi-field {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* File upload - larger drop zone */
+    .fi-file-upload {
+        min-height: 120px;
+    }
+
+    /* Checkbox/radio - larger tap area */
+    .fi-checkbox-wrapper,
+    .fi-radio-wrapper {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+}
+
+/* =========================================
+   Cards & Sections (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    /* Section - reduce padding */
+    .fi-section {
+        padding: 0.75rem !important;
+    }
+
+    .fi-section-header {
+        padding: 0.75rem !important;
+    }
+
+    .fi-section-content {
+        padding: 0.75rem !important;
+    }
+
+    /* Card - full width */
+    .fi-card {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+}
+
+/* =========================================
+   Modals & Slide-overs (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    /* Modal - full screen */
+    .fi-modal-window {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+
+    .fi-modal-content {
+        padding: 1rem !important;
+    }
+
+    /* Slide-over - full width */
+    .fi-slide-over {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+}
+
+/* =========================================
+   Pagination (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    .fi-pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .fi-pagination-item {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .fi-pagination-previous,
+    .fi-pagination-next {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* =========================================
+   Notifications (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    .fi-notification {
+        width: calc(100% - 1.5rem) !important;
+        max-width: none !important;
+    }
+}
+
+/* =========================================
+   Widgets Specific (Meeting-related included)
+   ========================================= */
+@media (max-width: 767px) {
+    /* All chart widgets - full width */
+    .fi-widget[id*="punctuality"],
+    .fi-widget[id*="gender"],
+    .fi-widget[id*="attendance"],
+    .fi-widget[id*="scanning"],
+    .fi-widget[id*="age-group"],
+    .fi-widget[id*="ranking"] {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* Chart containers responsive */
+    .fi-widget canvas {
+        max-height: 300px !important;
+    }
+}
+
+/* =========================================
+   Scanner Page (Mobile Specific)
+   ========================================= */
+@media (max-width: 767px) {
+    /* Scanner container adjustments */
+    #reader-container {
+        max-width: 100% !important;
+    }
+
+    /* Manual search select */
+    #manual-search {
+        min-height: 44px;
+        font-size: 16px !important;
+    }
+
+    /* Action buttons stack */
+    .grid.grid-cols-3 {
+        grid-template-columns: 1fr !important;
+        gap: 0.5rem;
+    }
+}
+
+/* =========================================
+   Landing Page (Mobile)
+   ========================================= */
+@media (max-width: 767px) {
+    /* Hero section */
+    .landing-hero h1 {
+        font-size: 1.75rem !important;
+    }
+
+    /* Feature cards stack */
+    .landing-features {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Stats grid */
+    .landing-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* CTA buttons */
+    .landing-cta {
+        flex-direction: column !important;
+        width: 100%;
+    }
+
+    .landing-cta a {
+        width: 100% !important;
+        text-align: center;
+    }
+}

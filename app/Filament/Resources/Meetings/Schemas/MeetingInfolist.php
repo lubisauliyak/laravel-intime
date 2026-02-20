@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Meetings\Schemas;
 
 use App\Models\Meeting;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
@@ -86,6 +87,74 @@ class MeetingInfolist
                             ->placeholder('Tidak ada keterangan tambahan.')
                             ->columnSpanFull()
                             ->prose(),
+                    ])
+                    ->columnSpanFull(),
+
+                Section::make('Kehadiran Pengurus')
+                    ->description('Daftar anggota pengurus yang hadir pada pertemuan ini.')
+                    ->collapsible()
+                    ->collapsed()
+                    ->visible(fn () => auth()->user()->hasAnyRole(['super_admin', 'admin', 'pengurus']))
+                    ->schema([
+                        RepeatableEntry::make('pengurusAttendances')
+                            ->hiddenLabel()
+                            ->state(function (Meeting $record) {
+                                return $record->attendances()
+                                    ->whereHas('member', function ($q) {
+                                        $q->whereIn('membership_type', ['pengurus', 'PENGURUS'])
+                                          ->orWhereHas('positions');
+                                    })
+                                    ->with(['member.positions.category', 'member.positions.group.level', 'member.positions.group.parent'])
+                                    ->get()
+                                    ->sortBy(function ($attendance) {
+                                        $primary = $attendance->member->getPrimaryPosition();
+                                        return [
+                                            $primary?->category?->sort_order ?? 7, // Urutan Kategori (Awal = Kecil)
+                                            -($primary?->group?->level?->level_number ?? 1), // Level Grup (Tinggi = Angka Besar)
+                                            $primary?->group?->parent?->name, // Nama Parent Grup
+                                            $primary?->group?->name, // Nama Grup
+                                            $attendance->member->full_name
+                                        ];
+                                    });
+                            })
+                            ->schema([
+                                Grid::make(12)
+                                    ->schema([
+                                        TextEntry::make('member.full_name')
+                                            ->label('Nama')
+                                            ->weight(FontWeight::Bold)
+                                            ->columnSpan(3),
+                                        TextEntry::make('consolidated_positions')
+                                            ->label('Dapukan')
+                                            ->columnSpan(5)
+                                            ->state(fn($record) => $record->member->positions)
+                                            ->listWithLineBreaks()
+                                            ->formatStateUsing(fn ($state) => 
+                                                ($state->position_name ?? '-') . ' ' . 
+                                                ($state->category?->name ?? '-') . ' ' . 
+                                                ($state->group?->level?->name ?? '-') . ' ' . 
+                                                ($state->group?->name ?? '-')
+                                            )
+                                            ->color('gray')
+                                            ->weight(FontWeight::Medium),
+                                        TextEntry::make('status')
+                                            ->label('Status')
+                                            ->columnSpan(2)
+                                            ->badge()
+                                            ->formatStateUsing(fn ($state) => strtoupper($state))
+                                            ->color(fn ($state): string => match ($state) {
+                                                'hadir' => 'success',
+                                                'izin', 'sakit' => 'warning',
+                                                default => 'gray',
+                                            }),
+                                        TextEntry::make('checkin_time')
+                                            ->label('Waktu')
+                                            ->columnSpan(2)
+                                            ->time('H:i')
+                                            ->placeholder('-'),
+                                    ]),
+                            ])
+                            ->placeholder('Belum ada pengurus yang hadir.'),
                     ])
                     ->columnSpanFull(),
             ]);

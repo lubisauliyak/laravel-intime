@@ -49,6 +49,14 @@ class Meeting extends Model
         return $this->hasMany(Attendance::class);
     }
 
+    public function pengurusAttendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class)->whereHas('member', function ($query) {
+            $query->whereIn('membership_type', ['pengurus', 'PENGURUS'])
+                  ->orWhereHas('positions');
+        });
+    }
+
     public function getTargetGroupIds(): array
     {
         return $this->group->getAllDescendantIds();

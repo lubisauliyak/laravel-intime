@@ -17,7 +17,10 @@ class RecentScansWidget extends BaseWidget
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 7;
+    
+    // Responsive column span
     protected int|string|array $columnSpan = 'full';
+    
     protected ?string $pollingInterval = null;
 
     public function table(Table $table): Table

@@ -24,8 +24,7 @@ class GenderDistributionWidget extends ChartWidget
         $cacheKey = 'gender_dist_' . ($user->group_id ?? 'all');
 
         return Cache::remember($cacheKey, 3600, function () use ($user) {
-            $query = Member::where('status', true)
-                ->where('membership_type', '!=', 'pengurus');
+            $query = Member::where('status', true);
 
             if (!$user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();

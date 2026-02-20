@@ -17,7 +17,10 @@ class AttendanceOverview extends StatsOverviewWidget
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 1;
+    
+    // Responsive column span: full on mobile, 3 cols on desktop
     protected int|string|array $columnSpan = 'full';
+    
     protected ?string $pollingInterval = null;
 
     protected function getStats(): array

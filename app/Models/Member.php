@@ -70,4 +70,20 @@ class Member extends Model
             ->whereIn('group_id', $lineageIds)
             ->exists();
     }
+
+    /**
+     * Get the highest-priority position for this member.
+     * Priority: Category sort_order ASC, then Group Level level_number ASC.
+     */
+    public function getPrimaryPosition()
+    {
+        return $this->positions()
+            ->with(['category', 'group.level'])
+            ->get()
+            ->sortBy(fn($pos) => [
+                $pos->category?->sort_order ?? 999,
+                -($pos->group?->level?->level_number ?? 0),
+            ])
+            ->first();
+    }
 }

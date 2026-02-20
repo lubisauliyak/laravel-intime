@@ -56,9 +56,9 @@ class PunctualityStatsWidget extends ChartWidget
             }
 
             if (!$user->isSuperAdmin() && $user->group_id) {
-                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds())->where('membership_type', '!=', 'pengurus'));
+                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
             } else {
-                $query->whereHas('member', fn($q) => $q->where('membership_type', '!=', 'pengurus'));
+                $query->whereHas('member', fn($q) => $q->where('status', true));
             }
 
             $total = $query->count();

@@ -50,7 +50,7 @@ class MembersTable
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                ...(static::getDynamicLevelColumns()),                
+                ...(static::getDynamicLevelColumns()),
                 TextColumn::make('birth_date')
                     ->label('Tgl Lahir')
                     ->date('d/m/Y')
@@ -81,7 +81,7 @@ class MembersTable
                         'female' => 'danger',
                         default => 'gray',
                     })
-                    ->visibleFrom('md'),                
+                    ->visibleFrom('sm'),
                 TextColumn::make('membership_type')
                     ->label('Kepengurusan')
                     ->badge()

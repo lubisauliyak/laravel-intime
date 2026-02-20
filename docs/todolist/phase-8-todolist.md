@@ -1,10 +1,23 @@
-# 💳 Detailed Design Phase 8: Member Cards & Optimization
+# 💳 Detailed Design Phase 8: Analytics, Cards & UI Refinement
 
-Dokumen ini merinci fitur pencetakan fisik kartu anggota dan optimasi sistem untuk menangani data besar secara stabil.
+> **Status:** ⏳ Current / In Progress  
+> **Periode:** 20 Februari 2026 ~  
 
-## 1. Cetak Kartu Anggota (Member Cards)
+Dokumen ini merinci fitur analitik kehadiran, pencetakan kartu anggota, dan perbaikan UI operasional.
 
-> **Konteks Aktual:** Package `barryvdh/laravel-dompdf` sudah terinstall. Perlu template kartu dan bulk action.
+## 1. UI & Analytics (Prioritas Baru 🚀)
+
+*   [ ] **Link Perizinan Mandiri (Phase 9 Bridge):**
+    *   [ ] Tambahkan field "Permit Link" di `MeetingInfolist.php`.
+    *   [ ] Implementasi "Copy to Clipboard" untuk memudahkan sharing oleh admin.
+*   [ ] **Registrasi Cepat (Phase 10 Bridge):**
+    *   [ ] Tambah tombol "+ Anggota Baru" di halaman Live Scanner.
+    *   [ ] Buat modal registrasi instan (Nama, Gender, Grup).
+*   [ ] **Matriks Kehadiran (Pindahan Phase 7):**
+    *   [ ] Tabel pivot kehadiran Anggota vs Tanggal.
+    *   [ ] Filter Gender & Kategori Usia.
+
+## 2. Cetak Kartu Anggota (Member Cards)
 
 *   [ ] **Template Desain:** 
     *   Template kartu profesional berbasis **HTML/CSS** (Blade view).

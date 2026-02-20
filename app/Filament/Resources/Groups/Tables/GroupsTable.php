@@ -32,7 +32,7 @@ class GroupsTable
                         2 => 'warning',
                         3 => 'danger',
                         4 => 'info',
-                        0 => 'primary', 
+                        0 => 'primary',
                         default => 'gray',
                     })
                     ->sortable(),

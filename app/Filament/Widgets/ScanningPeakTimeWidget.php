@@ -17,7 +17,13 @@ class ScanningPeakTimeWidget extends ChartWidget
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 6;
-    protected int|string|array $columnSpan = ['md' => 1, 'xl' => 1];
+    
+    // Responsive column span
+    protected int|string|array $columnSpan = [
+        'md' => 1,
+        'xl' => 1,
+    ];
+    
     protected ?string $pollingInterval = null;
     protected ?string $maxHeight = '250px';
 

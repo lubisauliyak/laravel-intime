@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\Meetings\Schemas;
 
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use App\Models\Member;
 use App\Models\Attendance;
@@ -166,7 +167,6 @@ class MeetingAttendanceInfolist
                              ]),
                     ])
                     ->compact(),
-                
             ]);
     }
 }

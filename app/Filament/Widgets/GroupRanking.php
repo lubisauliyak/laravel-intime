@@ -17,7 +17,10 @@ class GroupRanking extends BaseWidget
     use HasWidgetShield;
 
     protected static ?int $sort = 8;
+    
+    // Responsive column span
     protected int|string|array $columnSpan = 'full';
+    
     protected ?string $pollingInterval = '30s';
 
     public function table(Table $table): Table

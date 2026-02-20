@@ -18,7 +18,13 @@ class AgeGroupParticipationWidget extends ChartWidget
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 5;
-    protected int|string|array $columnSpan = ['md' => 1, 'xl' => 1];
+    
+    // Responsive column span
+    protected int|string|array $columnSpan = [
+        'md' => 1,
+        'xl' => 1,
+    ];
+    
     protected ?string $maxHeight = '250px';
 
     private function getReferenceMeeting(): ?Meeting
@@ -59,30 +65,45 @@ class AgeGroupParticipationWidget extends ChartWidget
         $cacheKey = 'age_participation_' . ($user->group_id ?? 'all') . '_' . $ref->id;
 
         return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
-            // Get all age groups that have members
-            $ageGroups = AgeGroup::orderBy('sort_order')->get();
+            // Get target age groups from meeting (only show targeted categories)
+            $targetAgeGroups = $ref->target_age_groups ?? [];
             
+            // Get age groups that are in the target list
+            $ageGroupsQuery = AgeGroup::orderBy('sort_order');
+            if (!empty($targetAgeGroups)) {
+                $ageGroupsQuery->whereIn('name', $targetAgeGroups);
+            }
+            $ageGroups = $ageGroupsQuery->get();
+
+            // If no age groups found (meeting targets all ages), get all age groups
+            if ($ageGroups->isEmpty()) {
+                $ageGroups = AgeGroup::orderBy('sort_order')->get();
+            }
+
             // Get descendant IDs if not super admin
             $allowedGroupIds = null;
             if (!$user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();
             }
 
-            // Get total members per age group (Excluding Pengurus)
+            // Get total members per age group (including pengurus) - only for target age groups
             $memberCounts = Member::where('status', true)
-                ->where('membership_type', '!=', 'pengurus')
                 ->when($allowedGroupIds, fn($q) => $q->whereIn('group_id', $allowedGroupIds))
+                ->when(!empty($targetAgeGroups), fn($q) => $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups)))
                 ->select('age_group_id', DB::raw('count(*) as total'))
                 ->groupBy('age_group_id')
                 ->pluck('total', 'age_group_id');
 
-            // Get attendance counts per age group and status (Excluding Pengurus)
+            // Get attendance counts per age group and status (including pengurus)
             $attendanceCounts = Attendance::where('meeting_id', $ref->id)
-                ->whereHas('member', function ($q) use ($allowedGroupIds) {
-                    $q->where('status', true)
-                      ->where('membership_type', '!=', 'pengurus');
+                ->whereHas('member', function ($q) use ($allowedGroupIds, $targetAgeGroups) {
+                    $q->where('status', true);
                     if ($allowedGroupIds) {
                         $q->whereIn('group_id', $allowedGroupIds);
+                    }
+                    // Only count attendance for members in target age groups
+                    if (!empty($targetAgeGroups)) {
+                        $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups));
                     }
                 })
                 ->join('members', 'attendances.member_id', '=', 'members.id')
@@ -100,11 +121,11 @@ class AgeGroupParticipationWidget extends ChartWidget
                 $totalMembers = $memberCounts[$ageGroup->id] ?? 0;
 
                 if ($totalMembers === 0) {
-                    continue; 
+                    continue;
                 }
 
                 $counts = $attendanceCounts->get($ageGroup->id, collect());
-                
+
                 $hadirCount = $counts->where('status', 'hadir')->sum('count');
                 $izinCount = $counts->where('status', 'izin')->sum('count');
                 $sakitCount = $counts->where('status', 'sakit')->sum('count');

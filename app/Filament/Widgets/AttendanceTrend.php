@@ -13,7 +13,10 @@ class AttendanceTrend extends ChartWidget
     use HasWidgetShield;
 
     protected static ?int $sort = 2;
-    protected int|string|array $columnSpan = ['md' => 2, 'xl' => 2];
+    
+    // Responsive column span
+    protected int|string|array $columnSpan = 'full';
+    
     protected ?string $heading = 'Riwayat Kehadiran (30 Hari Terakhir)';
     protected ?string $pollingInterval = '15s';
     protected ?string $maxHeight = '300px';

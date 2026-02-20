@@ -91,6 +91,11 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                     ->select('members.*')
                     ->whereIn('members.group_id', $descendantGroupIds)
                     ->where('members.status', true)
+                    ->when(!empty($this->meeting->target_age_groups), function ($q) {
+                        return $q->whereHas('ageGroup', function ($aq) {
+                            return $aq->whereIn('name', $this->meeting->target_age_groups);
+                        });
+                    })
                     ->leftJoin('attendances', function ($join) use ($meetingId) {
                         $join->on('attendances.member_id', '=', 'members.id')
                             ->where('attendances.meeting_id', '=', $meetingId);

@@ -141,8 +141,8 @@ inTime/
 | Phase 4 | Reporting & Mobile UX | ✅ **Selesai** | 4–10 Feb 2026 |
 | Phase 5 | QR Management & Advanced Export | ✅ **Selesai** | 11–16 Feb 2026 |
 | Phase 6 | Monitoring, Optimization & Import | ✅ **Selesai** | 18–19 Feb 2026 |
-| **Phase 7** | **Advanced Analytics & Insights** | ⏳ **Current** | 20 Feb 2026 ~ |
-| Phase 8 | Member Cards & Optimization | Direncanakan | — |
+| Phase 7 | Advanced Analytics & Insights | ✅ **Selesai** | 20 Feb 2026 |
+| **Phase 8** | **Member Cards & Optimization** | ⏳ **Current** | 20 Feb 2026 ~ |
 | Phase 9 | Self-Permit System | Direncanakan | — |
 | Phase 10 | On-the-Spot Registration | Direncanakan | — |
 

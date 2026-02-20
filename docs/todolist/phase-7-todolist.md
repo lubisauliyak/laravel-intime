@@ -1,7 +1,7 @@
 # 📊 Phase 7: Advanced Analytics & Attendance Insights
 
-> **Status:** ⏳ Planned / In Progress  
-> **Periode:** 20 Februari 2026 ~  
+> **Status:** ✅ Completed / Optimized  
+> **Periode:** 20 Februari 2026  
 > **SSOT:** `docs/ssot.md` §5.3  
 > **Context7:** `.qwen/context7.md` — PSR-12 compliance required
 
@@ -34,12 +34,14 @@ Phase 7 fokus pada **analitik lanjutan** dan **wawasan data** untuk memberikan i
   - [ ] Color-coded cells berdasarkan status (Hijau=Hadir, Kuning=Izin, Orange=Sakit, Merah=Alpa)
   - [ ] Summary bar di akhir (total kehadiran per anggota)
   - [ ] Pagination untuk anggota
+  - [ ] **Performance:** Implement pre-calculated summary table/cache for matrix data
   
 - [x] **Features**
   - [x] Filter by grup (hierarchical)
   - [ ] Filter by kategori usia
   - [ ] Filter by gender
   - [ ] Export to Excel (matrix format)
+  - [ ] **Mobile View:** Add summary card/collapsed view for mobile responsiveness
 
 **Files:**
 - `app/Filament/Pages/AttendanceMatrix.php` (Custom Page)
@@ -85,9 +87,9 @@ Phase 7 fokus pada **analitik lanjutan** dan **wawasan data** untuk memberikan i
 
 #### Tasks:
 - [ ] **Detection Logic**
-  - [ ] Query untuk anggota dengan kehadiran < 50% (configurable threshold)
-  - [ ] Query untuk anggota yang absen 3+ kali berturut-turut
-  - [ ] Calculate "risk score" berdasarkan trend
+  - [ ] Query untuk anggota dengan kehadiran < 50% (threshold: `count(attended) / total_meetings_in_period`)
+  - [ ] Query untuk anggota yang absen 3+ kali berturut-turut pada pertemuan wajib (target age group)
+  - [ ] Calculate "risk score": `(0.5 * low_participation) + (0.5 * consecutive_absences)`
   
 - [ ] **Dashboard Widget**
   - [ ] "Anggota Butuh Perhatian" list
@@ -137,290 +139,46 @@ Phase 7 fokus pada **analitik lanjutan** dan **wawasan data** untuk memberikan i
   - [ ] Excel (with charts)
   - [ ] Scheduled reports (future: auto-email monthly)
 
-**Files:**
-- `app/Exports/MonthlyReportPdf.php`
-- `app/Filament/Pages/AdvancedReports.php`
-- `resources/views/exports/monthly-report.blade.php`
-
 ---
 
-### 5. **Tabel Pengurus Hadir di Pertemuan** 🆕
+### 5. **Segmentasi Tampilan Presensi (Pengurus vs. Target)** 🚀
 
-**Tujuan:** Tracking khusus untuk kehadiran pengurus (pemimpin organisasi) di setiap pertemuan.
+**Tujuan:** Memisahkan visualisasi kehadiran antara "Anggota Target" (berdasarkan kategori usia) dan "Anggota Pengurus" dalam satu pertemuan menggunakan tabel `attendances` yang sudah ada.
 
 #### Background:
-Pengurus memiliki peran penting dalam kepemimpinan organisasi. Tracking kehadiran pengurus membantu:
-- Memantau komitmen kepemimpinan
-- Evaluasi performa pengurus
-- Data untuk musyawarah/evaluasi periode
+Pengurus seringkali hadir di setiap pertemuan meskipun kategori usia mereka tidak masuk dalam target pertemuan tersebut. Kita tidak perlu tabel baru, cukup optimasi query dan tampilan.
 
 #### Tasks:
 
-##### 5.1 Database Schema
-- [ ] **Migration: Create `meeting_attendees` Table**
-  ```sql
-  CREATE TABLE meeting_attendees (
-      id BIGINT PRIMARY KEY,
-      meeting_id BIGINT UNSIGNED,
-      user_id BIGINT UNSIGNED,        -- Pengurus yang hadir
-      group_id BIGINT UNSIGNED,       -- Snapshopt grup saat attend
-      attendance_type ENUM('hadir', 'izin', 'sakit'),
-      checkin_time DATETIME,
-      notes TEXT NULL,
-      created_at TIMESTAMP,
-      updated_at TIMESTAMP,
-      
-      FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL,
-      
-      UNIQUE KEY unique_meeting_user (meeting_id, user_id)
-  );
-  
-  CREATE INDEX idx_meeting_attendees_meeting ON meeting_attendees(meeting_id);
-  CREATE INDEX idx_meeting_attendees_user ON meeting_attendees(user_id);
-  ```
+##### 5.1 Meeting Infolist Refinement
+- [x] **Main Attendance Section (Target Anggota)**
+  - Filter: `attendances` di mana `member.age_group_id` ada dalam `meeting.target_age_groups`.
+  - Fungsi: Menampilkan daftar hadir anggota yang memang menjadi sasaran pertemuan.
+- [x] **Collapsible Section: Kehadiran Pengurus** 🆕
+  - Filter: `attendances` di mana `member.membership_type == 'pengurus'`.
+  - Komponen: `Spatie\Filament\Infolists\Components\Section` dengan `collapsible()`.
+  - **Permission:** Hanya terlihat oleh role `super_admin`, `admin`, dan `pengurus`.
 
-- [ ] **Migration: Add `is_attendee_tracking` to `meetings` Table**
-  ```sql
-  ALTER TABLE meetings 
-  ADD COLUMN is_attendee_tracking BOOLEAN DEFAULT TRUE,
-  ADD COLUMN attendee_notes TEXT NULL;
-  ```
+##### 5.2 Attendance Engine Updates
+- [x] **Scanner & Manual Attendance Logic**
+  - Izinkan presensi jika `member.membership_type == 'pengurus'` meskipun `age_group_id` tidak sesuai target pertemuan.
+  - Berikan label/indikator "Presensi Pengurus" pada log/toast.
 
-##### 5.2 Model & Relationships
-- [ ] **Create `MeetingAttendee` Model**
-  ```php
-  app/Models/MeetingAttendee.php
-  ```
-  - Relationships: belongsTo(Meeting), belongsTo(User), belongsTo(Group)
-  - Scopes: scopeHadir(), scopeIzin(), scopeSakit()
-  
-- [ ] **Update `Meeting` Model**
-  ```php
-  // Add relationship
-  public function attendees(): HasMany
-  {
-      return $this->hasMany(MeetingAttendee::class);
-  }
-  
-  // Helper method
-  public function getAttendeesCount(): int
-  {
-      return $this->attendees()->where('attendance_type', 'hadir')->count();
-  }
-  ```
-
-- [ ] **Update `User` Model**
-  ```php
-  // Add relationship
-  public function meetingAttendances(): HasMany
-  {
-      return $this->hasMany(MeetingAttendee::class);
-  }
-  
-  // Helper method
-  public function getAttendanceRate(): float
-  {
-      // Calculate percentage
-  }
-  ```
-
-##### 5.3 Filament Resource
-- [ ] **Create `MeetingAttendeeResource`**
-  ```
-  app/Filament/Resources/MeetingAttendeeResource.php
-  ├── Schemas/MeetingAttendeeForm.php
-  └── Tables/MeetingAttendeesTable.php
-  ```
-  
-- [ ] **Form Schema**
-  - Meeting selector (dropdown)
-  - User selector (filter: role = admin/pengurus)
-  - Attendance type (Hadir, Izin, Sakit)
-  - Check-in time (datetime picker)
-  - Notes (textarea)
-  
-- [ ] **Table Schema**
-  - Meeting name
-  - User name (with badge role)
-  - Group name
-  - Attendance type (badge color-coded)
-  - Check-in time
-  - Actions (Edit, Delete)
-  
-- [ ] **Filters**
-  - Filter by meeting
-  - Filter by user
-  - Filter by group
-  - Filter by attendance type
-  - Date range filter
-
-##### 5.4 Integration with Meeting View
-- [ ] **Update MeetingInfolist**
-  - Add section "Kehadiran Pengurus"
-  - Table/Repeater showing attendees
-  - Quick stats (total hadir, izin, sakit)
-  
-- [ ] **Update Meeting Page**
-  - Tab/section untuk tracking pengurus
-  - Button "Add Attendee"
-  - Bulk import untuk attendance pengurus
-
-##### 5.5 Bulk Import/Export
-- [ ] **Create `MeetingAttendeeImporter`**
-  ```php
-  app/Filament/Imports/MeetingAttendeeImporter.php
-  ```
-  - Import dari Excel: meeting_name, user_email, attendance_type, notes
-  - Validation: meeting exists, user exists, unique constraint
-  
-- [ ] **Create `MeetingAttendeeTemplateExport`**
-  ```php
-  app/Exports/MeetingAttendeeTemplateExport.php
-  ```
-  - Template dengan 2 sheets (Template + Panduan)
-  - Sample data
-  
-- [ ] **Bulk Import Page**
-  - Similar to Member import flow
-  - Modal with template download
-  - File upload
-  - Progress indicator
-
-##### 5.6 Reports & Analytics
-- [ ] **Dashboard Widget**
-  - `MeetingAttendeesOverviewWidget`
-  - Stats: Total meetings, avg attendance rate, top attendees
-  
-- [ ] **User Attendance Report**
-  - List semua meeting dengan attendance user
-  - Attendance rate per user
-  - Export to PDF/Excel
-  
-- [ ] **Meeting Attendance Summary**
-  - Per meeting: list pengurus hadir
-  - Percentage attendance per meeting
-  - Trend analysis
-
-##### 5.7 Permissions & Policies
-- [ ] **Create `MeetingAttendeePolicy`**
-  ```php
-  app/Policies/MeetingAttendeePolicy.php
-  ```
-  - viewAny, view, create, update, delete
-  - Scope by group hierarchy
-  
-- [ ] **Update Shield Permissions**
-  - Register new resource
-  - Assign permissions to roles
-
-##### 5.8 UI/UX Enhancements
-- [ ] **Quick Attendance Form**
-  - Modal form untuk add attendance cepat
-  - Search user by name/email
-  - Auto-fill check-in time
-  
-- [ ] **Attendance Badge**
-  - Visual indicator di user list
-  - Color-coded by attendance rate
-  
-- [ ] **Notifications**
-  - Reminder untuk pengurus yang belum absen
-  - Monthly attendance summary
+##### 5.3 Performance & Query Optimization
+- [x] Buat scope di model `Attendance`: `scopeTargetOnly()` dan `scopePengurusOnly()`.
+- [x] Pastikan query infolist menggunakan eager loading untuk menghindari N+1 (`with('member')`).
 
 **Files:**
-- `app/Models/MeetingAttendee.php`
-- `app/Filament/Resources/MeetingAttendeeResource.php`
-- `app/Filament/Imports/MeetingAttendeeImporter.php`
-- `app/Exports/MeetingAttendeeTemplateExport.php`
-- `app/Policies/MeetingAttendeePolicy.php`
+- `app/Models/Attendance.php` (update scopes)
+- `app/Filament/Resources/MeetingResource.php` (update Infolist schema)
+- `app/Services/AttendanceService.php` (update validation logic)
 
 ---
 
-## 📊 Database Schema Updates
-
-### New Tables
-
-#### `meeting_attendees`
-Tracking khusus untuk kehadiran pengurus di pertemuan.
-
-| Field | Type | Constraint | Description |
-|-------|------|------------|-------------|
-| `id` | bigint | PK, auto-increment | — |
-| `meeting_id` | bigint | FK → `meetings.id`, cascade | Pertemuan |
-| `user_id` | bigint | FK → `users.id`, cascade | Pengurus yang hadir |
-| `group_id` | bigint | FK → `groups.id`, set null | Grup (snapshot saat attend) |
-| `attendance_type` | enum | `hadir`, `izin`, `sakit` | Status kehadiran |
-| `checkin_time` | datetime | — | Waktu check-in |
-| `notes` | text | nullable | Catatan/keterangan |
-| `created_at` | timestamp | — | — |
-| `updated_at` | timestamp | — | — |
-
-**Indexes:**
-- `unique_meeting_user` (meeting_id, user_id)
-- `idx_meeting_attendees_meeting`
-- `idx_meeting_attendees_user`
-
-### Modified Tables
-
-#### `meetings`
-| Field | Type | Constraint | Description |
-|-------|------|------------|-------------|
-| `is_attendee_tracking` | boolean | default: true | Enable/disable tracking |
-| `attendee_notes` | text | nullable | Catatan umum attendance |
-
----
-
-## 📁 File Structure
-
-```
-app/
-├── Models/
-│   ├── MeetingAttendee.php                 🆕
-│   └── Meeting.php (update)
-│   └── User.php (update)
-│
-├── Policies/
-│   └── MeetingAttendeePolicy.php           🆕
-│
-├── Services/
-│   └── AttendanceRiskService.php           🆕
-│
-├── Exports/
-│   ├── MeetingAttendeeTemplateExport.php   🆕
-│   ├── AttendanceMatrixExport.php          🆕
-│   ├── GroupInsightsExport.php             🆕
-│   └── MonthlyReportPdf.php                🆕
-│
-├── Filament/
-│   ├── Resources/
-│   │   └── MeetingAttendeeResource/        🆕
-│   │       ├── MeetingAttendeeResource.php
-│   │       ├── Schemas/
-│   │       │   └── MeetingAttendeeForm.php
-│   │       └── Tables/
-│   │           └── MeetingAttendeesTable.php
-│   │
-│   ├── Pages/
-│   │   ├── AttendanceMatrix.php            🆕
-│   │   ├── GroupInsights.php               🆕
-│   │   ├── LowParticipationReport.php      🆕
-│   │   └── AdvancedReports.php             🆕
-│   │
-│   └── Widgets/
-│       ├── GroupLeaderboardWidget.php      🆕
-│       ├── AtRiskMembersWidget.php         🆕
-│       └── MeetingAttendeesOverviewWidget.php 🆕
-│
-└── Imports/
-    └── MeetingAttendeeImporter.php         🆕
-
-resources/
-└── views/
-    └── exports/
-        └── monthly-report.blade.php        🆕
-```
+- `app/Filament/Pages/AttendanceMatrix.php`            🆕
+- `app/Filament/Pages/GroupInsights.php`               🆕
+- `app/Filament/Pages/LowParticipationReport.php`      🆕
+- `app/Filament/Pages/AdvancedReports.php`             🆕
 
 ---
 
@@ -454,13 +212,15 @@ resources/
 
 ## 📈 Priority & Timeline
 
-| Fitur | Priority | Estimated Effort | Dependencies |
-|-------|:--------:|:----------------:|:-------------|
-| **Tabel Pengurus Hadir** | 🔴 HIGH | 3-4 days | None |
-| Attendance Grid | 🟡 MEDIUM | 2-3 days | None |
-| Group Leaderboard | 🟡 MEDIUM | 2 days | None |
-| Early Warning System | 🟢 LOW | 2 days | Attendance Grid |
-| Advanced Reporting | 🟢 LOW | 3 days | All above |
+| Fitur | Priority | Status | Dependencies |
+|-------|:--------:|:------:|:-------------|
+| **Tabel Pengurus Hadir** | 🔴 HIGH | ✅ DONE | None |
+| Attendance Grid | 🟡 MEDIUM | ⏩ MOVED | None |
+| Group Leaderboard | 🟡 MEDIUM | ⏩ MOVED | None |
+| Early Warning System | 🟢 LOW | ⏩ MOVED | Moved to Phase 11 |
+| Advanced Reporting | 🟢 LOW | ⏩ MOVED | Moved to Phase 11 |
+
+**Note:** Matriks, Leaderboard, dan Reporting dipindahkan ke Phase 8 & 11 untuk optimasi fokus.
 
 **Total Estimated:** 12-14 days
 
