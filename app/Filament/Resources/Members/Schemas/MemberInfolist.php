@@ -31,7 +31,8 @@ class MemberInfolist
                                 TextEntry::make('group.name')
                                     ->label('Kelompok'),
                                 TextEntry::make('ageGroup.name')
-                                    ->label('Kategori Usia'),
+                                    ->label('Kategori Usia')
+                                    ->placeholder('Tanpa Kategori Usia'),
                                 TextEntry::make('gender')
                                     ->label('Jenis Kelamin')
                                     ->formatStateUsing(fn ($state) => $state === 'male' ? 'LAKI-LAKI' : 'PEREMPUAN'),

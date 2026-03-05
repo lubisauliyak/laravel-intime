@@ -16,7 +16,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
+use Filament\Schemas\Components\Utilities\Get;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 class AttendanceReport extends Page implements HasTable
@@ -42,10 +42,19 @@ class AttendanceReport extends Page implements HasTable
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('success')
                 ->visible(fn () => auth()->user()->canExport())
-                ->action(fn () => (new GlobalAttendanceReportExport(
-                    $this->tableFilters, 
-                    auth()->user()
-                ))->download('Rekap-Kehadiran-' . now()->format('Y-m-d') . '.xlsx'))
+                ->action(function () {
+                    $filters = $this->tableFilters;
+                    // Flatten location filter if exists
+                    if (isset($filters['location'])) {
+                        $filters['parent_id'] = $filters['location']['parent_id'] ?? null;
+                        $filters['group_id'] = $filters['location']['group_id'] ?? null;
+                    }
+
+                    return (new GlobalAttendanceReportExport(
+                        $filters, 
+                        auth()->user()
+                    ))->download('Rekap-Kehadiran-' . now()->format('Y-m-d') . '.xlsx');
+                })
         ];
     }
 
@@ -56,19 +65,26 @@ class AttendanceReport extends Page implements HasTable
             ->query(function () {
                 $user = auth()->user();
                 $query = Member::query()
-                    ->with(['group', 'ageGroup'])
-                    ->where('status', true);
+                    ->select('members.*')
+                    ->join('groups', 'members.group_id', '=', 'groups.id')
+                    ->leftJoin('groups as parents', 'groups.parent_id', '=', 'parents.id')
+                    ->with(['group', 'ageGroup', 'group.parent'])
+                    ->where('members.status', true);
                 
                 if (!$user->isSuperAdmin()) {
                     if ($user->group_id) {
                         $descendantIds = $user->group->getAllDescendantIds();
-                        $query->whereIn('group_id', $descendantIds);
+                        $query->whereIn('members.group_id', $descendantIds);
                     } else {
                         $query->whereRaw('1 = 0');
                     }
                 }
-                
-                return $query;
+
+                // Match sorting with Excel Export
+                return $query->orderBy('parents.name', 'asc')
+                    ->orderBy('groups.name', 'asc')
+                    ->orderBy('members.gender', 'asc')
+                    ->orderBy('members.member_code', 'asc');
             })
             ->columns([
                 TextColumn::make('member_code')
@@ -80,22 +96,27 @@ class AttendanceReport extends Page implements HasTable
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('group.name')
-                    ->label('Grup')
+                    ->label('Kelompok')
                     ->sortable(),
                 TextColumn::make('total_sessions')
-                    ->label('Total Sesi')
+                    ->label('Pertemuan')
+                    ->alignCenter()
                     ->state(fn (Member $record): int => $this->getMemberStats($record)['total']),
                 TextColumn::make('attended_count')
                     ->label('Hadir')
+                    ->alignCenter()
                     ->state(fn (Member $record): int => $this->getMemberStats($record)['attended']),
                 TextColumn::make('excused_count')
-                    ->label('Izin / Sakit')
+                    ->label('Izin/Sakit')
+                    ->alignCenter()
                     ->state(fn (Member $record): int => $this->getMemberStats($record)['excused']),
                 TextColumn::make('absent_count')
-                    ->label('Tanpa Keterangan')
+                    ->label('Tidak Hadir')
+                    ->alignCenter()
                     ->state(fn (Member $record): int => $this->getMemberStats($record)['absent']),
                 TextColumn::make('attendance_rate')
                     ->label('% Kehadiran')
+                    ->alignCenter()
                     ->state(function (Member $record): string {
                         $stats = $this->getMemberStats($record);
                         if ($stats['total'] === 0) return '0%';
@@ -109,27 +130,74 @@ class AttendanceReport extends Page implements HasTable
                     }),
             ])
             ->filters([
-                SelectFilter::make('group_id')
-                    ->label('Grup')
-                    ->relationship('group', 'groups.name', function ($query) {
-                        $user = auth()->user();
-                        $query->join('levels', 'groups.level_id', '=', 'levels.id')
-                            ->select('groups.*')
-                            ->orderBy('levels.level_number', 'desc')
-                            ->orderBy('groups.name', 'asc');
+                Filter::make('location')
+                    ->form([
+                        Select::make('parent_id')
+                            ->label('Desa')
+                            ->options(function() {
+                                $user = auth()->user();
+                                $query = \App\Models\Group::query()
+                                    ->where('status', true)
+                                    ->whereHas('level', fn($q) => $q->where('name', 'DESA'))
+                                    ->orderBy('name', 'asc');
 
-                        if (!$user->isSuperAdmin()) {
-                            if ($user->group_id) {
-                                $descendantIds = $user->group->getAllDescendantIds();
-                                $query->whereIn('groups.id', $descendantIds);
-                            } else {
-                                $query->whereRaw('1 = 0');
+                                if (!$user->isSuperAdmin()) {
+                                    if ($user->group_id) {
+                                        $relatedIds = array_merge(
+                                            [$user->group_id],
+                                            $user->group->getAllAncestorIds(),
+                                            $user->group->getAllDescendantIds()
+                                        );
+                                        $query->whereIn('id', $relatedIds);
+                                    } else {
+                                        return [];
+                                    }
+                                }
+
+                                return $query->pluck('name', 'id');
+                            })
+                            ->live()
+                            ->searchable(),
+                        Select::make('group_id')
+                            ->label('Kelompok')
+                            ->options(function (Get $get) {
+                                $parentId = $get('parent_id');
+                                if (!$parentId) return [];
+                                
+                                $user = auth()->user();
+                                $query = \App\Models\Group::query()
+                                    ->where('status', true)
+                                    ->where('parent_id', $parentId)
+                                    ->whereHas('level', fn($q) => $q->where('name', 'KELOMPOK'))
+                                    ->orderBy('name', 'asc');
+
+                                if (!$user->isSuperAdmin()) {
+                                    if ($user->group_id) {
+                                        $descendantIds = $user->group->getAllDescendantIds();
+                                        $query->whereIn('groups.id', $descendantIds);
+                                    } else {
+                                        return [];
+                                    }
+                                }
+
+                                return $query->pluck('name', 'id');
+                            })
+                            ->noOptionsMessage(fn (Get $get) => $get('parent_id') ? 'Tidak ada Kelompok di Desa ini' : 'Silakan pilih Desa terlebih dahulu')
+                            ->searchable(),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        if (!empty($data['group_id'])) {
+                            $group = \App\Models\Group::find($data['group_id']);
+                            if ($group) {
+                                $query->whereIn('members.group_id', $group->getAllDescendantIds());
                             }
+                        } elseif (!empty($data['parent_id'])) {
+                             $desa = \App\Models\Group::find($data['parent_id']);
+                             if ($desa) {
+                                 $query->whereIn('members.group_id', $desa->getAllDescendantIds());
+                             }
                         }
-                    })
-                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
-                    ->preload()
-                    ->searchable(),
+                    }),
                 Filter::make('meeting_date')
                     ->form([
                         DatePicker::make('from')
@@ -171,7 +239,14 @@ class AttendanceReport extends Page implements HasTable
                 });
 
                 if ($record->ageGroup) {
-                    $query->orWhereJsonContains('target_age_groups', $record->ageGroup->name);
+                    $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                    $query->orWhere(function($subQ) use ($record, $allAgeGroupsCount) {
+                        $subQ->whereJsonContains('target_age_groups', $record->ageGroup->name)
+                            ->where(function($innerQ) use ($allAgeGroupsCount) {
+                                // Only apply age filter if NOT all age groups are selected
+                                $innerQ->whereRaw("JSON_LENGTH(target_age_groups) < ?", [$allAgeGroupsCount]);
+                            });
+                    });
                 }
             })
             ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))

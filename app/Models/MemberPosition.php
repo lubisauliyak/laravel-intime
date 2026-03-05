@@ -15,6 +15,7 @@ class MemberPosition extends Model
         'group_id',
         'position_category_id',
         'position_name',
+        'sort_order',
     ];
 
     public function member(): BelongsTo

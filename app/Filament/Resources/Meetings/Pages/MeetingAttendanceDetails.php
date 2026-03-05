@@ -84,14 +84,24 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
     {
         $descendantGroupIds = $this->group->getAllDescendantIds();
         $meetingId = $this->meeting->id;
+        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+        $selectedAgeGroupsCount = empty($this->meeting->target_age_groups) ? 0 : count($this->meeting->target_age_groups);
+        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
         return $table
             ->query(
                 Member::query()
-                    ->select('members.*')
+                    ->select([
+                        'members.*',
+                        'attendances.status as attendance_status',
+                        'attendances.checkin_time',
+                        'attendances.method',
+                        'attendances.notes',
+                        'attendances.evidence_path',
+                    ])
                     ->whereIn('members.group_id', $descendantGroupIds)
                     ->where('members.status', true)
-                    ->when(!empty($this->meeting->target_age_groups), function ($q) {
+                    ->when($shouldFilterByAge, function ($q) {
                         return $q->whereHas('ageGroup', function ($aq) {
                             return $aq->whereIn('name', $this->meeting->target_age_groups);
                         });
@@ -100,6 +110,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                         $join->on('attendances.member_id', '=', 'members.id')
                             ->where('attendances.meeting_id', '=', $meetingId);
                     })
+                    ->with(['ageGroup', 'group'])
                     ->orderByRaw('attendances.checkin_time IS NULL ASC')
                     ->orderBy('attendances.checkin_time', 'ASC')
                     ->orderBy('members.id', 'ASC')
@@ -114,12 +125,12 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                 TextColumn::make('gender')
                     ->label('L/P')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn ($state): string => match ($state) {
                         'male' => 'L',
                         'female' => 'P',
-                        default => $state,
+                        default => (string) $state,
                     })
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn ($state): string => match ($state) {
                         'male' => 'info',
                         'female' => 'danger',
                         default => 'gray',
@@ -127,10 +138,10 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                 TextColumn::make('ageGroup.name')
                     ->label('Kategori Usia')
                     ->badge()
-                    ->color(fn (string $state): string => match (true) {
-                        str_contains(strtolower($state), 'pra remaja') => 'info',
-                        str_contains(strtolower($state), 'remaja') => 'warning',
-                        str_contains(strtolower($state), 'pra nikah') => 'success',
+                    ->color(fn ($state): string => match (true) {
+                        str_contains(strtolower((string) $state), 'pra remaja') => 'info',
+                        str_contains(strtolower((string) $state), 'remaja') => 'warning',
+                        str_contains(strtolower((string) $state), 'pra nikah') => 'success',
                         default => 'gray',
                     }),
                 TextColumn::make('group.name')
@@ -139,17 +150,12 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                     ->label('Status Presensi')
                     ->badge()
                     ->getStateUsing(function (Member $record) {
-                        $attendance = Attendance::where('meeting_id', $this->meeting->id)
-                            ->where('member_id', $record->id)
-                            ->first();
-
-                        if (!$attendance) {
+                        if (!$record->attendance_status) {
                             return $this->isMeetingOver() ? 'TIDAK HADIR' : 'BELUM HADIR';
                         }
-
-                        return strtoupper($attendance->status);
+                        return strtoupper($record->attendance_status);
                     })
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn ($state): string => match ($state) {
                         'HADIR' => 'success',
                         'IZIN', 'SAKIT' => 'warning',
                         'BELUM HADIR' => 'gray',
@@ -158,14 +164,8 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                     }),
                 TextColumn::make('checkin_time')
                     ->label('Waktu Kedatangan')
-                    ->getStateUsing(function (Member $record) {
-                        return Attendance::where('meeting_id', $this->meeting->id)
-                            ->where('member_id', $record->id)
-                            ->first()?->checkin_time?->format('H:i');
-                    })
-                    ->description(fn (Member $record) => Attendance::where('meeting_id', $this->meeting->id)
-                            ->where('member_id', $record->id)
-                            ->first()?->method === 'manual' ? 'Input Manual' : ''),
+                    ->dateTime('H:i')
+                    ->description(fn (Member $record) => $record->method === 'manual' ? 'Input Manual' : ''),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -223,11 +223,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                                     'sakit' => 'Sakit',
                                 ])
                                 ->required()
-                                ->default(fn (Member $record) => 
-                                    Attendance::where('meeting_id', $this->meeting->id)
-                                        ->where('member_id', $record->id)
-                                        ->first()?->status ?? 'hadir'
-                                )
+                                ->default(fn (Member $record) => $record->attendance_status ?? 'hadir')
                                 ->live(),
                             FileUpload::make('evidence_path')
                                 ->label('Lampiran Foto/Gambar')
@@ -235,20 +231,12 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                                 ->directory('attendance-evidences')
                                 ->disk('public')
                                 ->visibility('public')
-                                ->default(fn (Member $record) => 
-                                    Attendance::where('meeting_id', $this->meeting->id)
-                                        ->where('member_id', $record->id)
-                                        ->first()?->evidence_path
-                                )
+                                ->default(fn (Member $record) => $record->evidence_path)
                                 ->visible(fn ($get) => in_array($get('status'), ['izin', 'sakit'])),
                             Textarea::make('notes')
                                 ->label('Keterangan')
                                 ->placeholder('Contoh: Sedang keluar kota / Sakit demam')
-                                ->default(fn (Member $record) => 
-                                    Attendance::where('meeting_id', $this->meeting->id)
-                                        ->where('member_id', $record->id)
-                                        ->first()?->notes
-                                )
+                                ->default(fn (Member $record) => $record->notes)
                                 ->visible(fn ($get) => in_array($get('status'), ['izin', 'sakit'])),
                         ])
                         ->action(function (Member $record, array $data) {
@@ -269,11 +257,7 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                         ->icon('heroicon-m-trash')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->visible(fn (Member $record) => 
-                            Attendance::where('meeting_id', $this->meeting->id)
-                                ->where('member_id', $record->id)
-                                ->exists()
-                        )
+                        ->visible(fn (Member $record) => (bool)$record->attendance_status)
                         ->action(function (Member $record) {
                             Attendance::where('meeting_id', $this->meeting->id)
                                 ->where('member_id', $record->id)
@@ -289,29 +273,25 @@ class MeetingAttendanceDetails extends Page implements HasTable, HasSchemas
                     ->icon('heroicon-m-eye')
                     ->color('success')
                     ->visible(function (Member $record) {
-                        $attendance = Attendance::where('meeting_id', $this->meeting->id)
-                            ->where('member_id', $record->id)
-                            ->first();
-                        
-                        return $attendance && ($attendance->evidence_path || $attendance->notes);
+                        return $record->attendance_status && ($record->evidence_path || $record->notes);
                     })
                     ->modalHeading('Detail Lampiran & Keterangan')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->infolist(function (Member $record) {
-                        $attendance = Attendance::where('meeting_id', $this->meeting->id)
-                            ->where('member_id', $record->id)
-                            ->first();
-
                         return Schema::make($this)
-                            ->record($attendance)
+                            ->record(new Attendance([
+                                'status' => $record->attendance_status,
+                                'notes' => $record->notes,
+                                'evidence_path' => $record->evidence_path,
+                            ]))
                             ->components([
                                 SchemaGrid::make(1)
                                     ->schema([
                                         TextEntry::make('status')
                                             ->label('Status Presensi')
                                             ->badge()
-                                            ->color(fn (string $state): string => match ($state) {
+                                            ->color(fn ($state): string => match ($state) {
                                                 'hadir' => 'success',
                                                 'izin', 'sakit' => 'warning',
                                                 default => 'gray',

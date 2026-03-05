@@ -12,12 +12,12 @@ class AttendanceTrend extends ChartWidget
 {
     use HasWidgetShield;
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
     
     // Responsive column span
     protected int|string|array $columnSpan = 'full';
     
-    protected ?string $heading = 'Riwayat Kehadiran (30 Hari Terakhir)';
+    protected ?string $heading = 'Statistik Tren Kehadiran';
     protected ?string $pollingInterval = '15s';
     protected ?string $maxHeight = '300px';
 
@@ -26,7 +26,7 @@ class AttendanceTrend extends ChartWidget
         $user = auth()->user();
         $cacheKey = 'attendance_trend_' . ($user->group_id ?? 'all');
 
-        return Cache::remember($cacheKey, 1800, function () use ($user) {
+        return Cache::remember($cacheKey, 180, function () use ($user) {
             $maxDaysAgo = now()->subDays(30);
 
             // Find earliest meeting within 30 days for this user's scope
@@ -84,10 +84,16 @@ class AttendanceTrend extends ChartWidget
                     [
                         'label' => 'Jumlah Kehadiran',
                         'data' => $values,
-                        'borderColor' => '#10b981',
-                        'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
+                        'borderColor' => '#22c55e',
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.08)',
                         'fill' => 'start',
                         'tension' => 0.4,
+                        'borderWidth' => 2.5,
+                        'pointRadius' => 3,
+                        'pointBackgroundColor' => '#22c55e',
+                        'pointBorderColor' => '#ffffff',
+                        'pointBorderWidth' => 2,
+                        'pointHoverRadius' => 6,
                     ],
                 ],
                 'labels' => $labels,
@@ -98,5 +104,32 @@ class AttendanceTrend extends ChartWidget
     protected function getType(): string
     {
         return 'line';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'plugins' => [
+                'legend' => [
+                    'display' => false,
+                ],
+            ],
+            'scales' => [
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+                'y' => [
+                    'beginAtZero' => true,
+                    'ticks' => [
+                        'precision' => 0,
+                    ],
+                    'grid' => [
+                        'color' => 'rgba(0, 0, 0, 0.05)',
+                    ],
+                ],
+            ],
+        ];
     }
 }

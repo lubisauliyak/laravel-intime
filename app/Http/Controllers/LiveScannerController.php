@@ -49,11 +49,19 @@ class LiveScannerController extends Controller
         }
 
         $isLate = now()->greaterThan($meeting->meeting_date->setTimeFrom($meeting->start_time));
-        $notes = $isLate ? 'TERLAMBAT' : null;
-
+        
         $isGlobalPengurus = strcasecmp($member->membership_type, 'pengurus') === 0;
         $isLineagePengurus = $member->hasPositionIn($meeting->group);
-        $isTargetAge = empty($meeting->target_age_groups) || ($member->ageGroup && in_array($member->ageGroup->name, $meeting->target_age_groups));
+        
+        // Check target age
+        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+        $isTargetAge = !$shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
+        
+        // Pengurus yang tidak sesuai target tidak diberi keterangan TERLAMBAT
+        $isPengurusNotTarget = ($isGlobalPengurus || $isLineagePengurus) && !$isTargetAge;
+        $notes = ($isLate && !$isPengurusNotTarget) ? 'TERLAMBAT' : null;
 
         Attendance::create([
             'meeting_id' => $meeting->id,
@@ -64,9 +72,9 @@ class LiveScannerController extends Controller
             'notes' => $notes,
         ]);
 
-        $label = ($isGlobalPengurus || $isLineagePengurus) && !$isTargetAge ? " [PENGURUS]" : "";
+        $label = $isPengurusNotTarget ? " [PENGURUS]" : "";
         $message = "Berhasil absen: {$member->full_name}{$label}";
-        if ($isLate) {
+        if ($isLate && !$isPengurusNotTarget) {
             $message .= " (TERLAMBAT)";
         }
 
@@ -145,12 +153,18 @@ class LiveScannerController extends Controller
 
         // 8. Validation: Target Age Groups (Bypassed by Pengurus)
         if (!$canBypassFilters && !empty($meeting->target_age_groups)) {
-            $memberAgeGroupName = $member->ageGroup?->name;
-            if (!in_array($memberAgeGroupName, $meeting->target_age_groups)) {
-                return response()->json([
-                    'status' => 'warning',
-                    'message' => "Kategori usia ({$memberAgeGroupName}) tidak sesuai target pertemuan."
-                ]);
+            $allAgeGroupsCount = \App\Models\AgeGroup::count();
+            $selectedAgeGroupsCount = count($meeting->target_age_groups);
+            $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
+            if ($shouldFilterByAge) {
+                $memberAgeGroupName = $member->ageGroup?->name;
+                if (!in_array($memberAgeGroupName, (array) $meeting->target_age_groups)) {
+                    return response()->json([
+                        'status' => 'warning',
+                        'message' => "Kategori usia ({$memberAgeGroupName}) tidak sesuai target pertemuan."
+                    ]);
+                }
             }
         }
 
@@ -174,13 +188,17 @@ class LiveScannerController extends Controller
             ->where(function($q) use ($allowedGroupIds, $lineageGroupIds, $meeting) {
                 // Option A: Regular members who match meeting filters (Gender & Age)
                 $q->where(function ($sq) use ($allowedGroupIds, $meeting) {
+                    $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                    $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+                    $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+                    
                     $sq->whereIn('group_id', $allowedGroupIds)
                         ->when($meeting->target_gender !== 'all', function ($gq) use ($meeting) {
                             return $gq->where('gender', $meeting->target_gender);
                         })
-                        ->when(!empty($meeting->target_age_groups), function ($aq) use ($meeting) {
+                        ->when($shouldFilterByAge, function ($aq) use ($meeting) {
                             return $aq->whereHas('ageGroup', function ($ageQ) use ($meeting) {
-                                return $ageQ->whereIn('name', $meeting->target_age_groups);
+                                return $ageQ->whereIn('name', (array) $meeting->target_age_groups);
                             });
                         });
                 })
@@ -198,13 +216,14 @@ class LiveScannerController extends Controller
                 $isPengurus = $m->isPengurus();
                 $isTargetAge = false;
 
-                if (!empty($meeting->target_age_groups)) {
-                    $isTargetAge = $m->ageGroup && in_array($m->ageGroup->name, $meeting->target_age_groups);
-                }
+                $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+                $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+                $isTargetAge = !$shouldFilterByAge || ($m->ageGroup && in_array($m->ageGroup->name, (array) $meeting->target_age_groups));
 
                 // Hide label if they are target age group, OR if they are not pengurus
                 $label = ($isPengurus && !$isTargetAge) ? " [PENGURUS]" : "";
-                
+
                 return [
                     'id' => $m->id,
                     'text' => "{$m->full_name} ({$m->member_code}){$label}"
@@ -276,7 +295,19 @@ class LiveScannerController extends Controller
         if ($status === 'hadir') {
             $isLate = now()->greaterThan($meeting->meeting_date->setTimeFrom($meeting->start_time));
         }
-        $finalNotes = $request->notes ?? ($isLate ? 'TERLAMBAT' : null);
+        
+        $isGlobalPengurus = strcasecmp($member->membership_type, 'pengurus') === 0;
+        $isLineagePengurus = $member->hasPositionIn($meeting->group);
+        
+        // Check target age
+        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+        $isTargetAge = !$shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
+        
+        // Pengurus yang tidak sesuai target tidak diberi keterangan TERLAMBAT
+        $isPengurusNotTarget = ($isGlobalPengurus || $isLineagePengurus) && !$isTargetAge;
+        $finalNotes = $request->notes ?? (($isLate && !$isPengurusNotTarget) ? 'TERLAMBAT' : null);
 
         Attendance::create([
             'meeting_id' => $meeting->id,
@@ -288,14 +319,11 @@ class LiveScannerController extends Controller
             'notes' => $finalNotes,
         ]);
 
-        $isGlobalPengurus = strcasecmp($member->membership_type, 'pengurus') === 0;
-        $isLineagePengurus = $member->hasPositionIn($meeting->group);
-        $isTargetAge = empty($meeting->target_age_groups) || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
-        $label = ($isGlobalPengurus || $isLineagePengurus) && !$isTargetAge ? " [PENGURUS]" : "";
+        $label = $isPengurusNotTarget ? " [PENGURUS]" : "";
 
         $statusLabel = strtoupper($status);
         $message = "Berhasil ($statusLabel): {$member->full_name}{$label}";
-        if ($isLate) $message .= " (TERLAMBAT)";
+        if ($isLate && !$isPengurusNotTarget) $message .= " (TERLAMBAT)";
 
         return response()->json(['status' => 'success', 'message' => $message]);
     }

@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Meeting;
 use App\Exports\Sheets\MeetingAttendanceSummarySheet;
 use App\Exports\Sheets\MeetingAttendanceDetailSheet;
+use App\Exports\Sheets\MeetingPengurusDetailSheet;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
@@ -24,6 +25,7 @@ class MeetingAttendanceExport implements WithMultipleSheets
         return [
             new MeetingAttendanceSummarySheet($this->meeting),
             new MeetingAttendanceDetailSheet($this->meeting),
+            new MeetingPengurusDetailSheet($this->meeting),
         ];
     }
 }

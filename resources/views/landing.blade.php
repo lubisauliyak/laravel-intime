@@ -67,9 +67,29 @@
                 @endauth
             </div>
             <div class="md:hidden flex items-center">
-                <button class="text-slate-600 dark:text-slate-300 hover:text-primary focus:outline-none">
-                    <span class="material-icons-round text-3xl">menu</span>
+                <button id="mobile-menu-button" class="text-slate-600 dark:text-slate-300 hover:text-primary focus:outline-none p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <span id="menu-icon" class="material-icons-round text-3xl">menu</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden md:hidden absolute top-20 left-0 w-full bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xl z-40">
+        <div class="px-4 py-6 space-y-4">
+            <a class="block text-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors" href="#">Beranda</a>
+            <a class="block text-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors" href="#features">Fitur</a>
+            <a class="block text-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors" href="#pricing">Harga</a>
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800">
+                @auth
+                    <a class="flex justify-center items-center w-full px-6 py-3 rounded-full bg-primary text-white font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/30" href="{{ route('filament.admin.pages.dashboard') }}">
+                        Dashboard
+                    </a>
+                @else
+                    <a class="flex justify-center items-center w-full px-6 py-3 rounded-full bg-primary text-white font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/30" href="{{ route('filament.admin.auth.login') }}">
+                        Masuk Ke Aplikasi
+                    </a>
+                @endauth
             </div>
         </div>
     </div>
@@ -427,5 +447,35 @@
         </div>
     </div>
 </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuIcon = document.getElementById('menu-icon');
+
+            if (mobileMenuButton && mobileMenu && menuIcon) {
+                mobileMenuButton.addEventListener('click', function() {
+                    const isHidden = mobileMenu.classList.contains('hidden');
+                    
+                    if (isHidden) {
+                        mobileMenu.classList.remove('hidden');
+                        menuIcon.textContent = 'close';
+                    } else {
+                        mobileMenu.classList.add('hidden');
+                        menuIcon.textContent = 'menu';
+                    }
+                });
+
+                // Close menu when clicking on links
+                const links = mobileMenu.querySelectorAll('a');
+                links.forEach(link => {
+                    link.addEventListener('click', function() {
+                        mobileMenu.classList.add('hidden');
+                        menuIcon.textContent = 'menu';
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>

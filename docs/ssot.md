@@ -1,6 +1,6 @@
 # 📘 SSOT — Single Source of Truth: inTime
 
-> **Terakhir diperbarui:** 20 Februari 2026 (Revisi 5 — Vertical Lineage & Dashboard Optimization)  
+> **Terakhir diperbarui:** 05 Maret 2026 (Revisi 6 — inTime Branding & Report Filter Optimization)  
 > **Prinsip:** Dokumen ini adalah **satu-satunya sumber kebenaran** proyek inTime. Semua dokumen lain tunduk pada informasi di sini. Jika ada konflik, **dokumen ini yang benar**.  
 > **AI Context:** Selalu refer ke `.qwen/context7.md` untuk coding standards & best practices terbaru.
 
@@ -146,7 +146,7 @@ inTime/
 | Phase 9 | Self-Permit System | Direncanakan | — |
 | Phase 10 | On-the-Spot Registration | Direncanakan | — |
 
-### 5.2 Detail Fitur — Phase 6 (Import & Template)
+**SSOT tugas aktif:** `docs/todolist/phase-8-todolist.md`
 
 | Fitur | Status | File Terkait |
 |:------|:------:|:-------------|
@@ -213,6 +213,8 @@ app/
 | **13** | 19 Feb 2026 | **Download Template di Modal Import** | UX lebih baik — template ada di dalam modal, bukan tombol terpisah |
 | **14** | 19 Feb 2026 | **PSR-12 Compliance untuk Import** | Semua `use` statements di awal file, tidak ada FQN di tengah kode |
 | **15** | 19 Feb 2026 | **Context7 sebagai AI Reference** | `.qwen/context7.md` adalah SSOT untuk coding standards AI assistant |
+| **16** | 05 Mar 2026 | **Unifikasi Branding (Panel + Landing)** | Panel Filament menggunakan font **Manrope** & palette **Emerald** dari landing page |
+| **17** | 05 Mar 2026 | **Filter Location Berbasis Parent ID** | Filter Desa menggunakan logic `parent_id` (mirip MemberResource) untuk konsistensi skema |
 
 ---
 
@@ -310,6 +312,10 @@ File ini berisi:
 | | • Updated §8: Keputusan #13-15 |
 | | • Updated §2.2: Added `.qwen/context7.md` ke inventaris |
 | **20 Feb 2026** | **🚀 Revisi 5 — Phase 7: Analytics & Pengurus Tracking** |
+| **05 Mar 2026** | **🎨 Revisi 6 — inTime Branding & UI Optimization** |
+| | • Updated §5.1: Phase 8 status dan detail tugas link |
+| | • Added §8: Keputusan #16-17 (Branding & Filter structure) |
+| | • Sinkronisasi UI Panel dengan `landing.blade.php` |
 | | • Updated §5.1: Phase 7 status ke "Current" |
 | | • Added §5.3: Phase 7 features (Tabel Pengurus, Attendance Grid, Leaderboard, etc.) |
 | | • Updated `docs/todolist/phase-7-todolist.md` dengan detailed tasks |

@@ -17,15 +17,16 @@ class AgeGroupParticipationWidget extends ChartWidget
 
     protected static bool $isLazy = true;
 
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 8;
     
     // Responsive column span
     protected int|string|array $columnSpan = [
         'md' => 1,
         'xl' => 1,
     ];
-    
-    protected ?string $maxHeight = '250px';
+
+    protected ?string $maxHeight = '280px';
+    protected ?string $minHeight = '280px';
 
     private function getReferenceMeeting(): ?Meeting
     {
@@ -43,11 +44,26 @@ class AgeGroupParticipationWidget extends ChartWidget
 
     public function getHeading(): ?string
     {
-        $ref = $this->getReferenceMeeting();
-        if (!$ref || $ref->meeting_date->isToday()) {
-            return 'Aktivitas Berdasarkan Usia';
+        return 'Aktivitas Anggota Berdasarkan Usia';
+    }
+
+    public function getDescription(): ?string
+    {
+        $data = $this->getData();
+        if (empty($data['datasets'])) {
+            return 'Belum ada data aktivitas';
         }
-        return 'Aktivitas Berdasarkan Usia (' . $ref->meeting_date->format('d/m/Y') . ')';
+
+        $hadir = array_sum($data['datasets'][0]['data']);
+        $izinSakit = array_sum($data['datasets'][1]['data']);
+        $tidakHadir = array_sum($data['datasets'][2]['data']);
+        $total = $hadir + $izinSakit + $tidakHadir;
+
+        if ($total === 0) {
+            return 'Belum ada data partisipasi';
+        }
+
+        return "Total : {$total} Anggota";
     }
 
     protected function getData(): array
@@ -62,31 +78,26 @@ class AgeGroupParticipationWidget extends ChartWidget
             ];
         }
 
-        $cacheKey = 'age_participation_' . ($user->group_id ?? 'all') . '_' . $ref->id;
+        $cacheKey = 'age_participation_v2_' . ($user->group_id ?? 'all') . '_' . $ref->id;
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
-            // Get target age groups from meeting (only show targeted categories)
+        return Cache::remember($cacheKey, 180, function () use ($user, $ref) {
             $targetAgeGroups = $ref->target_age_groups ?? [];
             
-            // Get age groups that are in the target list
             $ageGroupsQuery = AgeGroup::orderBy('sort_order');
             if (!empty($targetAgeGroups)) {
                 $ageGroupsQuery->whereIn('name', $targetAgeGroups);
             }
             $ageGroups = $ageGroupsQuery->get();
 
-            // If no age groups found (meeting targets all ages), get all age groups
             if ($ageGroups->isEmpty()) {
                 $ageGroups = AgeGroup::orderBy('sort_order')->get();
             }
 
-            // Get descendant IDs if not super admin
             $allowedGroupIds = null;
             if (!$user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();
             }
 
-            // Get total members per age group (including pengurus) - only for target age groups
             $memberCounts = Member::where('status', true)
                 ->when($allowedGroupIds, fn($q) => $q->whereIn('group_id', $allowedGroupIds))
                 ->when(!empty($targetAgeGroups), fn($q) => $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups)))
@@ -94,14 +105,12 @@ class AgeGroupParticipationWidget extends ChartWidget
                 ->groupBy('age_group_id')
                 ->pluck('total', 'age_group_id');
 
-            // Get attendance counts per age group and status (including pengurus)
             $attendanceCounts = Attendance::where('meeting_id', $ref->id)
                 ->whereHas('member', function ($q) use ($allowedGroupIds, $targetAgeGroups) {
                     $q->where('status', true);
                     if ($allowedGroupIds) {
                         $q->whereIn('group_id', $allowedGroupIds);
                     }
-                    // Only count attendance for members in target age groups
                     if (!empty($targetAgeGroups)) {
                         $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups));
                     }
@@ -119,13 +128,9 @@ class AgeGroupParticipationWidget extends ChartWidget
 
             foreach ($ageGroups as $ageGroup) {
                 $totalMembers = $memberCounts[$ageGroup->id] ?? 0;
-
-                if ($totalMembers === 0) {
-                    continue;
-                }
+                if ($totalMembers === 0) continue;
 
                 $counts = $attendanceCounts->get($ageGroup->id, collect());
-
                 $hadirCount = $counts->where('status', 'hadir')->sum('count');
                 $izinCount = $counts->where('status', 'izin')->sum('count');
                 $sakitCount = $counts->where('status', 'sakit')->sum('count');
@@ -140,22 +145,37 @@ class AgeGroupParticipationWidget extends ChartWidget
                 $tidakHadirData[] = $tidakHadirCount + $alphaCount;
             }
 
+            $totalHadir = array_sum($hadirData);
+            $totalIzinSakit = array_sum($izinSakitData);
+            $totalTidakHadir = array_sum($tidakHadirData);
+            $totalGlobal = $totalHadir + $totalIzinSakit + $totalTidakHadir;
+
+            $pctHadir = $totalGlobal > 0 ? number_format(($totalHadir / $totalGlobal) * 100, 1) : 0;
+            $pctIzinSakit = $totalGlobal > 0 ? number_format(($totalIzinSakit / $totalGlobal) * 100, 1) : 0;
+            $pctTidakHadir = $totalGlobal > 0 ? number_format(($totalTidakHadir / $totalGlobal) * 100, 1) : 0;
+
             return [
                 'datasets' => [
                     [
-                        'label' => 'Hadir',
+                        'label' => "Hadir: {$totalHadir} ({$pctHadir}%)",
                         'data' => $hadirData,
-                        'backgroundColor' => '#10b981',
+                        'backgroundColor' => '#22c55e',
+                        'borderRadius' => 6,
+                        'borderSkipped' => false,
                     ],
                     [
-                        'label' => 'Izin/Sakit',
+                        'label' => "Izin/Sakit: {$totalIzinSakit} ({$pctIzinSakit}%)",
                         'data' => $izinSakitData,
-                        'backgroundColor' => '#f59e0b',
+                        'backgroundColor' => '#facc15',
+                        'borderRadius' => 6,
+                        'borderSkipped' => false,
                     ],
                     [
-                        'label' => 'Tidak Hadir',
+                        'label' => "Tidak Hadir: {$totalTidakHadir} ({$pctTidakHadir}%)",
                         'data' => $tidakHadirData,
                         'backgroundColor' => '#ef4444',
+                        'borderRadius' => 6,
+                        'borderSkipped' => false,
                     ],
                 ],
                 'labels' => $labels,
@@ -171,11 +191,36 @@ class AgeGroupParticipationWidget extends ChartWidget
     protected function getOptions(): array
     {
         return [
+            'maintainAspectRatio' => false,
             'plugins' => [
                 'legend' => [
                     'display' => true,
+                    'position' => 'bottom',
+                    'labels' => [
+                        'padding' => 16,
+                        'usePointStyle' => true,
+                        'pointStyle' => 'circle',
+                    ],
                 ],
             ],
+            'scales' => [
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+                'y' => [
+                    'beginAtZero' => true,
+                    'ticks' => [
+                        'precision' => 0,
+                    ],
+                    'grid' => [
+                        'color' => 'rgba(0, 0, 0, 0.05)',
+                    ],
+                ],
+            ],
+            'barPercentage' => 0.7,
+            'categoryPercentage' => 0.8,
         ];
     }
 }

@@ -16,7 +16,7 @@ class GroupRanking extends BaseWidget
 {
     use HasWidgetShield;
 
-    protected static ?int $sort = 8;
+    protected static ?int $sort = 12;
     
     // Responsive column span
     protected int|string|array $columnSpan = 'full';
@@ -39,9 +39,7 @@ class GroupRanking extends BaseWidget
         $refMeeting = $meetingQuery->latest('meeting_date')->first();
         $isToday = $refMeeting && $refMeeting->meeting_date->isToday();
 
-        $heading = $isToday
-            ? 'Ranking Kelompok'
-            : 'Ranking Kelompok (' . ($refMeeting ? $refMeeting->meeting_date->format('d/m/Y') : '-') . ')';
+        $heading = 'Peringkat Kehadiran Kelompok';
 
         $query = Group::query()->whereHas('members');
 
@@ -55,28 +53,61 @@ class GroupRanking extends BaseWidget
             ->query(
                 $query
                     ->addSelect([
-                        'total_attendance' => Attendance::selectRaw('count(*)')
+                        'present_count' => Attendance::selectRaw('count(*)')
                             ->whereHas('member', function (Builder $query) {
                                 $query->whereColumn('group_id', 'groups.id');
                             })
+                            ->where('status', 'hadir')
                             ->when($refMeeting, fn($q) => $q->where('meeting_id', $refMeeting->id))
-                            ->when(!$refMeeting, fn($q) => $q->whereDate('checkin_time', now()))
+                            ->when(!$refMeeting, fn($q) => $q->whereDate('checkin_time', now())),
+                        'excused_count' => Attendance::selectRaw('count(*)')
+                            ->whereHas('member', function (Builder $query) {
+                                $query->whereColumn('group_id', 'groups.id');
+                            })
+                            ->whereIn('status', ['izin', 'sakit'])
+                            ->when($refMeeting, fn($q) => $q->where('meeting_id', $refMeeting->id))
+                            ->when(!$refMeeting, fn($q) => $q->whereDate('checkin_time', now())),
                     ])
-                    ->withCount('members')
+                    ->withCount(['members' => function (Builder $query) use ($refMeeting) {
+                        // Optional: If meeting has target filtering, we might want to filter here too.
+                        // But usually ranking is for the whole group members.
+                        $query->where('status', true);
+                    }])
             )
             ->columns([
                 TextColumn::make('name')
-                    ->label('Nama Grup')
+                    ->label('Nama Kelompok')
                     ->searchable(),
                 TextColumn::make('members_count')
                     ->label('Anggota')
-                    ->sortable(),
-                TextColumn::make('total_attendance')
-                    ->label('Total Presensi Hadir')
-                    ->sortable()
+                    ->alignCenter(),
+                TextColumn::make('present_count')
+                    ->label('Hadir')
                     ->badge()
-                    ->color('success'),
+                    ->color('success')
+                    ->alignCenter(),
+                TextColumn::make('excused_count')
+                    ->label('Izin/Sakit')
+                    ->badge()
+                    ->color('warning')
+                    ->alignCenter(),
+                TextColumn::make('absent_count')
+                    ->label('Tidak Hadir')
+                    ->getStateUsing(fn ($record) => max(0, $record->members_count - ($record->present_count + $record->excused_count)))
+                    ->badge()
+                    ->color('danger')
+                    ->alignCenter(),
+                TextColumn::make('attendance_percentage')
+                    ->label('% Hadir')
+                    ->getStateUsing(function ($record) {
+                        if ($record->members_count <= 0) return '0%';
+                        $percentage = ($record->present_count / $record->members_count) * 100;
+                        return number_format($percentage, 1) . '%';
+                    })
+                    ->badge()
+                    ->color(fn ($state) => ((float) $state >= 80) ? 'success' : (((float) $state >= 50) ? 'warning' : 'danger'))
+                    ->alignCenter(),
             ])
-            ->defaultSort('total_attendance', 'desc');
+            ->defaultSort('present_count', 'desc');
     }
 }

@@ -76,11 +76,24 @@ class MeetingStatsTable extends TableWidget
                     }),
 
                 TextColumn::make('members_count')
-                    ->label('Total Anggota')
+                    ->label('Anggota (Target)')
                     ->alignCenter()
-                    ->getStateUsing(function (Group $record) {
+                    ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
-                        return Member::whereIn('group_id', $descendantIds)->where('status', true)->count();
+                        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+                        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+                        return Member::whereIn('group_id', $descendantIds)
+                            ->where('status', true)
+                            ->when($meeting->target_gender !== 'all', function ($q) use ($meeting) {
+                                return $q->where('gender', $meeting->target_gender);
+                            })
+                            ->when($shouldFilterByAge, function ($q) use ($meeting) {
+                                return $q->whereHas('ageGroup', function ($aq) use ($meeting) {
+                                    return $aq->whereIn('name', (array) $meeting->target_age_groups);
+                                });
+                            })
+                            ->count();
                     }),
 
                 TextColumn::make('present_count')
@@ -90,7 +103,20 @@ class MeetingStatsTable extends TableWidget
                     ->color('success')
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
-                        $memberIds = Member::whereIn('group_id', $descendantIds)->pluck('id');
+                        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+                        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+                        $memberIds = Member::whereIn('group_id', $descendantIds)
+                            ->where('status', true)
+                            ->when($meeting->target_gender !== 'all', function ($q) use ($meeting) {
+                                return $q->where('gender', $meeting->target_gender);
+                            })
+                            ->when($shouldFilterByAge, function ($q) use ($meeting) {
+                                return $q->whereHas('ageGroup', function ($aq) use ($meeting) {
+                                    return $aq->whereIn('name', (array) $meeting->target_age_groups);
+                                });
+                            })
+                            ->pluck('id');
 
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('member_id', $memberIds)
@@ -105,7 +131,20 @@ class MeetingStatsTable extends TableWidget
                     ->color('warning')
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
-                        $memberIds = Member::whereIn('group_id', $descendantIds)->pluck('id');
+                        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+                        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+                        $memberIds = Member::whereIn('group_id', $descendantIds)
+                            ->where('status', true)
+                            ->when($meeting->target_gender !== 'all', function ($q) use ($meeting) {
+                                return $q->where('gender', $meeting->target_gender);
+                            })
+                            ->when($shouldFilterByAge, function ($q) use ($meeting) {
+                                return $q->whereHas('ageGroup', function ($aq) use ($meeting) {
+                                    return $aq->whereIn('name', (array) $meeting->target_age_groups);
+                                });
+                            })
+                            ->pluck('id');
 
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('member_id', $memberIds)
@@ -118,10 +157,24 @@ class MeetingStatsTable extends TableWidget
                     ->alignRight()
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
-                        $memberIds = Member::whereIn('group_id', $descendantIds)->pluck('id');
-                        $totalMembers = $memberIds->count();
+                        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+                        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+                        $targetMembers = Member::whereIn('group_id', $descendantIds)
+                            ->where('status', true)
+                            ->when($meeting->target_gender !== 'all', function ($q) use ($meeting) {
+                                return $q->where('gender', $meeting->target_gender);
+                            })
+                            ->when($shouldFilterByAge, function ($q) use ($meeting) {
+                                return $q->whereHas('ageGroup', function ($aq) use ($meeting) {
+                                    return $aq->whereIn('name', (array) $meeting->target_age_groups);
+                                });
+                            });
 
+                        $totalMembers = $targetMembers->count();
                         if ($totalMembers === 0) return '0%';
+
+                        $memberIds = $targetMembers->pluck('id');
 
                         $isPresent = Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('member_id', $memberIds)

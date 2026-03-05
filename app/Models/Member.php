@@ -39,7 +39,7 @@ class Member extends Model
 
     public function positions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(MemberPosition::class);
+        return $this->hasMany(MemberPosition::class)->orderBy('sort_order');
     }
 
     public function isPengurus(): bool
@@ -83,6 +83,7 @@ class Member extends Model
             ->sortBy(fn($pos) => [
                 $pos->category?->sort_order ?? 999,
                 -($pos->group?->level?->level_number ?? 0),
+                $pos->sort_order ?? 0,
             ])
             ->first();
     }

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Attendance;
 use App\Models\Meeting;
+use App\Models\AgeGroup;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
@@ -16,13 +17,10 @@ class ScanningPeakTimeWidget extends ChartWidget
 
     protected static bool $isLazy = true;
 
-    protected static ?int $sort = 6;
+    protected static ?int $sort = 9;
     
     // Responsive column span
-    protected int|string|array $columnSpan = [
-        'md' => 1,
-        'xl' => 1,
-    ];
+    protected int|string|array $columnSpan = 'full';
     
     protected ?string $pollingInterval = null;
     protected ?string $maxHeight = '250px';
@@ -43,11 +41,24 @@ class ScanningPeakTimeWidget extends ChartWidget
 
     public function getHeading(): ?string
     {
-        $ref = $this->getReferenceMeeting();
-        if (!$ref || $ref->meeting_date->isToday()) {
-            return 'Beban Aktivitas Scanner';
+        return 'Beban Aktivitas Scanner';
+    }
+
+    public function getDescription(): ?string
+    {
+        $data = $this->getData();
+        $total = 0;
+        if (!empty($data['datasets'])) {
+            foreach ($data['datasets'] as $dataset) {
+                $total += array_sum($dataset['data']);
+            }
         }
-        return 'Beban Aktivitas Scanner (' . $ref->meeting_date->format('d/m/Y') . ')';
+
+        if ($total === 0) {
+            return 'Belum ada aktivitas masuk';
+        }
+
+        return "Total : {$total} Anggota";
     }
 
     protected function getData(): array
@@ -56,14 +67,35 @@ class ScanningPeakTimeWidget extends ChartWidget
         $ref = $this->getReferenceMeeting();
         $cacheKey = 'scanning_peak_' . ($user->group_id ?? 'all') . '_' . ($ref->id ?? 'today');
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
+        return Cache::remember($cacheKey, 120, function () use ($user, $ref) {
             $targetPoints = 20;
 
-            // Build base query for attendance
-            $baseQuery = Attendance::query()->whereNotNull('checkin_time');
+            // Build base query for attendance - only count 'hadir' status
+            $baseQuery = Attendance::query()
+                ->whereNotNull('checkin_time')
+                ->where('status', 'hadir');
 
             if ($ref) {
                 $baseQuery->where('meeting_id', $ref->id);
+
+                // Add target filtering
+                $baseQuery->whereHas('member', function ($q) use ($ref) {
+                    $q->where('status', true);
+
+                    if ($ref->target_gender !== 'all') {
+                        $q->where('gender', $ref->target_gender);
+                    }
+
+                    $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => AgeGroup::count());
+                    $selectedAgeGroupsCount = empty($ref->target_age_groups) ? 0 : count($ref->target_age_groups);
+                    $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
+                    if ($shouldFilterByAge) {
+                        $q->whereHas('ageGroup', function ($aq) use ($ref) {
+                            return $aq->whereIn('name', (array) $ref->target_age_groups);
+                        });
+                    }
+                });
             } else {
                 $baseQuery->whereDate('checkin_time', now());
             }
@@ -78,7 +110,10 @@ class ScanningPeakTimeWidget extends ChartWidget
 
             if (!$firstCheckin || !$lastCheckin) {
                 return [
-                    'datasets' => [['label' => 'Jumlah Scan', 'data' => [], 'borderColor' => '#fbbf24', 'backgroundColor' => 'rgba(251, 191, 36, 0.1)', 'fill' => 'start', 'tension' => 0.4]],
+                    'datasets' => [
+                        ['label' => 'QR Code', 'data' => [], 'borderColor' => '#10b981', 'backgroundColor' => 'rgba(16, 185, 129, 0.1)', 'fill' => 'start', 'tension' => 0.4],
+                        ['label' => 'Manual', 'data' => [], 'borderColor' => '#3b82f6', 'backgroundColor' => 'rgba(59, 130, 246, 0.1)', 'fill' => 'start', 'tension' => 0.4],
+                    ],
                     'labels' => [],
                 ];
             }
@@ -113,8 +148,24 @@ class ScanningPeakTimeWidget extends ChartWidget
                 $end->minute($endMinute);
             }
 
-            // Query attendance data with minute-level granularity
-            $data = (clone $baseQuery)
+            // Query attendance data separated by method (qr_code vs manual)
+            $scanData = (clone $baseQuery)
+                ->where('method', 'qr_code')
+                ->select(
+                    DB::raw('HOUR(checkin_time) as hour'),
+                    DB::raw('FLOOR(MINUTE(checkin_time) / ' . $intervalMinutes . ') * ' . $intervalMinutes . ' as minute_slot'),
+                    DB::raw('count(*) as count')
+                )
+                ->groupBy('hour', 'minute_slot')
+                ->orderBy('hour')
+                ->orderBy('minute_slot')
+                ->get()
+                ->keyBy(function ($item) {
+                    return $item->hour . '_' . $item->minute_slot;
+                });
+
+            $manualData = (clone $baseQuery)
+                ->where('method', 'manual')
                 ->select(
                     DB::raw('HOUR(checkin_time) as hour'),
                     DB::raw('FLOOR(MINUTE(checkin_time) / ' . $intervalMinutes . ') * ' . $intervalMinutes . ' as minute_slot'),
@@ -130,28 +181,57 @@ class ScanningPeakTimeWidget extends ChartWidget
 
             // Generate labels and values for time slots
             $labels = [];
-            $values = [];
+            $scanValues = [];
+            $manualValues = [];
             $current = $start->copy();
 
             while ($current->lessThanOrEqualTo($end)) {
                 $key = $current->hour . '_' . $current->minute;
                 $labels[] = $current->format('H:i');
-                $values[] = $data->get($key)?->count ?? 0;
+                $scanValues[] = $scanData->get($key)?->count ?? 0;
+                $manualValues[] = $manualData->get($key)?->count ?? 0;
                 $current->addMinutes($intervalMinutes);
 
-                // Safety: max 30 points to avoid infinite loop 
+                // Safety: max 30 points to avoid infinite loop
                 if (count($labels) >= 30) break;
             }
+
+            $totalScan = array_sum($scanValues);
+            $totalManual = array_sum($manualValues);
+            $totalGlobal = $totalScan + $totalManual;
+
+            $pctScan = $totalGlobal > 0 ? number_format(($totalScan / $totalGlobal) * 100, 1) : 0;
+            $pctManual = $totalGlobal > 0 ? number_format(($totalManual / $totalGlobal) * 100, 1) : 0;
 
             return [
                 'datasets' => [
                     [
-                        'label' => 'Jumlah Scan',
-                        'data' => $values,
-                        'borderColor' => '#fbbf24',
-                        'backgroundColor' => 'rgba(251, 191, 36, 0.1)',
+                        'label' => "QR Code: {$totalScan} ({$pctScan}%)",
+                        'data' => $scanValues,
+                        'borderColor' => '#22c55e',
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.08)',
                         'fill' => 'start',
                         'tension' => 0.4,
+                        'borderWidth' => 2.5,
+                        'pointRadius' => 3,
+                        'pointBackgroundColor' => '#22c55e',
+                        'pointBorderColor' => '#ffffff',
+                        'pointBorderWidth' => 2,
+                        'pointHoverRadius' => 6,
+                    ],
+                    [
+                        'label' => "Manual: {$totalManual} ({$pctManual}%)",
+                        'data' => $manualValues,
+                        'borderColor' => '#3b82f6',
+                        'backgroundColor' => 'rgba(59, 130, 246, 0.08)',
+                        'fill' => 'start',
+                        'tension' => 0.4,
+                        'borderWidth' => 2.5,
+                        'pointRadius' => 3,
+                        'pointBackgroundColor' => '#3b82f6',
+                        'pointBorderColor' => '#ffffff',
+                        'pointBorderWidth' => 2,
+                        'pointHoverRadius' => 6,
                     ],
                 ],
                 'labels' => $labels,
@@ -162,5 +242,38 @@ class ScanningPeakTimeWidget extends ChartWidget
     protected function getType(): string
     {
         return 'line';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                    'position' => 'bottom',
+                    'labels' => [
+                        'padding' => 16,
+                        'usePointStyle' => true,
+                        'pointStyle' => 'circle',
+                    ],
+                ],
+            ],
+            'scales' => [
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+                'y' => [
+                    'beginAtZero' => true,
+                    'ticks' => [
+                        'precision' => 0,
+                    ],
+                    'grid' => [
+                        'color' => 'rgba(0, 0, 0, 0.05)',
+                    ],
+                ],
+            ],
+        ];
     }
 }

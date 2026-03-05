@@ -16,7 +16,7 @@ class RecentScansWidget extends BaseWidget
 
     protected static bool $isLazy = true;
 
-    protected static ?int $sort = 7;
+    protected static ?int $sort = 11;
     
     // Responsive column span
     protected int|string|array $columnSpan = 'full';
@@ -39,9 +39,7 @@ class RecentScansWidget extends BaseWidget
         $refMeeting = $meetingQuery->latest('meeting_date')->first();
         $isToday = $refMeeting && $refMeeting->meeting_date->isToday();
 
-        $heading = $isToday
-            ? 'Aktivitas Presensi'
-            : 'Aktivitas Presensi (' . ($refMeeting ? $refMeeting->meeting_date->format('d/m/Y') : '-') . ')';
+        $heading = 'Aktivitas Presensi Terbaru';
 
         $query = Attendance::query()->latest('checkin_time');
 
@@ -71,7 +69,7 @@ class RecentScansWidget extends BaseWidget
                 TextColumn::make('member.full_name')
                     ->label('Nama Anggota'),
                 TextColumn::make('member.group.name')
-                    ->label('Grup'),
+                    ->label('Kelompok'),
                 TextColumn::make('checkin_time')
                     ->label('Jam Presensi')
                     ->time('H:i:s'),

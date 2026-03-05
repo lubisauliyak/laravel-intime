@@ -47,9 +47,14 @@ class MeetingForm
                             ->required(),
                         CheckboxList::make('target_age_groups')
                             ->label('Target Kategori Usia')
-                            ->options(AgeGroup::orderBy('sort_order')->pluck('name', 'name'))
+                            ->options(function () {
+                                $ageGroups = AgeGroup::orderBy('sort_order')->pluck('name', 'name')->toArray();
+                                return $ageGroups;
+                            })
                             ->columns(2)
-                            ->gridDirection('vertical'),
+                            ->gridDirection('vertical')
+                            ->default([])
+                            ->helperText('Pilih satu atau lebih kategori usia. Kosongkan untuk menargetkan semua kategori.'),
                     ]),
                 Section::make('Waktu & Penyelenggara')
                     ->schema([

@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use Illuminate\Support\Carbon;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents, WithCustomStartCell
 {
@@ -28,11 +29,40 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
     protected $filters;
     protected $user;
     protected $rowCount = 0;
+    protected $meetings;
+    protected $lastCollection;
+    protected $ageGroupsCount;
 
     public function __construct(array $filters, $user)
     {
         $this->filters = $filters;
         $this->user = $user;
+        $this->meetings = $this->getRelevantMeetings();
+        $this->ageGroupsCount = \App\Models\AgeGroup::count();
+    }
+
+    protected function getRelevantMeetings()
+    {
+        $meetingDateFilter = $this->filters['meeting_date'] ?? [];
+        $from = $meetingDateFilter['from'] ?? null;
+        $until = $meetingDateFilter['until'] ?? null;
+
+        $query = Meeting::query()
+            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
+            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until));
+
+        if (!$this->user->isSuperAdmin()) {
+            if ($this->user->group_id) {
+                $relatedIds = array_merge(
+                    [$this->user->group_id],
+                    $this->user->group->getAllAncestorIds(),
+                    $this->user->group->getAllDescendantIds()
+                );
+                $query->whereIn('group_id', $relatedIds);
+            }
+        }
+
+        return $query->orderBy('meeting_date', 'asc')->get();
     }
 
     public function startCell(): string
@@ -47,49 +77,78 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
 
     public function collection()
     {
-        $query = Member::query()->where('status', true);
+        $query = Member::query()
+            ->select('members.*')
+            ->join('groups', 'members.group_id', '=', 'groups.id')
+            ->join('levels', 'groups.level_id', '=', 'levels.id')
+            ->leftJoin('groups as parents', 'groups.parent_id', '=', 'parents.id')
+            ->where('members.status', true);
         
         if (!$this->user->isSuperAdmin()) {
             if ($this->user->group_id) {
                 $descendantIds = $this->user->group->getAllDescendantIds();
-                $query->whereIn('group_id', $descendantIds);
+                $query->whereIn('members.group_id', $descendantIds);
             } else {
                 return collect();
             }
         }
 
+        // Apply Desa filter if present (parent_id is used for better schema alignment)
+        $desaId = $this->filters['parent_id'] ?? $this->filters['desa_id'] ?? null;
+        if (is_array($desaId)) {
+            $desaId = $desaId['value'] ?? null;
+        }
+        
+        if ($desaId) {
+            $desa = \App\Models\Group::find($desaId);
+            if ($desa) {
+                $query->whereIn('members.group_id', $desa->getAllDescendantIds());
+            }
+        }
+
         // Apply group filter if present (Handle Filament SelectFilter nested structure)
-        $groupId = null;
-        if (isset($this->filters['group_id'])) {
-            $groupId = is_array($this->filters['group_id']) 
-                ? ($this->filters['group_id']['value'] ?? null) 
-                : $this->filters['group_id'];
+        $groupId = $this->filters['group_id'] ?? null;
+        if (is_array($groupId)) {
+            $groupId = $groupId['value'] ?? null;
         }
 
         if ($groupId) {
             if (is_array($groupId)) {
-                $query->whereIn('group_id', $groupId);
+                $query->whereIn('members.group_id', $groupId);
             } else {
-                $query->where('group_id', $groupId);
+                $query->where('members.group_id', $groupId);
             }
         }
 
-        return $query->with('group')->get();
+        return $this->lastCollection = $query->with(['group', 'attendances', 'group.level', 'group.parent', 'ageGroup'])
+            ->orderBy('parents.name', 'asc')
+            ->orderBy('groups.name', 'asc')
+            ->orderBy('members.gender', 'asc')
+            ->orderBy('members.member_code', 'asc')
+            ->get();
     }
 
     public function headings(): array
     {
-        return [
+        $headers = [
             'No',
             'ID',
             'Nama Anggota',
-            'Grup',
-            'Total Sesi',
+            'L/P',
+            'Kelompok',
+            'Kategori Usia',
+            'Pertemuan',
             'Hadir',
-            'Izin / Sakit',
-            'Tanpa Keterangan',
+            'Izin/Sakit',
+            'Tidak Hadir',
             '% Kehadiran',
         ];
+
+        foreach ($this->meetings as $meeting) {
+            $headers[] = $meeting->meeting_date->format('d/m/y') . "\n" . $meeting->name;
+        }
+
+        return $headers;
     }
 
     public function map($member): array
@@ -113,7 +172,14 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
                 });
 
                 if ($member->ageGroup) {
-                    $query->orWhereJsonContains('target_age_groups', $member->ageGroup->name);
+                    $allAgeGroupsCount = \App\Models\AgeGroup::count();
+                    $query->orWhere(function($subQ) use ($member, $allAgeGroupsCount) {
+                        $subQ->whereJsonContains('target_age_groups', $member->ageGroup->name)
+                            ->where(function($innerQ) use ($allAgeGroupsCount) {
+                                // Only apply age filter if NOT all age groups are selected
+                                $innerQ->whereRaw("JSON_LENGTH(target_age_groups) < ?", [$allAgeGroupsCount]);
+                            });
+                    });
                 }
             })
             ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
@@ -141,39 +207,113 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
         // 5. Calculate Rate
         $rate = $totalSessions > 0 ? number_format(($attended / $totalSessions) * 100, 1) . '%' : '0%';
 
-        return [
+        $totalSessionsInt = (int) ($totalSessions ?? 0);
+        $attendedInt = (int) ($attended ?? 0);
+        $excusedInt = (int) ($excused ?? 0);
+        $tidakHadirInt = (int) ($tanpaKeterangan ?? 0);
+
+        $row = [
             $this->rowCount,
             $member->member_code,
             $member->full_name,
+            strtoupper($member->gender === 'male' ? 'L' : 'P'),
             $member->group->name,
-            $totalSessions,
-            $attended,
-            $excused,
-            $tanpaKeterangan,
+            $member->ageGroup?->name ?? '-',
+            $totalSessionsInt,
+            $attendedInt,
+            $excusedInt,
+            $tidakHadirInt,
             $rate,
         ];
+
+        // 6. Meeting Status Columns
+        foreach ($this->meetings as $meeting) {
+            $attendance = $member->attendances->where('meeting_id', $meeting->id)->first();
+            $isTarget = $this->isMemberTargetForMeeting($member, $meeting);
+
+            if ($attendance) {
+                $row[] = match($attendance->status) {
+                    'hadir' => 'H',
+                    'izin' => 'I',
+                    'sakit' => 'S',
+                    default => '',
+                };
+            } elseif (!$isTarget) {
+                $row[] = '-'; // Non-target and no attendance
+            } else {
+                $row[] = ''; // Target but no attendance record (Alpa)
+            }
+        }
+
+        return $row;
+    }
+
+    protected function isMemberTargetForMeeting($member, $meeting)
+    {
+        // 1. Group check: meeting group must be ancestor of member group or member group itself
+        $memberGroupAncestors = array_merge([$member->group_id], $member->group->getAllAncestorIds());
+        if (!in_array($meeting->group_id, $memberGroupAncestors)) {
+            return false;
+        }
+
+        // 2. Date check: member must be created before or on meeting date
+        if ($member->created_at->startOfDay()->gt($meeting->meeting_date->startOfDay())) {
+            return false;
+        }
+
+        // 3. Gender check
+        if ($meeting->target_gender !== 'all' && $meeting->target_gender !== $member->gender) {
+            return false;
+        }
+
+        // 4. Age Group check
+        if (!empty($meeting->target_age_groups)) {
+            if ($member->ageGroup) {
+                if (count((array) $meeting->target_age_groups) < $this->ageGroupsCount) {
+                    if (!in_array($member->ageGroup->name, (array) $meeting->target_age_groups)) {
+                        return false;
+                    }
+                }
+            } else {
+                // If member has no age group but meeting targets specific ones
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function columnWidths(): array
     {
-        return [
+        $widths = [
             'A' => 5,   // No
             'B' => 12,  // ID
             'C' => 30,  // Nama
-            'D' => 20,  // Grup
-            'E' => 12,  // Total Sesi
-            'F' => 10,  // Hadir
-            'G' => 15,  // Izin/Sakit
-            'H' => 18,  // Alpa
-            'I' => 15,  // %
+            'D' => 5,   // L/P
+            'E' => 20,  // Kelompok
+            'F' => 18,  // Kategori Usia
+            'G' => 12,  // Total Sesi
+            'H' => 12,  // Hadir
+            'I' => 12,  // Izin/Sakit
+            'J' => 12,  // Tidak Hadir
+            'K' => 15,  // %
         ];
+
+        for ($i = 0; $i < count($this->meetings); $i++) {
+            $letter = Coordinate::stringFromColumnIndex(12 + $i);
+            $widths[$letter] = 12; // Increased width for better readability of wrapped headers
+        }
+
+        return $widths;
     }
 
     public function styles(Worksheet $sheet)
     {
         $lastRow = $this->rowCount + 5;
+        $lastColNum = 11 + count($this->meetings);
+        $lastColLetter = Coordinate::stringFromColumnIndex($lastColNum);
         
-        $sheet->getStyle("A5:I{$lastRow}")->applyFromArray([
+        $sheet->getStyle("A5:{$lastColLetter}{$lastRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -185,8 +325,22 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
             ],
         ]);
 
+        // Specific alignment for header row
+        // Summary headers (A-K) remain middle aligned (inherited)
+        // Meeting headers (L onwards) use top align if meetings exist
+        if (count($this->meetings) > 0) {
+            $lastMeetingColNum = 11 + count($this->meetings);
+            $lastMeetingColLetter = Coordinate::stringFromColumnIndex($lastMeetingColNum);
+            $sheet->getStyle("L5:{$lastMeetingColLetter}5")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        }
+
         $sheet->getStyle("C6:C{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('A5:I5')->getFont()->setBold(true);
+        
+        // Force display 0 for summary columns
+        $sheet->getStyle("G6:J{$lastRow}")->getNumberFormat()->setFormatCode('0');
+        
+        $sheet->getStyle("A5:{$lastColLetter}5")->getFont()->setBold(true);
+        $sheet->getStyle("A5:{$lastColLetter}5")->getAlignment()->setWrapText(true);
 
         return [];
     }
@@ -196,7 +350,10 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
         return [
             BeforeSheet::class => function(BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $sheet->mergeCells('A1:I1');
+                $lastColNum = 11 + count($this->meetings);
+                $lastColLetter = Coordinate::stringFromColumnIndex($lastColNum);
+
+                $sheet->mergeCells("A1:{$lastColLetter}1");
                 $sheet->setCellValue('A1', 'REKAPITULASI KEHADIRAN ANGGOTA');
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
                 
@@ -213,18 +370,50 @@ class GlobalAttendanceReportExport implements FromCollection, WithTitle, WithHea
                     $periodeText = 'Sampai ' . Carbon::parse($until)->translatedFormat('d F Y');
                 }
 
-                $sheet->mergeCells('A2:I2');
+                $sheet->mergeCells("A2:{$lastColLetter}2");
                 $sheet->setCellValue('A2', "Periode: {$periodeText}");
                 
-                $sheet->mergeCells('A3:I3');
+                $sheet->mergeCells("A3:{$lastColLetter}3");
                 $sheet->setCellValue('A3', "Dicetak oleh: " . $this->user->name);
                 
-                $sheet->mergeCells('A4:I4'); // Spacer
+                $sheet->mergeCells("A4:{$lastColLetter}4"); // Spacer
             },
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+                
+                // Set row heights
                 for ($i = 1; $i <= $this->rowCount + 5; $i++) {
                     $sheet->getRowDimension($i)->setRowHeight(20);
+                }
+
+                // Apply gray background for non-target cells & Color for statuses
+                if ($this->lastCollection && count($this->meetings) > 0) {
+                    $rowIdx = 6;
+                    foreach ($this->lastCollection as $member) {
+                        $colIdx = 12;
+                        foreach ($this->meetings as $meeting) {
+                            $cell = Coordinate::stringFromColumnIndex($colIdx) . $rowIdx;
+                            
+                            $val = $sheet->getCell($cell)->getValue();
+                            $isTarget = $this->isMemberTargetForMeeting($member, $meeting);
+                            
+                            // Apply color for statuses (H/I/S)
+                            if ($val === 'H') {
+                                $sheet->getStyle($cell)->getFont()->getColor()->setARGB('FF15803D'); // Success Green
+                            } elseif (in_array($val, ['I', 'S'])) {
+                                $sheet->getStyle($cell)->getFont()->getColor()->setARGB('FFB45309'); // Warning Orange
+                            }
+
+                            // If not target, apply gray background (even if they attended)
+                            if (!$isTarget) {
+                                $sheet->getStyle($cell)->getFill()
+                                    ->setFillType(Fill::FILL_SOLID)
+                                    ->getStartColor()->setARGB('FFE9ECEF'); // Light gray
+                            }
+                            $colIdx++;
+                        }
+                        $rowIdx++;
+                    }
                 }
             },
         ];

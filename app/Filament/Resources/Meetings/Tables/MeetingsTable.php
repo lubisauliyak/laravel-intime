@@ -63,20 +63,25 @@ class MeetingsTable
                 TextColumn::make('target_age_groups')
                     ->label('Kategori Usia')
                     ->badge()
-                    ->formatStateUsing(function ($state) {
-                        if (empty($state)) return null;
+                    ->state(function (Meeting $record): array {
+                        $state = $record->target_age_groups;
+                        if (empty($state)) {
+                            return ['Semua'];
+                        }
+                        
                         return \App\Models\AgeGroup::whereIn('name', (array) $state)
                             ->orderBy('sort_order')
                             ->pluck('name')
                             ->toArray();
                     })
                     ->color(fn (string $state): string => match (true) {
+                        str_contains(strtolower($state), 'semua') => 'gray',
                         str_contains(strtolower($state), 'pra remaja') => 'info',
                         str_contains(strtolower($state), 'remaja') => 'warning',
                         str_contains(strtolower($state), 'pra nikah') => 'success',
                         default => 'gray',
                     })
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 TextColumn::make('creator.name')
                     ->label('Dibuat Oleh')
                     ->visibleFrom('md'),
@@ -121,7 +126,7 @@ class MeetingsTable
                         ->url(fn ($record) => route('meeting.report.pdf', $record))
                         ->openUrlInNewTab(),
                     Action::make('open_scanner')
-                        ->label('Scanner Station')
+                        ->label('Buka Scanner')
                         ->icon('heroicon-o-qr-code')
                         ->color('emerald')
                         ->url(fn ($record) => route('scanner.live', $record))

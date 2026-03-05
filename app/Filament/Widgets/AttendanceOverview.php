@@ -28,7 +28,7 @@ class AttendanceOverview extends StatsOverviewWidget
         $user = auth()->user();
         $cacheKey = 'attendance_overview_' . ($user->group_id ?? 'all');
 
-        return Cache::remember($cacheKey, 60, function () use ($user) {
+        return Cache::remember($cacheKey, 120, function () use ($user) {
             // Find reference meeting (today or latest past)
             $meetingQuery = Meeting::where('meeting_date', '<=', now()->toDateString());
             if (!$user->isSuperAdmin() && $user->group_id) {
@@ -56,43 +56,117 @@ class AttendanceOverview extends StatsOverviewWidget
                 $attendanceQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds));
             }
 
-            $attendanceCount = $attendanceQuery->count();
+            // Filter by target audience (gender and age groups)
+            if ($refMeeting) {
+                $attendanceQuery->whereHas('member', function ($q) use ($refMeeting) {
+                    if ($refMeeting->target_gender !== 'all') {
+                        $q->where('gender', $refMeeting->target_gender);
+                    }
 
-            // Populasi anggota: selalu data terkini
+                    $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => \App\Models\AgeGroup::count());
+                    $selectedAgeGroupsCount = empty($refMeeting->target_age_groups) ? 0 : count($refMeeting->target_age_groups);
+                    $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
+                    if ($shouldFilterByAge) {
+                        $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', (array) $refMeeting->target_age_groups));
+                    }
+                });
+            }
+
+            $attendanceCount = (clone $attendanceQuery)->where('status', 'hadir')->count();
+            $lateCount = (clone $attendanceQuery)->where('status', 'hadir')->where('notes', 'LIKE', '%TERLAMBAT%')->count();
+
+            // Populasi anggota: filter berdasarkan target usia dari pertemuan terakhir
             $memberQuery = Member::where('status', true);
             if (!$user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();
                 $memberQuery->whereIn('group_id', $allowedGroupIds);
             }
+
+            // Filter population by target
+            if ($refMeeting) {
+                if ($refMeeting->target_gender !== 'all') {
+                    $memberQuery->where('gender', $refMeeting->target_gender);
+                }
+
+                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => \App\Models\AgeGroup::count());
+                $selectedAgeGroupsCount = empty($refMeeting->target_age_groups) ? 0 : count($refMeeting->target_age_groups);
+                $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
+                if ($shouldFilterByAge) {
+                    $memberQuery->whereHas('ageGroup', fn($q) => $q->whereIn('name', (array) $refMeeting->target_age_groups));
+                }
+            }
+
             $totalMembers = $memberQuery->count();
+            $notAttendedCount = max(0, $totalMembers - $attendanceCount);
 
             $attendanceRate = $totalMembers > 0 ? ($attendanceCount / $totalMembers) * 100 : 0;
 
-            // Label: tampilkan tanggal hanya jika bukan hari ini
-            $presensiLabel = $isToday
-                ? 'Total Presensi Hari Ini'
-                : 'Total Presensi (' . ($refMeeting ? $refMeeting->meeting_date->format('d/m/Y') : '-') . ')';
-            $presensiDesc = $isToday
-                ? 'Anggota yang telah melakukan presensi hari ini'
-                : 'Data presensi pertemuan terakhir';
+            $isExpired = $refMeeting ? $refMeeting->isExpired() : true;
 
-            $rasioLabel = $isToday
-                ? 'Rasio Kehadiran'
-                : 'Rasio Kehadiran (' . ($refMeeting ? $refMeeting->meeting_date->format('d/m/Y') : '-') . ')';
+            // Label Logic
+            $presensiLabel = 'Hadir';
+            
+            // "Belum Hadir" during meeting time, "Tidak Hadir" if session expired/past
+            $belumHadirLabel = ($isToday && !$isExpired) ? 'Belum Hadir' : 'Tidak Hadir';
+            
+            $terlambatLabel = 'Terlambat';
+            $populasiLabel = 'Target Populasi';
+            $rasioLabel = 'Rasio Kehadiran';
 
-            return [
+            $dateSuffix = $refMeeting && !$isToday ? ' (' . $refMeeting->meeting_date->format('d/m/Y') . ')' : '';
+
+            $stats = [
                 Stat::make($presensiLabel, $attendanceCount)
-                    ->description($presensiDesc)
-                    ->descriptionIcon('heroicon-m-user-group')
+                    ->description('Total kehadiran')
+                    ->descriptionIcon('heroicon-m-check-circle')
                     ->color('success'),
-                Stat::make('Populasi Anggota', $totalMembers)
-                    ->description('Jumlah total anggota terdaftar aktif')
+                Stat::make($belumHadirLabel, $notAttendedCount)
+                    ->description(($isToday && !$isExpired) ? 'Estimasi yang akan datang' : 'Tidak hadir tanpa keterangan')
+                    ->descriptionIcon('heroicon-m-user-minus')
+                    ->color($notAttendedCount > 0 ? ($isExpired ? 'danger' : 'warning') : 'gray'),
+                Stat::make($terlambatLabel, $lateCount)
+                    ->description('Hadir setelah waktu mulai sesi')
+                    ->descriptionIcon('heroicon-m-clock')
+                    ->color($lateCount > 0 ? 'warning' : 'gray'),
+                Stat::make($populasiLabel, $totalMembers)
+                    ->description('Total target anggota aktif')
                     ->descriptionIcon('heroicon-m-users'),
                 Stat::make($rasioLabel, number_format($attendanceRate, 1) . '%')
-                    ->description('Persentase kehadiran terhadap populasi')
+                    ->description('Persentase tingkat kehadiran')
                     ->descriptionIcon('heroicon-m-presentation-chart-line')
-                    ->color($attendanceRate > 70 ? 'success' : 'warning'),
+                    ->color($attendanceRate > 75 ? 'success' : ($attendanceRate > 50 ? 'warning' : 'danger')),
             ];
+
+            // 6. Pengurus Hadir (Bukan Target / Total Hadir)
+            if ($refMeeting) {
+                $allAttendanceQuery = Attendance::where('meeting_id', $refMeeting->id);
+                if (!$user->isSuperAdmin() && $user->group_id) {
+                    $allAttendanceQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
+                }
+
+                $pengurusAttendanceQuery = (clone $allAttendanceQuery)->whereHas('member', function ($q) {
+                    $q->whereIn('membership_type', ['pengurus', 'PENGURUS'])
+                      ->orWhereHas('positions');
+                });
+
+                $totalPengurusHadir = $pengurusAttendanceQuery->count();
+                
+                $pengurusBukanTarget = 0;
+                if (!empty($refMeeting->target_age_groups)) {
+                    $pengurusBukanTarget = (clone $pengurusAttendanceQuery)
+                        ->whereHas('member.ageGroup', fn($q) => $q->whereNotIn('name', (array) $refMeeting->target_age_groups))
+                        ->count();
+                }
+
+                $stats[] = Stat::make('Pengurus Hadir', $pengurusBukanTarget > 0 ? "{$pengurusBukanTarget} / {$totalPengurusHadir}" : (string) $totalPengurusHadir)
+                    ->description($pengurusBukanTarget > 0 ? 'Bukan target / Total hadir' : 'Total kehadiran pengurus')
+                    ->descriptionIcon('heroicon-m-shield-check')
+                    ->color('info');
+            }
+
+            return $stats;
         });
     }
 }

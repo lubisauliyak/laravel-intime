@@ -15,22 +15,26 @@ class MeetingAttendanceInfolist
     public static function configure(Schema $schema, $meeting, $group, $isMeetingOver): Schema
     {
         $descendantIds = $group->getAllDescendantIds();
-        
+
         // Total members (all)
         $totalMembers = Member::whereIn('group_id', $descendantIds)->where('status', true)->count();
-        
+
         // Target members (filtered by gender and age category)
+        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+        $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
+        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
         $targetQuery = Member::whereIn('group_id', $descendantIds)
             ->where('status', true)
             ->when($meeting->target_gender !== 'all', function ($q) use ($meeting) {
                 return $q->where('gender', $meeting->target_gender);
             })
-            ->when(!empty($meeting->target_age_groups), function ($q) use ($meeting) {
+            ->when($shouldFilterByAge, function ($q) use ($meeting) {
                 return $q->whereHas('ageGroup', function ($aq) use ($meeting) {
-                    return $aq->whereIn('name', $meeting->target_age_groups);
+                    return $aq->whereIn('name', (array) $meeting->target_age_groups);
                 });
             });
-        
+
         $totalTarget = $targetQuery->count();
         $targetMemberIds = $targetQuery->pluck('id')->toArray();
         
@@ -121,25 +125,26 @@ class MeetingAttendanceInfolist
                                 TextEntry::make('target_gender')
                                     ->label('Target Gender')
                                     ->badge()
-                                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                                    ->formatStateUsing(fn ($state): string => match ($state) {
                                         'all' => 'Semua',
                                         'male' => 'Laki-laki',
                                         'female' => 'Perempuan',
-                                        default => $state,
+                                        default => (string) $state,
                                     })
-                                    ->color(fn (string $state): string => match ($state) {
+                                    ->color(fn ($state): string => match ($state) {
                                         'male' => 'info',
                                         'female' => 'danger',
                                         default => 'gray',
                                     }),
-                                 TextEntry::make('target_age_groups')
+                                  TextEntry::make('target_age_groups')
                                     ->label('Target Kategori Usia')
-                                    ->placeholder('Semua')
+                                    ->formatStateUsing(fn ($state) => empty($state) ? '✓ Semua Kategori Usia' : $state)
                                     ->badge()
-                                    ->color(fn (string $state): string => match (true) {
-                                        str_contains(strtolower($state), 'pra remaja') => 'info',
-                                        str_contains(strtolower($state), 'remaja') => 'warning',
-                                        str_contains(strtolower($state), 'pra nikah') => 'success',
+                                    ->color(fn ($state): string => match (true) {
+                                        str_contains(strtolower((string) $state), 'semua') => 'success',
+                                        str_contains(strtolower((string) $state), 'pra remaja') => 'info',
+                                        str_contains(strtolower((string) $state), 'remaja') => 'warning',
+                                        str_contains(strtolower((string) $state), 'pra nikah') => 'success',
                                         default => 'gray',
                                     }),
                             ]),

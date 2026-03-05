@@ -7,12 +7,15 @@ Dokumen ini merinci fitur analitik kehadiran, pencetakan kartu anggota, dan perb
 
 ## 1. UI & Analytics (Prioritas Baru 🚀)
 
-*   [ ] **Link Perizinan Mandiri (Phase 9 Bridge):**
-    *   [ ] Tambahkan field "Permit Link" di `MeetingInfolist.php`.
-    *   [ ] Implementasi "Copy to Clipboard" untuk memudahkan sharing oleh admin.
-*   [ ] **Registrasi Cepat (Phase 10 Bridge):**
-    *   [ ] Tambah tombol "+ Anggota Baru" di halaman Live Scanner.
-    *   [ ] Buat modal registrasi instan (Nama, Gender, Grup).
+*   [x] **Branding Panel (inTime Identity):** 🆕
+    *   [x] Menyelaraskan font Filament dengan landing page (**Manrope**).
+    *   [x] Implementasi Palette **Emerald** (#065f46) & Background Light/Dark sesuai branding.
+    *   [x] Custom Sidebar: Indigo labels, Royal Blue active items, dan efek glassmorphism pada Topbar.
+*   [x] **Refined Attendance Report Filters:** 🆕
+    *   [x] Implementasi **Dependent Select** (Pilih Desa → Filter Kelompok).
+    *   [x] Sinkronisasi `parent_id` untuk filter Desa (sesuai skema database).
+    *   [x] Custom `noOptionsMessage` untuk panduan interaksi user.
+    *   [x] Perbaikan `TypeError` pada param `Get` data (Filament v3 Compatibility).
 *   [ ] **Matriks Kehadiran (Pindahan Phase 7):**
     *   [ ] Tabel pivot kehadiran Anggota vs Tanggal.
     *   [ ] Filter Gender & Kategori Usia.
@@ -46,7 +49,9 @@ Dokumen ini merinci fitur analitik kehadiran, pencetakan kartu anggota, dan perb
 1.  Kartu anggota dapat dicetak dalam jumlah banyak melalui satu file PDF yang rapi (Layout A4).
 2.  Laporan Excel memiliki branding profesional (Logo/Header).
 3.  Proses ekspor dan cetak berjalan stabil pada dataset besar (Optimasi memori).
-4.  Dokumentasi penggunaan untuk admin telah selesai.
+4.  Panel Admin memiliki identitas visual yang konsisten dengan Landing Page (**inTime Branding**).
+5.  Filter laporan kehadiran berfungsi secara cerdas (Dependent filtering).
+6.  Dokumentasi penggunaan untuk admin telah selesai.
 
 ---
-*Status: Direncanakan (16 Feb 2026)*
+*Status: Aktif (Update 05 Mar 2026 — inTime Branding & Report Refinement)*

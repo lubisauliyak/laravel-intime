@@ -47,15 +47,20 @@ class MeetingInfolist
                                     ->label('Target Kategori Usia')
                                     ->state(function ($record) {
                                         $groups = $record->target_age_groups;
-                                        if (empty($groups)) return null;
+                                        
+                                        // Jika kosong, tampilkan 'Semua Kategori Usia'
+                                        if (empty($groups)) {
+                                            return ['Semua'];
+                                        }
+                                        
                                         return \App\Models\AgeGroup::whereIn('name', (array) $groups)
                                             ->orderBy('sort_order')
                                             ->pluck('name')
                                             ->toArray();
                                     })
-                                    ->placeholder('Semua')
                                     ->badge()
                                     ->color(fn (string $state): string => match (true) {
+                                        str_contains(strtolower($state), 'semua') => 'gray',
                                         str_contains(strtolower($state), 'pra remaja') => 'info',
                                         str_contains(strtolower($state), 'remaja') => 'warning',
                                         str_contains(strtolower($state), 'pra nikah') => 'success',
@@ -111,6 +116,7 @@ class MeetingInfolist
                                         return [
                                             $primary?->category?->sort_order ?? 7, // Urutan Kategori (Awal = Kecil)
                                             -($primary?->group?->level?->level_number ?? 1), // Level Grup (Tinggi = Angka Besar)
+                                            $primary?->sort_order ?? 0, // Urutan Manual
                                             $primary?->group?->parent?->name, // Nama Parent Grup
                                             $primary?->group?->name, // Nama Grup
                                             $attendance->member->full_name
@@ -126,8 +132,16 @@ class MeetingInfolist
                                             ->columnSpan(3),
                                         TextEntry::make('consolidated_positions')
                                             ->label('Dapukan')
-                                            ->columnSpan(5)
-                                            ->state(fn($record) => $record->member->positions)
+                                            ->columnSpan(7)
+                                            ->state(fn($record) => $record->member->positions()
+                                                ->with(['category', 'group.level'])
+                                                ->get()
+                                                ->sortBy(fn($pos) => [
+                                                    $pos->category?->sort_order ?? 999,
+                                                    -($pos->group?->level?->level_number ?? 0),
+                                                    $pos->sort_order ?? 0,
+                                                ])
+                                            )
                                             ->listWithLineBreaks()
                                             ->formatStateUsing(fn ($state) => 
                                                 ($state->position_name ?? '-') . ' ' . 
@@ -137,21 +151,18 @@ class MeetingInfolist
                                             )
                                             ->color('gray')
                                             ->weight(FontWeight::Medium),
-                                        TextEntry::make('status')
+                                         TextEntry::make('status')
                                             ->label('Status')
                                             ->columnSpan(2)
                                             ->badge()
-                                            ->formatStateUsing(fn ($state) => strtoupper($state))
+                                            ->formatStateUsing(fn ($state, $record) => 
+                                                strtoupper($state) . ($state === 'hadir' && $record->checkin_time ? ' (' . $record->checkin_time->format('H:i') . ')' : '')
+                                            )
                                             ->color(fn ($state): string => match ($state) {
                                                 'hadir' => 'success',
                                                 'izin', 'sakit' => 'warning',
                                                 default => 'gray',
                                             }),
-                                        TextEntry::make('checkin_time')
-                                            ->label('Waktu')
-                                            ->columnSpan(2)
-                                            ->time('H:i')
-                                            ->placeholder('-'),
                                     ]),
                             ])
                             ->placeholder('Belum ada pengurus yang hadir.'),

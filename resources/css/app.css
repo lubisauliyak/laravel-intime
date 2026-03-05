@@ -19,12 +19,13 @@
  * Stack everything vertically
  */
 @media (max-width: 767px) {
+
     /* Stats Overview Widget - Stack cards vertically */
     .fi-stats-overview-widget .fi-stats-overview-widget-stats-grid {
         grid-template-columns: 1fr !important;
         gap: 0.75rem;
     }
-    
+
     /* Stat card - full width */
     .fi-stats-overview-widget-stat {
         min-width: 100% !important;
@@ -65,7 +66,7 @@
     .fi-stats-overview-widget .fi-stats-overview-widget-stats-grid {
         grid-template-columns: repeat(2, 1fr) !important;
     }
-    
+
     .fi-dashboard-grid {
         grid-template-columns: repeat(2, 1fr) !important;
     }
@@ -80,8 +81,9 @@
    Touch-Friendly Improvements (Mobile & Tablet)
    ========================================= */
 @media (max-width: 1024px) {
+
     /* Buttons - min 44px touch target */
-    .fi-btn, 
+    .fi-btn,
     .fi-action,
     .fi-btn-group-btn {
         min-height: 44px;
@@ -107,8 +109,8 @@
     }
 
     /* Form inputs - larger on mobile (prevents iOS zoom) */
-    .fi-input, 
-    .fi-select-input, 
+    .fi-input,
+    .fi-select-input,
     .fi-textarea,
     .fi-toggle-input,
     .fi-checkbox-input {
@@ -153,7 +155,8 @@
     }
 
     .fi-table {
-        min-width: 600px; /* Forces scroll on small screens */
+        min-width: 600px;
+        /* Forces scroll on small screens */
     }
 
     /* Sticky first column for context */
@@ -186,6 +189,7 @@
    Navigation & Sidebar (Mobile)
    ========================================= */
 @media (max-width: 767px) {
+
     /* Sidebar hidden by default on mobile */
     .fi-sidebar {
         transform: translateX(-100%);
@@ -226,6 +230,7 @@
    Forms (Mobile)
    ========================================= */
 @media (max-width: 767px) {
+
     /* Form layout - single column */
     .fi-form-grid {
         grid-template-columns: 1fr !important;
@@ -255,6 +260,7 @@
    Cards & Sections (Mobile)
    ========================================= */
 @media (max-width: 767px) {
+
     /* Section - reduce padding */
     .fi-section {
         padding: 0.75rem !important;
@@ -279,6 +285,7 @@
    Modals & Slide-overs (Mobile)
    ========================================= */
 @media (max-width: 767px) {
+
     /* Modal - full screen */
     .fi-modal-window {
         width: 100% !important;
@@ -334,12 +341,15 @@
    Widgets Specific (Meeting-related included)
    ========================================= */
 @media (max-width: 767px) {
+
     /* All chart widgets - full width */
     .fi-widget[id*="punctuality"],
     .fi-widget[id*="gender"],
     .fi-widget[id*="attendance"],
     .fi-widget[id*="scanning"],
     .fi-widget[id*="age-group"],
+    .fi-widget[id*="target-population"],
+    .fi-widget[id*="target-gender"],
     .fi-widget[id*="ranking"] {
         grid-column: 1 / -1 !important;
     }
@@ -354,6 +364,7 @@
    Scanner Page (Mobile Specific)
    ========================================= */
 @media (max-width: 767px) {
+
     /* Scanner container adjustments */
     #reader-container {
         max-width: 100% !important;
@@ -376,6 +387,7 @@
    Landing Page (Mobile)
    ========================================= */
 @media (max-width: 767px) {
+
     /* Hero section */
     .landing-hero h1 {
         font-size: 1.75rem !important;

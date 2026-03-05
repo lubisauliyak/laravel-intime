@@ -112,10 +112,10 @@ class MemberForm
                 Select::make('age_group_id')
                     ->label('Kategori Usia')
                     ->relationship('ageGroup', 'name', fn($query) => $query->orderBy('sort_order'))
-                    ->required()
+                    ->nullable()
                     ->searchable()
                     ->preload()
-                    ->helperText('Kategori dipilih otomatis berdasarkan usia, namun tetap bisa diubah manual jika diperlukan.'),
+                    ->helperText('Kategori dipilih otomatis berdasarkan usia, namun tetap bisa diubah manual jika diperlukan. Kosongkan jika belum sesuai kategori.'),
                 Select::make('gender')
                     ->label('Jenis Kelamin')
                     ->options([
@@ -153,7 +153,8 @@ class MemberForm
                                     ->relationship('category', 'name', modifyQueryUsing: fn ($query) => $query->orderBy('sort_order')->orderBy('name'))
                                     ->required()
                                     ->searchable()
-                                    ->preload(),
+                                    ->preload()
+                                    ->columnSpan(['default' => 'full', 'md' => 3]),
                                 Select::make('group_id')
                                     ->label('Grup')
                                     ->relationship(
@@ -164,14 +165,21 @@ class MemberForm
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                                     ->required()
                                     ->searchable()
-                                    ->preload(),
+                                    ->preload()
+                                    ->columnSpan(['default' => 'full', 'md' => 4]),
                                 TextInput::make('position_name')
                                     ->label('Nama Dapukan')
                                     ->placeholder('CONTOH: KETUA')
                                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : null),
+                                    ->mutateDehydratedStateUsing(fn ($state) => $state ? strtoupper($state) : null)
+                                    ->columnSpan(['default' => 'full', 'md' => 3]),
+                                TextInput::make('sort_order')
+                                    ->label('Urutan')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->columnSpan(['default' => 'full', 'md' => 2]),
                             ])
-                            ->columns(3)
+                            ->columns(['default' => 1, 'md' => 12])
                             ->defaultItems(1)
                             ->collapsed()
                             ->itemLabel(function (array $state): string {

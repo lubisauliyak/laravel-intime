@@ -37,9 +37,22 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
     public function collection()
     {
         $allowedGroupIds = $this->meeting->group->getAllDescendantIds();
+        $targetAgeGroups = $this->meeting->target_age_groups;
         
+        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+        $selectedAgeGroupsCount = empty($targetAgeGroups) ? 0 : count($targetAgeGroups);
+        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
         return Member::whereIn('group_id', $allowedGroupIds)
             ->where('status', true)
+            ->when($this->meeting->target_gender !== 'all', function ($q) {
+                return $q->where('gender', $this->meeting->target_gender);
+            })
+            ->when($shouldFilterByAge, function ($q) use ($targetAgeGroups) {
+                return $q->whereHas('ageGroup', function ($aq) use ($targetAgeGroups) {
+                    return $aq->whereIn('name', $targetAgeGroups);
+                });
+            })
             ->with(['group.parent.parent', 'attendances' => function ($q) {
                 $q->where('meeting_id', $this->meeting->id);
             }])
@@ -56,7 +69,7 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
             'Desa',
             'Grup / Kelompok',
             'Status Presensi',
-            'Waktu Absen',
+            'Waktu',
             'Metode',
             'Keterangan',
         ];

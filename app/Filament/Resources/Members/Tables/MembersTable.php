@@ -71,7 +71,8 @@ class MembersTable
                     })
                     ->sortable()
                     ->searchable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->placeholder('Tanpa Kategori'),
                 TextColumn::make('gender')
                     ->label('L/P')
                     ->formatStateUsing(fn (string $state): string => $state === 'male' ? 'L' : 'P')
@@ -81,6 +82,7 @@ class MembersTable
                         'female' => 'danger',
                         default => 'gray',
                     })
+                    ->sortable()
                     ->visibleFrom('sm'),
                 TextColumn::make('membership_type')
                     ->label('Kepengurusan')
@@ -129,8 +131,31 @@ class MembersTable
                 SelectFilter::make('age_group_id')
                     ->label('Kategori Usia')
                     ->multiple()
-                    ->relationship('ageGroup', 'name')
-                    ->preload(),
+                    ->options(function () {
+                        $options = AgeGroup::orderBy('sort_order')->pluck('name', 'id')->toArray();
+                        $options['null'] = 'Tanpa Kategori Usia';
+                        return $options;
+                    })
+                    ->query(function ($query, array $data) {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        $values = $data['values'];
+                        $hasNull = in_array('null', $values);
+                        $normalIds = array_diff($values, ['null']);
+
+                        return $query->where(function ($q) use ($hasNull, $normalIds) {
+                            if ($hasNull && !empty($normalIds)) {
+                                $q->whereNull('age_group_id')
+                                    ->orWhereIn('age_group_id', $normalIds);
+                            } elseif ($hasNull) {
+                                $q->whereNull('age_group_id');
+                            } else {
+                                $q->whereIn('age_group_id', $normalIds);
+                            }
+                        });
+                    }),
                 SelectFilter::make('gender')
                     ->label('L/P')
                     ->options([

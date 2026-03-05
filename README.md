@@ -65,6 +65,19 @@ inTime adalah aplikasi berbasis web yang dirancang untuk manajemen pendataan ang
 -   [x] **PSR-12 Compliance**: Refactor semua import statements di Resources.
 -   [x] **Documentation Update**: SSOT, Import Guide, Context7 integration.
 
+### ✅ Phase 7: Advanced Analytics & Insights (Selesai)
+-   [x] **Vertical Lineage**: Scanner mendeteksi wewenang berdasarkan leluhur grup (Ancestors).
+-   [x] **Dynamic Sidebar**: Penamaan & indikator navigasi yang lebih kontras.
+-   [x] **Scanner Verification**: Integrasi `HasPageShield` pada seluruh entitas monitoring.
+-   [x] **Advanced Dashboard**: Analisis gender, kedisiplinan, dan partisipasi usia.
+
+### 🕒 Phase 8: UI Branding & Report Refinement (Current)
+-   [x] **inTime Branding**: Penyelarasan UI Panel dengan Landing Page (**Manrope** font & **Emerald** palette).
+-   [x] **Smart Filters**: Implementasi **Dependent Location Filter** (Desa → Kelompok) pada laporan.
+-   [x] **Schema Alignment**: Sinkronisasi filter `parent_id` untuk struktur data yang lebih konsisten.
+-   [x] **Excel Sync**: Sinkronisasi filter pencarian antara dashboard web dan hasil ekspor Excel.
+-   [ ] **Member Cards**: Sistem pencetakan kartu anggota massal (A4 PDF Layout).
+
 ## ⚙️ Instalasi
 
 1.  Clone repository:
