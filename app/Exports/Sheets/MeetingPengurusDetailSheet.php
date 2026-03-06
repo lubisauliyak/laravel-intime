@@ -35,7 +35,7 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
     public function collection()
     {
         return $this->meeting->attendances()
-            ->where('status', 'hadir')
+            ->whereIn('status', ['hadir', 'izin', 'sakit'])
             ->whereHas('member', function ($q) {
                 $q->whereIn('membership_type', ['pengurus', 'PENGURUS'])
                   ->orWhereHas('positions');
@@ -45,10 +45,9 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
             ->sortBy(function ($attendance) {
                 $primary = $attendance->member->getPrimaryPosition();
                 return [
-                    $primary?->category?->sort_order ?? 7,
-                    -($primary?->group?->level?->level_number ?? 1),
-                    $primary?->group?->parent?->name,
-                    $primary?->group?->name,
+                    -($primary?->group?->level?->level_number ?? 0), // Level Tertinggi (Desc)
+                    $primary?->category?->sort_order ?? 99,        // Kategori Dapukan
+                    $primary?->sort_order ?? 99,                  // Urutan Dapukan
                     $attendance->member->full_name,
                 ];
             });
@@ -76,6 +75,11 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
 
         // Format dapukan like the infolist: "Position Category Level Group"
         $dapukan = $member->positions
+            ->sortBy([
+                fn ($a, $b) => -($a->group?->level?->level_number <=> $b->group?->level?->level_number),
+                fn ($a, $b) => ($a->category?->sort_order ?? 99) <=> ($b->category?->sort_order ?? 99),
+                fn ($a, $b) => ($a->sort_order ?? 99) <=> ($b->sort_order ?? 99),
+            ])
             ->map(function ($pos) {
                 $parts = array_filter([
                     $pos->position_name ?? '-',
@@ -109,7 +113,7 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
             'A' => 5.33,   // No
             'B' => 10.67,  // ID
             'C' => 30.0,   // Nama Lengkap
-            'D' => 40.0,   // Dapukan
+            'D' => 55.0,   // Dapukan
             'E' => 16.0,   // Status Presensi
             'F' => 10.67,  // Waktu
             'G' => 12.0,   // Metode
@@ -119,10 +123,10 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
 
     public function styles(Worksheet $sheet)
     {
-        $lastRow = $this->rowCount + 6;
+        $lastRow = $this->rowCount + 5;
 
         // Global styles
-        $sheet->getStyle("A6:H{$lastRow}")->applyFromArray([
+        $sheet->getStyle("A5:H{$lastRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -136,14 +140,14 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
         ]);
 
         // Left align for Nama Lengkap and Dapukan
-        $sheet->getStyle("C7:C{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle("D7:D{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("C6:C{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("D6:D{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         // Left align for Keterangan
-        $sheet->getStyle("H7:H{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("H6:H{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         // Bold Heading
-        $sheet->getStyle('A6:H6')->getFont()->setBold(true);
+        $sheet->getStyle('A5:H5')->getFont()->setBold(true);
 
         // Title Styling
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
@@ -157,26 +161,37 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
             BeforeSheet::class => function(BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                $sheet->mergeCells('A1:H1');
+                // $sheet->mergeCells('A1:H1');
                 $sheet->setCellValue('A1', 'LAPORAN DETAIL PRESENSI PENGURUS');
 
-                $sheet->mergeCells('A2:H2');
+                // $sheet->mergeCells('A2:H2');
                 $sheet->setCellValue('A2', "Pertemuan/Penyelenggara : {$this->meeting->name} / {$this->meeting->group->name}");
 
-                $sheet->mergeCells('A3:H3');
+                // $sheet->mergeCells('A3:H3');
                 $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
                 $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
                 $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
 
-                $sheet->mergeCells('A4:H4'); // Spacer
-                $sheet->mergeCells('A5:H5'); // Spacer
+                // $sheet->mergeCells('A4:H4'); // Spacer
+                $sheet->setCellValue('A4', "");
             },
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastRow = $this->rowCount + 6;
+                $lastRow = $this->rowCount + 5;
 
-                for ($i = 1; $i <= $lastRow; $i++) {
+                // Fixed height for headers
+                for ($i = 1; $i <= 5; $i++) {
                     $sheet->getRowDimension($i)->setRowHeight(18.75);
+                }
+
+                // Minimal height 18.75, but auto-expand if multi-line Dapukan
+                for ($i = 6; $i <= $lastRow; $i++) {
+                    $dapukanValue = $sheet->getCell('D' . $i)->getValue();
+                    if (strpos((string)$dapukanValue, "\n") !== false) {
+                        $sheet->getRowDimension($i)->setRowHeight(-1);
+                    } else {
+                        $sheet->getRowDimension($i)->setRowHeight(18.75);
+                    }
                 }
             },
         ];

@@ -56,7 +56,15 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
             ->with(['group.parent.parent', 'attendances' => function ($q) {
                 $q->where('meeting_id', $this->meeting->id);
             }])
-            ->get();
+            ->get()
+            ->sortBy(function ($member) {
+                return [
+                    $member->group->parent?->name ?? 'ZZZ', // Parent group (e.g. DESA)
+                    $member->group->name,                 // Current group (e.g. KELOMPOK)
+                    $member->gender,                      // Gender
+                    $member->member_code,                 // Member code
+                ];
+            });
     }
 
     public function headings(): array
@@ -112,7 +120,7 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
         return [
             'A' => 5.33,  // No (40px)
             'B' => 10.67, // ID (80px)
-            'C' => 33.33, // Nama (250px)
+            'C' => 36.0, // Nama (250px)
             'D' => 20.0,  // Daerah
             'E' => 20.0,  // Desa
             'F' => 20.0,  // Kelompok
@@ -132,7 +140,7 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
         $sheet->getColumnDimension('E')->setVisible(false);
 
         // Global styles
-        $sheet->getStyle("A6:J{$lastRow}")->applyFromArray([
+        $sheet->getStyle("A5:J{$lastRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -146,10 +154,10 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
         ]);
 
         // Left align for Full Name
-        $sheet->getStyle("C7:C{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle("C6:C{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         // Bold Heading
-        $sheet->getStyle('A6:J6')->getFont()->setBold(true);
+        $sheet->getStyle('A5:J5')->getFont()->setBold(true);
 
         // Title Styling
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
@@ -163,19 +171,19 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
             BeforeSheet::class => function(BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
                 
-                $sheet->mergeCells('A1:J1');
+                // $sheet->mergeCells('A1:J1');
                 $sheet->setCellValue('A1', 'LAPORAN DETAIL PRESENSI ANGGOTA');
                 
-                $sheet->mergeCells('A2:J2');
+                // $sheet->mergeCells('A2:J2');
                 $sheet->setCellValue('A2', "Pertemuan/Penyelenggara : {$this->meeting->name} / {$this->meeting->group->name}");
                 
-                $sheet->mergeCells('A3:J3');
+                // $sheet->mergeCells('A3:J3');
                 $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
                 $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
                 $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
 
-                $sheet->mergeCells('A4:J4'); // Spacer
-                $sheet->mergeCells('A5:J5'); // Spacer
+                // $sheet->mergeCells('A4:J4'); // Spacer
+                $sheet->setCellValue('A4', "");
             },
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();

@@ -180,7 +180,7 @@ class LiveScannerController extends Controller
         $allowedGroupIds = $meeting->group->getAllDescendantIds();
         $lineageGroupIds = array_merge($allowedGroupIds, $meeting->group->getAllAncestorIds());
 
-        $members = Member::with('ageGroup')->where(function($q) use ($query) {
+        $members = Member::with(['ageGroup', 'group'])->where(function($q) use ($query) {
                 $q->where('full_name', 'like', "%$query%")
                   ->orWhere('member_code', 'like', "%$query%");
             })
@@ -214,19 +214,21 @@ class LiveScannerController extends Controller
             ->get()
             ->map(function($m) use ($meeting) {
                 $isPengurus = $m->isPengurus();
-                $isTargetAge = false;
 
                 $allAgeGroupsCount = \App\Models\AgeGroup::count();
                 $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
                 $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
                 $isTargetAge = !$shouldFilterByAge || ($m->ageGroup && in_array($m->ageGroup->name, (array) $meeting->target_age_groups));
 
-                // Hide label if they are target age group, OR if they are not pengurus
-                $label = ($isPengurus && !$isTargetAge) ? " [PENGURUS]" : "";
+                $label = ($isPengurus && !$isTargetAge) ? 'PENGURUS' : '';
+                $groupName = $m->group?->name ?? '-';
 
                 return [
                     'id' => $m->id,
-                    'text' => "{$m->full_name} ({$m->member_code}){$label}"
+                    'text' => $m->full_name,
+                    'code' => $m->member_code,
+                    'group' => $groupName,
+                    'badge' => $label,
                 ];
             });
 

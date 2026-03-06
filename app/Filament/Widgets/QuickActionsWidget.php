@@ -14,6 +14,7 @@ class QuickActionsWidget extends StatsOverviewWidget
     protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 'full';
+    protected ?string $heading = 'Aksi Cepat';
 
     protected function getStats(): array
     {
@@ -37,7 +38,7 @@ class QuickActionsWidget extends StatsOverviewWidget
             : url("/admin/meetings");
 
         $scannerDesc = $todayMeeting
-            ? $todayMeeting->name
+            ? 'Buka ' . $todayMeeting->name
             : 'Tidak ada sesi hari ini';
 
         return [
@@ -56,7 +57,7 @@ class QuickActionsWidget extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-document-text')
                 ->color('warning')
                 ->url($reportUrl),
-            Stat::make('Buka', '🪪')
+            Stat::make('Daftar Anggota', '🪪')
                 ->description('Lihat daftar anggota')
                 ->descriptionIcon('heroicon-m-identification')
                 ->color('info')

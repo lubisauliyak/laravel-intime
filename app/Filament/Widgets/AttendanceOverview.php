@@ -15,6 +15,7 @@ class AttendanceOverview extends StatsOverviewWidget
     use HasWidgetShield;
 
     protected static bool $isLazy = true;
+    protected ?string $heading = 'Ringkasan Kehadiran';
 
     protected static ?int $sort = 1;
     

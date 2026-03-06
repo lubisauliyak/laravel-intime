@@ -55,31 +55,30 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         $this->addStatsRecursively($this->meeting->group, 0, $rows);
         // Table 1 data occupies rows from currentRow=1 to currentRow
         // Actual Excel rows: header at row 6, data starts at row 7
-        $this->table1StartRow = 6; // heading row
-        $this->table1EndRow = $this->currentRow + 6; // last data row
+        $this->table1StartRow = 5; // heading row
+        $this->table1EndRow = $this->currentRow + 5; // last data row
 
         // === SPACER: 3 empty rows ===
         $emptyRow = ['group_name' => '', 'level' => '', 'target' => '', 'hadir' => '', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => ''];
         $rows->push($emptyRow);
         $rows->push($emptyRow);
-        $rows->push($emptyRow);
-        $this->currentRow += 3;
+        $this->currentRow += 2; // 2 spacer rows added
 
         // === TABLE 2: Rekapitulasi Pengurus ===
         // Title row
         $rows->push(['group_name' => 'REKAPITULASI KEHADIRAN PENGURUS', 'level' => '', 'target' => '', 'hadir' => '', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => '']);
         $this->currentRow++;
-        $this->table2TitleRow = $this->currentRow + 6;
+        $this->table2TitleRow = $this->currentRow + 5;
 
         // Heading row
-        $rows->push(['group_name' => 'Nama Grup', 'level' => 'Level', 'target' => '', 'hadir' => 'Hadir', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => '']);
+        $rows->push(['group_name' => 'Nama Grup', 'level' => 'Level', 'target' => 'Hadir', 'hadir' => '', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => '']);
         $this->currentRow++;
-        $this->table2HeadingRow = $this->currentRow + 6;
+        $this->table2HeadingRow = $this->currentRow + 5;
 
         // Data rows
         $this->table2StartRow = $this->table2HeadingRow;
         $this->addPengurusStats($this->meeting->group, 0, $rows);
-        $this->table2EndRow = $this->currentRow + 6;
+        $this->table2EndRow = $this->currentRow + 5;
 
         return $rows;
     }
@@ -119,10 +118,12 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         $percentage = $totalTarget > 0 ? round(($hadir / $totalTarget) * 100, 1) : 0;
 
         $hasChildren = $group->children()->exists();
+        $levelNumber = $group->level?->level_number ?? 0;
         
         $this->currentRow++;
-        if ($hasChildren) {
-            $this->parentRows[] = $this->currentRow + 6; // actual excel row
+        // Only color DAERAH/DESA rows (level > 1), not KELOMPOK
+        if ($hasChildren && $levelNumber > 1) {
+            $this->parentRows[] = $this->currentRow + 5;
         }
 
         $rows->push([
@@ -151,16 +152,18 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         $hadir = $this->getPengurusHadirCountForGroup($group);
         
         $hasChildren = $group->children()->exists();
+        $levelNumber = $group->level?->level_number ?? 0;
         $this->currentRow++;
-        if ($hasChildren) {
-            $this->table2ParentRows[] = $this->currentRow + 6;
+        // Only color DAERAH/DESA rows (level > 1), not KELOMPOK
+        if ($hasChildren && $levelNumber > 1) {
+            $this->table2ParentRows[] = $this->currentRow + 5;
         }
 
         $rows->push([
             'group_name' => str_repeat('    ', $depth) . $group->name,
             'level' => $group->level?->name ?? '-',
-            'target' => '',
-            'hadir' => $hadir,
+            'target' => $hadir,  // Hadir placed in Column C (right next to Level)
+            'hadir' => '',
             'izin_sakit' => '',
             'tidak_hadir' => '',
             'percentage' => '',
@@ -177,11 +180,12 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
                 }
                 
                 $this->currentRow++;
+                // SEMUA is KELOMPOK level, no coloring
                 $rows->push([
                     'group_name' => str_repeat('    ', $depth + 1) . 'SEMUA',
                     'level' => $firstChild->level?->name ?? 'KELOMPOK',
-                    'target' => '',
-                    'hadir' => $totalHadir,
+                    'target' => $totalHadir,  // Hadir placed in Column C
+                    'hadir' => '',
                     'izin_sakit' => '',
                     'tidak_hadir' => '',
                     'percentage' => '',
@@ -201,15 +205,13 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
      */
     private function getPengurusHadirCountForGroup(Group $group)
     {
-        $descendantIds = $group->getAllDescendantIds();
-
-        // Get member IDs from MemberPosition that have positions in this group's descendants
-        $pengurusMemberIds = MemberPosition::whereIn('group_id', $descendantIds)
+        // Get member IDs from MemberPosition that have positions DIRECTLY in this group
+        $pengurusMemberIds = MemberPosition::where('group_id', $group->id)
             ->pluck('member_id')
             ->unique();
 
-        // Also include members with membership_type 'pengurus' in these groups
-        $pengurusByType = Member::whereIn('group_id', $descendantIds)
+        // Also include members with membership_type 'pengurus' directly in this group
+        $pengurusByType = Member::where('group_id', $group->id)
             ->where('status', true)
             ->whereIn('membership_type', ['pengurus', 'PENGURUS'])
             ->pluck('id');
@@ -238,20 +240,20 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
     public function map($row): array
     {
         return [
-            $row['group_name'],
-            $row['level'],
-            $row['target'],
-            $row['hadir'],
-            $row['izin_sakit'],
-            $row['tidak_hadir'],
-            $row['percentage'],
+            $row['group_name'] ?? '',
+            $row['level'] ?? '',
+            $row['target'] ?? '',
+            $row['hadir'] ?? '',
+            $row['izin_sakit'] ?? '',
+            $row['tidak_hadir'] ?? '',
+            $row['percentage'] ?? '',
         ];
     }
 
     public function columnWidths(): array
     {
         return [
-            'A' => 22.0,   // 165px
+            'A' => 23.5,   // 165px
             'B' => 10.67,  // 80px
             'C' => 14.0,   // 105px
             'D' => 10.67,  // 80px
@@ -288,15 +290,15 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         foreach ($this->parentRows as $row) {
             $sheet->getStyle("A{$row}:G{$row}")->getFill()
                 ->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('F1F5F9'); 
+                ->getStartColor()->setRGB('CEDCEA'); 
         }
 
         // === TABLE 2 STYLES ===
         // Title row: bold, no color, merge across columns
         $sheet->getStyle("A{$this->table2TitleRow}")->getFont()->setBold(true)->setSize(11);
 
-        // Heading row + data rows: borders
-        $sheet->getStyle("A{$this->table2HeadingRow}:G{$this->table2EndRow}")->applyFromArray([
+        // Heading row + data rows: borders (ONLY COL A-C)
+        $sheet->getStyle("A{$this->table2HeadingRow}:C{$this->table2EndRow}")->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => Border::BORDER_THIN,
@@ -309,18 +311,18 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
             ],
         ]);
 
-        // Bold heading for table 2
-        $sheet->getStyle("A{$this->table2HeadingRow}:G{$this->table2HeadingRow}")->getFont()->setBold(true);
+        // Bold heading for table 2 (ONLY COL A-C)
+        $sheet->getStyle("A{$this->table2HeadingRow}:C{$this->table2HeadingRow}")->getFont()->setBold(true);
 
         // Left align for "Nama Grup" in table 2
         $t2DataStart = $this->table2HeadingRow + 1;
         $sheet->getStyle("A{$t2DataStart}:A{$this->table2EndRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
-        // Soft Color for Parent Rows in table 2
+        // Soft Color for Parent Rows and SEMUA rows in table 2 (ONLY COL A-C)
         foreach ($this->table2ParentRows as $row) {
-            $sheet->getStyle("A{$row}:G{$row}")->getFill()
+            $sheet->getStyle("A{$row}:C{$row}")->getFill()
                 ->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('F1F5F9'); 
+                ->getStartColor()->setRGB('CEDCEA'); 
         }
 
         // === GLOBAL ===
@@ -336,30 +338,30 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
             BeforeSheet::class => function(BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
                 
-                $sheet->mergeCells('A1:G1');
+                // $sheet->mergeCells('A1:G1');
                 $sheet->setCellValue('A1', 'LAPORAN RINGKASAN STATISTIK KEHADIRAN');
                 
-                $sheet->mergeCells('A2:G2');
+                // $sheet->mergeCells('A2:G2');
                 $sheet->setCellValue('A2', "Pertemuan/Penyelenggara : {$this->meeting->name} / {$this->meeting->group->name}");
                 
-                $sheet->mergeCells('A3:G3');
+                // $sheet->mergeCells('A3:G3');
                 $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
                 $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
                 $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
 
-                $sheet->mergeCells('A4:G4'); // Spacer
-                $sheet->mergeCells('A5:G5'); // Spacer
+                // $sheet->mergeCells('A4:G4'); // Spacer
+                $sheet->setCellValue('A4', "");
             },
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastRow = $this->currentRow + 6;
+                $lastRow = $this->currentRow + 5;
 
                 for ($i = 1; $i <= $lastRow; $i++) {
                     $sheet->getRowDimension($i)->setRowHeight(18.75);
                 }
 
                 // Merge title row for table 2
-                $sheet->mergeCells("A{$this->table2TitleRow}:G{$this->table2TitleRow}");
+                // $sheet->mergeCells("A{$this->table2TitleRow}:G{$this->table2TitleRow}");
             },
         ];
     }

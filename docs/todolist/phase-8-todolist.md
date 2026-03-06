@@ -39,19 +39,20 @@ Dokumen ini merinci fitur analitik kehadiran, pencetakan kartu anggota, dan perb
     *   Panduan penggunaan fitur pelaporan dan cetak kartu.
     *   Update `README.md` secara menyeluruh.
 
-## 3. Branding Laporan Excel (Pindahan dari Phase 5 📥)
-
-*   [ ] **Custom Styling:**
-    *   Header laporan: Logo organisasi, Nama Organisasi, Judul Pertemuan, Tanggal.
-    *   Implementasi via `WithEvents` + `AfterSheet` atau `WithCustomStartCell` pada `maatwebsite/excel`.
+*   [x] **Custom Styling & Logic Refinement:** 🆕
+    *   [x] Header laporan: Nama Organisasi, Judul Pertemuan, Tanggal (Tanpa background fill).
+    *   [x] Branding warna: Latar belakang biru muda (`#CEDCEA`) khusus untuk level DAERAH & DESA.
+    *   [x] Hierarchical Aggregation: Sheet Ringkasan menghitung kehadiran secara berjenjang (Desa masuk ke dalam statistik Daerah).
+    *   [x] Dynamic Row Height: Implementasi tinggi baris otomatis untuk data multi-line (Dapukan pengurus) dengan minimum height 18.75.
+    *   [x] Table 2 Cleanup: Reorganisasi kolom Rekapitulasi Pengurus (Nama, Level, Hadir berdampingan).
+    *   [x] Filter Accuracy: Sinkronisasi kriteria target (Gender, Usia, Wilayah) antara sistem dan ekspor Excel.
+    *   [x] Penanganan Alpa: Tampilkan cell kosong (string kosong) untuk target yang tidak hadir agar labih bersih.
 
 ## 4. Definition of Done (DoD) - Phase 8
 1.  Kartu anggota dapat dicetak dalam jumlah banyak melalui satu file PDF yang rapi (Layout A4).
-2.  Laporan Excel memiliki branding profesional (Logo/Header).
-3.  Proses ekspor dan cetak berjalan stabil pada dataset besar (Optimasi memori).
-4.  Panel Admin memiliki identitas visual yang konsisten dengan Landing Page (**inTime Branding**).
-5.  Filter laporan kehadiran berfungsi secara cerdas (Dependent filtering).
-6.  Dokumentasi penggunaan untuk admin telah selesai.
+5.  Laporan Excel memiliki branding profesional (Color coding berjenjang & Clean layout).
+6.  Filter laporan kehadiran berfungsi secara cerdas (Dependent filtering & Target logic synchronization).
+7.  Dokumentasi penggunaan untuk admin telah selesai.
 
 ---
-*Status: Aktif (Update 05 Mar 2026 — inTime Branding & Report Refinement)*
+*Status: Aktif (Update 06 Mar 2026 — Advanced Excel Engine & Report Refinement)*

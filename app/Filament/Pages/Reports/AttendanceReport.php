@@ -137,6 +137,7 @@ class AttendanceReport extends Page implements HasTable
                             ->options(function() {
                                 $user = auth()->user();
                                 $query = \App\Models\Group::query()
+                                    ->with('level')
                                     ->where('status', true)
                                     ->whereHas('level', fn($q) => $q->where('name', 'DESA'))
                                     ->orderBy('name', 'asc');
@@ -154,7 +155,9 @@ class AttendanceReport extends Page implements HasTable
                                     }
                                 }
 
-                                return $query->pluck('name', 'id');
+                                return $query->get()->mapWithKeys(fn ($group) => [
+                                    $group->id => "[{$group->level?->code}] {$group->name}",
+                                ]);
                             })
                             ->live()
                             ->searchable(),
@@ -166,6 +169,7 @@ class AttendanceReport extends Page implements HasTable
                                 
                                 $user = auth()->user();
                                 $query = \App\Models\Group::query()
+                                    ->with('level')
                                     ->where('status', true)
                                     ->where('parent_id', $parentId)
                                     ->whereHas('level', fn($q) => $q->where('name', 'KELOMPOK'))
@@ -180,7 +184,9 @@ class AttendanceReport extends Page implements HasTable
                                     }
                                 }
 
-                                return $query->pluck('name', 'id');
+                                return $query->get()->mapWithKeys(fn ($group) => [
+                                    $group->id => "[{$group->level?->code}] {$group->name}",
+                                ]);
                             })
                             ->noOptionsMessage(fn (Get $get) => $get('parent_id') ? 'Tidak ada Kelompok di Desa ini' : 'Silakan pilih Desa terlebih dahulu')
                             ->searchable(),

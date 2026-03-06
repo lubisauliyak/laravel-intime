@@ -22,6 +22,7 @@ class GroupRanking extends BaseWidget
     protected int|string|array $columnSpan = 'full';
     
     protected ?string $pollingInterval = '30s';
+    protected static ?string $heading = 'Peringkat Kelompok';
 
     public function table(Table $table): Table
     {
@@ -39,8 +40,6 @@ class GroupRanking extends BaseWidget
         $refMeeting = $meetingQuery->latest('meeting_date')->first();
         $isToday = $refMeeting && $refMeeting->meeting_date->isToday();
 
-        $heading = 'Peringkat Kehadiran Kelompok';
-
         $query = Group::query()->whereHas('members');
 
         if (!$user->isSuperAdmin() && $user->group_id) {
@@ -49,7 +48,6 @@ class GroupRanking extends BaseWidget
         }
 
         return $table
-            ->heading($heading)
             ->query(
                 $query
                     ->addSelect([

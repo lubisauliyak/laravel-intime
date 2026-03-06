@@ -23,13 +23,13 @@ class TopInsightWidget extends BaseWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static bool $isLazy = true;
+    protected static ?string $heading = 'Wawasan Utama';
 
     public function table(Table $table): Table
     {
         $insights = $this->getInsightData();
 
         return $table
-            ->heading('💡 Wawasan')
             ->query(
                 // Menggunakan Meeting sebagai dummy query, data akan di-override oleh records
                 Meeting::query()->limit(0)
@@ -65,7 +65,7 @@ class TopInsightWidget extends BaseWidget
             $insights = [];
 
             // 1. Trend Analysis
-            $meetingQuery = Meeting::query();
+            $meetingQuery = Meeting::where('meeting_date', '<=', now()->toDateString());
             if (!$user->isSuperAdmin() && $user->group_id) {
                 $allowedMeetingGroupIds = array_merge(
                     [$user->group_id],
@@ -127,7 +127,8 @@ class TopInsightWidget extends BaseWidget
 
     private function getAttendanceRate($meeting, $user): float
     {
-        $attendanceQuery = Attendance::where('meeting_id', $meeting->id);
+        $attendanceQuery = Attendance::where('meeting_id', $meeting->id)
+            ->where('status', 'hadir');
         $memberQuery = Member::where('status', true);
 
         if (!$user->isSuperAdmin() && $user->group_id) {
@@ -198,6 +199,7 @@ class TopInsightWidget extends BaseWidget
             if ($totalMembers === 0) return null;
 
             $attended = Attendance::where('meeting_id', $meeting->id)
+                ->where('status', 'hadir')
                 ->whereHas('member', function ($q) use ($group, $meeting) {
                     $q->where('group_id', $group->id);
                     
@@ -223,7 +225,7 @@ class TopInsightWidget extends BaseWidget
 
     private function getGhostMembers($user): array
     {
-        $meetingQuery = Meeting::query();
+        $meetingQuery = Meeting::where('meeting_date', '<=', now()->toDateString());
         if (!$user->isSuperAdmin() && $user->group_id) {
             $allowedMeetingGroupIds = array_merge(
                 [$user->group_id],

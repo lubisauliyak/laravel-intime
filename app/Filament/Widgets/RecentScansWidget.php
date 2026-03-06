@@ -22,6 +22,7 @@ class RecentScansWidget extends BaseWidget
     protected int|string|array $columnSpan = 'full';
     
     protected ?string $pollingInterval = null;
+    protected static ?string $heading = 'Pindaian Terakhir';
 
     public function table(Table $table): Table
     {
@@ -38,8 +39,6 @@ class RecentScansWidget extends BaseWidget
         }
         $refMeeting = $meetingQuery->latest('meeting_date')->first();
         $isToday = $refMeeting && $refMeeting->meeting_date->isToday();
-
-        $heading = 'Aktivitas Presensi Terbaru';
 
         $query = Attendance::query()->latest('checkin_time');
 
@@ -63,7 +62,6 @@ class RecentScansWidget extends BaseWidget
         }
 
         return $table
-            ->heading($heading)
             ->query($query->limit(10))
             ->columns([
                 TextColumn::make('member.full_name')

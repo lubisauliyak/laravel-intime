@@ -11,8 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Manrope', sans-serif; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .scan-line { animation: scan 2s linear infinite; }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
@@ -36,9 +36,9 @@
     $canScan = !$isFinished && !$isBeforeCheckin;
 @endphp
 
-<body class="bg-[#0a0a0c] text-white min-h-screen overflow-x-hidden">
+<body class="bg-[#0d1511] text-white min-h-screen overflow-x-hidden">
     <!-- Navbar -->
-    <nav class="p-4 md:p-6 flex items-center justify-between border-b border-white/5 bg-black/40 sticky top-0 z-50">
+    <nav class="p-4 md:p-6 flex items-center justify-between border-b border-white/5 bg-[#0d1511]/80 backdrop-blur-md sticky top-0 z-50">
         <div class="flex items-center gap-3 md:gap-4 overflow-hidden">
             <a href="/admin/meetings/{{ $meeting->id }}" class="p-2 hover:bg-white/10 rounded-xl transition-all shrink-0">
                 <svg class="w-5 h-5 md:w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -119,7 +119,7 @@
                         </button>
 
                         <!-- Start Button Overlay -->
-                        <div id="start-overlay" class="absolute inset-0 bg-gray-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-12 text-center z-20 transition-all duration-700">
+                        <div id="start-overlay" class="absolute inset-0 bg-[#0d1511]/90 backdrop-blur-xl flex flex-col items-center justify-center p-12 text-center z-20 transition-all duration-700">
                             <div class="relative mb-8">
                                 <div class="absolute -inset-6 bg-emerald-500/20 blur-2xl rounded-full animate-pulse"></div>
                                 <div class="relative w-24 h-24 bg-emerald-500 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-emerald-500/40 rotate-12 group-hover:rotate-0 transition-transform duration-500">
@@ -177,7 +177,7 @@
                     <div class="max-h-[70vh] overflow-y-auto custom-scrollbar">
                         <table class="w-full text-left border-collapse">
                             <thead class="sticky top-0 z-10 glass backdrop-blur-3xl">
-                                <tr class="bg-black/40 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                                <tr class="bg-[#0d1511]/60 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
                                     <th class="px-4 py-4 md:px-8 md:py-5">Identitas Anggota</th>
                                     <th class="px-4 py-4 md:px-8 md:py-5">Waktu</th>
                                     <th class="px-4 py-4 md:px-8 md:py-5 text-right">Status</th>
@@ -315,7 +315,20 @@
                     data: function(params) { return { q: params.term }; },
                     processResults: function(data) { return { results: data }; },
                     cache: true
-                }
+                },
+                templateResult: function(item) {
+                    if (item.loading) return item.text;
+                    const badge = item.badge ? `<span style="background:rgba(59,130,246,0.2);color:#60a5fa;font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.05em;">${item.badge}</span>` : '';
+                    return $(`<div style="padding:4px 0;">
+                        <div style="font-weight:700;font-size:13px;color:#fff;letter-spacing:-0.02em;">${item.text}${badge}</div>
+                        <div style="font-size:10px;color:#6b7280;font-weight:600;margin-top:2px;">${item.code || ''} · ${item.group || ''}</div>
+                    </div>`);
+                },
+                templateSelection: function(item) {
+                    if (!item.code) return item.text;
+                    return $(`<span>${item.text} <span style="opacity:0.5;font-size:11px;">· ${item.group || ''}</span></span>`);
+                },
+                escapeMarkup: function(m) { return m; }
             });
 
         });
