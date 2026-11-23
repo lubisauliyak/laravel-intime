@@ -1,0 +1,57 @@
+{
+  "name": "antigravity-plugin-context-mode",
+  "version": "2.0.0",
+  "description": "Native Antigravity plugin for context-mode: SQLite FTS5 indexing, sandboxed execution, and lifecycle hook protection against context window bloat",
+  "type": "module",
+  "license": "MIT",
+  "author": "Phillip Webber <github@webbsense.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Domush/antigravity-plugin-context-mode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Domush/antigravity-plugin-context-mode/issues"
+  },
+  "homepage": "https://domush.github.io/antigravity-plugin-context-mode/",
+  "keywords": [
+    "antigravity",
+    "antigravity-plugin",
+    "gemini",
+    "context-mode",
+    "context-window",
+    "fts5",
+    "bm25",
+    "rrf",
+    "mcp",
+    "model-context-protocol",
+    "lifecycle-hooks"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/test_store.js tests/test_executor.js tests/test_tools.js tests/test_hooks.js tests/test_mcp.js tests/test_chunker.js"
+  },
+  "bin": {
+    "antigravity-context-mode": "server.js"
+  },
+  "main": "./server.js",
+  "files": [
+    "server.js",
+    "plugin.json",
+    "hooks.json",
+    "mcp_config.json",
+    "lib",
+    "hooks",
+    "skills",
+    "rules",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

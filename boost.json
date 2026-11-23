@@ -1,0 +1,9 @@
+{
+    "agents": [
+        "claude_code",
+        "gemini",
+        "cursor"
+    ],
+    "guidelines": true,
+    "mcp": true
+}
