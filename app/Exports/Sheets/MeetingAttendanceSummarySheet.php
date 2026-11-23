@@ -1,0 +1,405 @@
+<?php
+
+namespace App\Exports\Sheets;
+
+use App\Models\Meeting;
+use App\Models\Group;
+use App\Models\Member;
+use App\Models\Attendance;
+use App\Models\MemberPosition;
+use App\Enums\MeetingTargetGender;
+use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
+use App\Enums\MembershipType;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Events\BeforeSheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+
+class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents
+{
+    protected $meeting;
+    protected $currentRow = 0;
+    protected $parentRows = [];
+
+    // Track table ranges for styling
+    protected $table1StartRow;
+    protected $table1EndRow;
+    protected $table2TitleRow;
+    protected $table2HeadingRow;
+    protected $table2StartRow;
+    protected $table2EndRow;
+    protected $table2ParentRows = [];
+    protected $memberIds;
+
+    public function __construct(Meeting $meeting, $memberIds = null)
+    {
+        $this->meeting = $meeting;
+        $this->memberIds = $memberIds;
+    }
+
+    public function title(): string
+    {
+        return 'Ringkasan Statistik';
+    }
+
+    public function collection()
+    {
+        $rows = collect();
+
+        // === TABLE 1: Statistik Hierarki ===
+        $this->addStatsRecursively($this->meeting->group, 0, $rows);
+        // Table 1 data occupies rows from currentRow=1 to currentRow
+        // Actual Excel rows: header at row 6, data starts at row 7
+        $this->table1StartRow = 5; // heading row
+        $this->table1EndRow = $this->currentRow + 5; // last data row
+
+        // === SPACER: 3 empty rows ===
+        $emptyRow = ['group_name' => '', 'level' => '', 'target' => '', 'hadir' => '', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => ''];
+        $rows->push($emptyRow);
+        $rows->push($emptyRow);
+        $this->currentRow += 2; // 2 spacer rows added
+
+        // === TABLE 2: Rekapitulasi Pengurus ===
+        // Title row
+        $rows->push(['group_name' => 'REKAPITULASI KEHADIRAN PENGURUS', 'level' => '', 'target' => '', 'hadir' => '', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => '']);
+        $this->currentRow++;
+        $this->table2TitleRow = $this->currentRow + 5;
+
+        // Heading row
+        $rows->push(['group_name' => 'Nama Grup', 'level' => 'Level', 'target' => 'Hadir', 'hadir' => '', 'izin_sakit' => '', 'tidak_hadir' => '', 'percentage' => '']);
+        $this->currentRow++;
+        $this->table2HeadingRow = $this->currentRow + 5;
+
+        // Data rows
+        $this->table2StartRow = $this->table2HeadingRow;
+        $this->addPengurusStats($this->meeting->group, 0, $rows);
+        $this->table2EndRow = $this->currentRow + 5;
+
+        return $rows;
+    }
+
+    private function addStatsRecursively(Group $group, int $depth, $rows)
+    {
+        $descendantIds = $group->getAllDescendantIds();
+
+        $allAgeGroupsCount = \App\Models\AgeGroup::count();
+        $selectedAgeGroupsCount = empty($this->meeting->target_age_groups) ? 0 : count($this->meeting->target_age_groups);
+        $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
+
+        $targetQuery = Member::whereIn('group_id', $descendantIds)
+            ->where('status', true)
+            ->when($this->meeting->target_gender !== MeetingTargetGender::ALL, function ($q) {
+                return $q->where('gender', $this->meeting->target_gender->value);
+            })
+            ->when($shouldFilterByAge, function ($q) {
+                return $q->whereHas('ageGroup', function ($aq) {
+                    return $aq->whereIn('name', $this->meeting->target_age_groups);
+                });
+            })
+            ->when($this->memberIds !== null, function ($q) {
+                return $q->whereIn('id', $this->memberIds);
+            });
+
+        $baseTarget = (clone $targetQuery)->count();
+        $targetMemberIds = $targetQuery->pluck('id')->toArray();
+
+        $attendancesQuery = Attendance::where('meeting_id', $this->meeting->id)
+            ->whereHas('member', function ($q) use ($descendantIds) {
+                $q->whereIn('group_id', $descendantIds)
+                    ->when($this->memberIds !== null, fn($mq) => $mq->whereIn('id', $this->memberIds));
+            })
+            ->join('members', 'attendances.member_id', '=', 'members.id')
+            ->selectRaw('attendances.status, members.gender, attendances.member_id');
+
+        $attendancesData = $attendancesQuery->get();
+
+        $hadir = $attendancesData->filter(fn($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value)->count();
+        $hadirL = $attendancesData->filter(fn($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value && $a->gender === Gender::MALE->value)->count();
+        $hadirP = $attendancesData->filter(fn($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value && $a->gender === Gender::FEMALE->value)->count();
+        
+        $izinSakit = $attendancesData->filter(fn($a) => in_array($a->status->value ?? $a->status, [AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
+
+        // Non-target yang hadir atau izin/sakit
+        $nonTargetAttended = $attendancesData->filter(fn($a) => !in_array($a->member_id, $targetMemberIds) && in_array($a->status->value ?? $a->status, [AttendanceStatus::HADIR->value, AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
+
+        $totalTarget = $baseTarget + $nonTargetAttended;
+
+        // Target dasar yang hadir atau izin/sakit
+        $targetAttended = $attendancesData->filter(fn($a) => in_array($a->member_id, $targetMemberIds) && in_array($a->status->value ?? $a->status, [AttendanceStatus::HADIR->value, AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
+
+        $tidakHadir = max(0, $baseTarget - $targetAttended);
+        
+        $percentage = $totalTarget > 0 ? round(($hadir / $totalTarget) * 100, 1) : 0;
+
+        $hasChildren = $group->children()->exists();
+        $levelNumber = $group->level?->level_number ?? 0;
+        
+        $this->currentRow++;
+        // Only color DAERAH/DESA rows (level > 1), not KELOMPOK
+        if ($hasChildren && $levelNumber > 1) {
+            $this->parentRows[] = $this->currentRow + 5;
+        }
+
+        $rows->push([
+            'group_name' => str_repeat('    ', $depth) . $group->name,
+            'level' => $group->level?->name ?? '-',
+            'target' => $totalTarget,
+            'hadir' => $hadir,
+            'hadir_l' => $hadirL,
+            'hadir_p' => $hadirP,
+            'izin_sakit' => $izinSakit,
+            'tidak_hadir' => $tidakHadir,
+            'percentage' => $percentage . '%',
+        ]);
+
+        foreach ($group->children()->orderBy('name')->get() as $child) {
+            $this->addStatsRecursively($child, $depth + 1, $rows);
+        }
+    }
+
+    /**
+     * Add pengurus attendance stats.
+     * Counts pengurus by their MemberPosition records (not just member).
+     * A pengurus with positions in multiple groups counts in each.
+     * At the lowest level (KELOMPOK), consolidate all children as "SEMUA".
+     */
+    private function addPengurusStats(Group $group, int $depth, $rows)
+    {
+        $hadir = $this->getPengurusHadirCountForGroup($group);
+        
+        $hasChildren = $group->children()->exists();
+        $levelNumber = $group->level?->level_number ?? 0;
+        $this->currentRow++;
+        // Only color DAERAH/DESA rows (level > 1), not KELOMPOK
+        if ($hasChildren && $levelNumber > 1) {
+            $this->table2ParentRows[] = $this->currentRow + 5;
+        }
+
+        $rows->push([
+            'group_name' => str_repeat('    ', $depth) . $group->name,
+            'level' => $group->level?->name ?? '-',
+            'target' => $hadir,  // Hadir placed in Column C (right next to Level)
+            'hadir' => '',
+            'izin_sakit' => '',
+            'tidak_hadir' => '',
+            'percentage' => '',
+        ]);
+
+        $children = $group->children()->orderBy('name')->get();
+        if ($children->isNotEmpty()) {
+            $firstChild = $children->first();
+            // Jika anak adalah Level 1 (KELOMPOK), konsolidasi menjadi satu baris "SEMUA"
+            if ($firstChild->level?->level_number === 1) {
+                $totalHadir = 0;
+                foreach ($children as $child) {
+                    $totalHadir += $this->getPengurusHadirCountForGroup($child);
+                }
+                
+                $this->currentRow++;
+                // SEMUA is KELOMPOK level, no coloring
+                $rows->push([
+                    'group_name' => str_repeat('    ', $depth + 1) . 'SEMUA',
+                    'level' => $firstChild->level?->name ?? 'KELOMPOK',
+                    'target' => $totalHadir,  // Hadir placed in Column C
+                    'hadir' => '',
+                    'izin_sakit' => '',
+                    'tidak_hadir' => '',
+                    'percentage' => '',
+                ]);
+            } else {
+                foreach ($children as $child) {
+                    $this->addPengurusStats($child, $depth + 1, $rows);
+                }
+            }
+        }
+    }
+
+    /**
+     * Count pengurus who attended and have a position in this group's hierarchy.
+     * Uses MemberPosition to identify pengurus, so members with multiple positions
+     * across different groups are counted in each relevant group.
+     */
+    private function getPengurusHadirCountForGroup(Group $group)
+    {
+        // Get member IDs from MemberPosition that have positions DIRECTLY in this group
+        $pengurusMemberIds = MemberPosition::where('group_id', $group->id)
+            ->pluck('member_id')
+            ->unique();
+
+        // Also include members with membership_type 'pengurus' directly in this group
+        $pengurusByType = Member::where('group_id', $group->id)
+            ->where('status', true)
+            ->where('membership_type', MembershipType::PENGURUS->value)
+            ->pluck('id');
+
+        $allPengurusIds = $pengurusMemberIds->merge($pengurusByType)->unique();
+
+        if ($this->memberIds !== null) {
+            $allPengurusIds = $allPengurusIds->intersect($this->memberIds);
+        }
+
+        return Attendance::where('meeting_id', $this->meeting->id)
+            ->whereIn('member_id', $allPengurusIds)
+            ->where('status', AttendanceStatus::HADIR->value)
+            ->count();
+    }
+
+    public function headings(): array
+    {
+        return [
+            'Nama Grup',
+            'Level',
+            'Target Anggota',
+            'Hadir',
+            'L',
+            'P',
+            'Izin / Sakit',
+            'Tidak Hadir',
+            'Persentase Hadir',
+        ];
+    }
+
+    public function map($row): array
+    {
+        return [
+            $row['group_name'] ?? '',
+            $row['level'] ?? '',
+            $row['target'] ?? '',
+            $row['hadir'] ?? '',
+            $row['hadir_l'] ?? '',
+            $row['hadir_p'] ?? '',
+            $row['izin_sakit'] ?? '',
+            $row['tidak_hadir'] ?? '',
+            $row['percentage'] ?? '',
+        ];
+    }
+
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 23.5,   // Nama Grup
+            'B' => 10.67,  // Level
+            'C' => 14.0,   // Target
+            'D' => 8.0,    // Hadir
+            'E' => 5.0,    // L
+            'F' => 5.0,    // P
+            'G' => 11.0,   // Izin/Sakit
+            'H' => 11.0,   // Tidak Hadir
+            'I' => 15.99,  // %
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        // === TABLE 1 STYLES ===
+        $sheet->getStyle("A{$this->table1StartRow}:I{$this->table1EndRow}")->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                ],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'wrapText' => true,
+            ],
+        ]);
+
+        // Left align for "Nama Grup" in table 1
+        $t1DataStart = $this->table1StartRow + 1;
+        $sheet->getStyle("A{$t1DataStart}:A{$this->table1EndRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // Bold Headings for table 1
+        $sheet->getStyle("A{$this->table1StartRow}:I{$this->table1StartRow}")->getFont()->setBold(true);
+
+        // Soft Color for Parent Rows in table 1
+        foreach ($this->parentRows as $row) {
+            $sheet->getStyle("A{$row}:I{$row}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('CEDCEA'); 
+        }
+
+        // === TABLE 2 STYLES ===
+        // Title row: bold, no color, merge across columns
+        $sheet->getStyle("A{$this->table2TitleRow}")->getFont()->setBold(true)->setSize(11);
+
+        // Heading row + data rows: borders (ONLY COL A-C)
+        $sheet->getStyle("A{$this->table2HeadingRow}:C{$this->table2EndRow}")->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                ],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'wrapText' => true,
+            ],
+        ]);
+
+        // Bold heading for table 2 (ONLY COL A-C)
+        $sheet->getStyle("A{$this->table2HeadingRow}:C{$this->table2HeadingRow}")->getFont()->setBold(true);
+
+        // Left align for "Nama Grup" in table 2
+        $t2DataStart = $this->table2HeadingRow + 1;
+        $sheet->getStyle("A{$t2DataStart}:A{$this->table2EndRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // Soft Color for Parent Rows and SEMUA rows in table 2 (ONLY COL A-C)
+        foreach ($this->table2ParentRows as $row) {
+            $sheet->getStyle("A{$row}:C{$row}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('CEDCEA'); 
+        }
+
+        // === GLOBAL ===
+        // Title Styling
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        
+        return [];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            BeforeSheet::class => function(BeforeSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                
+                // $sheet->mergeCells('A1:G1');
+                $sheet->setCellValue('A1', 'LAPORAN RINGKASAN STATISTIK KEHADIRAN');
+                
+                // $sheet->mergeCells('A2:G2');
+                $sheet->setCellValue('A2', "Pertemuan/Penyelenggara : {$this->meeting->name} / {$this->meeting->group->name}");
+                
+                // $sheet->mergeCells('A3:G3');
+                $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
+                $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
+                $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
+
+                // $sheet->mergeCells('A4:G4'); // Spacer
+                $sheet->setCellValue('A4', "");
+            },
+            AfterSheet::class => function(AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $lastRow = $this->currentRow + 5;
+
+                for ($i = 1; $i <= $lastRow; $i++) {
+                    $sheet->getRowDimension($i)->setRowHeight(18.75);
+                }
+
+                // Merge title row for table 2
+                // $sheet->mergeCells("A{$this->table2TitleRow}:G{$this->table2TitleRow}");
+            },
+        ];
+    }
+}
