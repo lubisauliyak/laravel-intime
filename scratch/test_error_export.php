@@ -1,8 +1,8 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -89,7 +89,7 @@ Excel::store(new MemberImportErrorsExport($dummyInvalidRows), $exportPath, 'loca
 
 echo "File CSV berhasil digenerate di: {$fullExportPath}\n";
 
-if (!file_exists($fullExportPath)) {
+if (! file_exists($fullExportPath)) {
     echo "ERROR: File CSV tidak terbentuk!\n";
     exit(1);
 }
@@ -97,19 +97,19 @@ if (!file_exists($fullExportPath)) {
 // Baca konten CSV
 $content = file_get_contents($fullExportPath);
 echo "\n--- ISI BERKAS CSV ---\n";
-echo $content . "\n";
+echo $content."\n";
 
 $rows = array_map('str_getcsv', explode("\r\n", trim($content)));
 $header = $rows[0];
 
 echo "--- VALIDASI STRUKTUR HEADER ---\n";
-echo "Jumlah Kolom Header: " . count($header) . " (Ekspektasi: 7)\n";
-echo "Nama Kolom Terakhir: '" . trim($header[6]) . "' (Ekspektasi: 'Keterangan Error')\n";
+echo 'Jumlah Kolom Header: '.count($header)." (Ekspektasi: 7)\n";
+echo "Nama Kolom Terakhir: '".trim($header[6])."' (Ekspektasi: 'Keterangan Error')\n";
 
 $isHeaderValid = (count($header) === 7) && (trim($header[6]) === 'Keterangan Error');
 $isRowCountValid = (count($rows) === 4); // 1 header + 3 data rows
 
-if (!$isHeaderValid || !$isRowCountValid) {
+if (! $isHeaderValid || ! $isRowCountValid) {
     echo "ERROR: Struktur CSV tidak sesuai ekspektasi!\n";
     exit(1);
 }
@@ -152,11 +152,11 @@ echo "\n--- PENGUJIAN RE-UPLOAD: MEMBER IMPORT PARSER MEMBACA ULANG CSV INI ---\
 \App\Models\Group::create(['name' => 'KELOMPOK MAWAR']);
 \App\Models\AgeGroup::create(['name' => 'Pra Nikah', 'min_age' => null, 'max_age' => null]);
 
-$parser = new MemberImportParser();
+$parser = new MemberImportParser;
 $reparseResult = $parser->parse($fullExportPath);
 
-echo "Total Baris Dibaca Parser: " . $reparseResult['total_rows'] . " (Ekspektasi: 3)\n";
-echo "Data Bermasalah Terdeteksi: " . $reparseResult['invalid_count'] . " (Ekspektasi: 3)\n";
+echo 'Total Baris Dibaca Parser: '.$reparseResult['total_rows']." (Ekspektasi: 3)\n";
+echo 'Data Bermasalah Terdeteksi: '.$reparseResult['invalid_count']." (Ekspektasi: 3)\n";
 
 // Bersihkan file uji
 unlink($fullExportPath);

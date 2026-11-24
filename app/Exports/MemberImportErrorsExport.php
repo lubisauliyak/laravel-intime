@@ -13,7 +13,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class MemberImportErrorsExport implements FromArray, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithCustomCsvSettings
+class MemberImportErrorsExport implements FromArray, WithColumnWidths, WithCustomCsvSettings, WithHeadings, WithMapping, WithStyles
 {
     protected array $invalidRows;
 

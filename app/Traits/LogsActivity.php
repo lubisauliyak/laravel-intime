@@ -3,8 +3,8 @@
 namespace App\Traits;
 
 use App\Models\ActivityLog;
-use App\Models\Group;
 use App\Models\Attendance;
+use App\Models\Group;
 use App\Models\User;
 use App\Support\ActivityLogDictionary;
 use Illuminate\Database\Eloquent\Model;
@@ -41,14 +41,15 @@ trait LogsActivity
             ? $this->getLoggedEvents()
             : ['created', 'updated', 'deleted'];
 
-        if (!in_array($event, $allowedEvents)) {
+        if (! in_array($event, $allowedEvents)) {
             return false;
         }
 
         // Jika event updated tetapi tidak ada atribut dirty yang signifikan, abaikan
         if ($event === 'updated') {
             $dirty = $this->getFilteredDirtyAttributes();
-            return !empty($dirty);
+
+            return ! empty($dirty);
         }
 
         return true;
@@ -161,6 +162,7 @@ trait LogsActivity
         } catch (\Throwable $e) {
             // Jangan biarkan kegagalan pencatatan audit trail menghentikan alur transaksi utama
             report($e);
+
             return null;
         }
     }
@@ -206,6 +208,6 @@ trait LogsActivity
             return (string) $this->member->full_name;
         }
 
-        return class_basename($this) . " #{$this->getKey()}";
+        return class_basename($this)." #{$this->getKey()}";
     }
 }

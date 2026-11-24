@@ -51,7 +51,7 @@ class ListMeetings extends ListRecords
                 ->badgeColor('info'),
         ];
 
-        if ($user && !$user->isSuperAdmin() && $user->group_id) {
+        if ($user && ! $user->isSuperAdmin() && $user->group_id) {
             $tabs['my_group'] = Tab::make('Grup Saya')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('group_id', $user->group_id))
                 ->badge($stats['my_group'] ?? 0)

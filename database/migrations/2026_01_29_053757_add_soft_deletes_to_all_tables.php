@@ -11,10 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('groups', function (Blueprint $table) { $table->softDeletes(); });
-        Schema::table('levels', function (Blueprint $table) { $table->softDeletes(); });
-        Schema::table('members', function (Blueprint $table) { $table->softDeletes(); });
-        Schema::table('users', function (Blueprint $table) { $table->softDeletes(); });
+        Schema::table('groups', function (Blueprint $table) {
+            $table->softDeletes();
+        });
+        Schema::table('levels', function (Blueprint $table) {
+            $table->softDeletes();
+        });
+        Schema::table('members', function (Blueprint $table) {
+            $table->softDeletes();
+        });
+        Schema::table('users', function (Blueprint $table) {
+            $table->softDeletes();
+        });
     }
 
     /**
@@ -22,9 +30,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('groups', function (Blueprint $table) { $table->dropSoftDeletes(); });
-        Schema::table('levels', function (Blueprint $table) { $table->dropSoftDeletes(); });
-        Schema::table('members', function (Blueprint $table) { $table->dropSoftDeletes(); });
-        Schema::table('users', function (Blueprint $table) { $table->dropSoftDeletes(); });
+        Schema::table('groups', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
+        Schema::table('levels', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
+        Schema::table('members', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
     }
 };

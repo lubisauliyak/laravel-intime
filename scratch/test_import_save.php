@@ -1,13 +1,13 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use App\Models\Group;
 use App\Models\AgeGroup;
+use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -70,7 +70,7 @@ $existing = Member::create([
 ]);
 
 echo "Kondisi Awal Database:\n";
-echo "- Total Member: " . Member::count() . "\n";
+echo '- Total Member: '.Member::count()."\n";
 echo "- Member Eksisting: {$existing->member_code} ({$existing->full_name})\n\n";
 
 // Siapkan data simulasi hasil parser (2 baris valid: 1 baru, 1 update; 1 baris invalid dilewati)
@@ -120,16 +120,17 @@ foreach ($simulatedValidRows as $row) {
         'membership_type' => $row['membership_type'],
     ];
 
-    if (!empty($row['member_code']) && ($row['is_update'] ?? false)) {
+    if (! empty($row['member_code']) && ($row['is_update'] ?? false)) {
         $found = Member::where('member_code', $row['member_code'])->first();
         if ($found) {
             $found->update($data);
             $updated++;
+
             continue;
         }
     }
 
-    $data['member_code'] = !empty($row['member_code']) ? $row['member_code'] : null;
+    $data['member_code'] = ! empty($row['member_code']) ? $row['member_code'] : null;
     $newM = new Member($data);
     $newM->save();
     $inserted++;
@@ -138,7 +139,7 @@ foreach ($simulatedValidRows as $row) {
 DB::commit();
 
 echo "--- HASIL SETELAH COMMIT TRANSAKSI ---\n";
-echo "Total Member Sekarang: " . Member::count() . " (Ekspektasi: 2)\n";
+echo 'Total Member Sekarang: '.Member::count()." (Ekspektasi: 2)\n";
 echo "Jumlah Insert Baru: {$inserted} (Ekspektasi: 1)\n";
 echo "Jumlah Diperbarui: {$updated} (Ekspektasi: 1)\n";
 
@@ -157,12 +158,11 @@ try {
     $failMember->save();
 
     // Picu error sengaja
-    throw new \Exception("Simulasi error tak terduga!");
-
+    throw new \Exception('Simulasi error tak terduga!');
     DB::commit();
 } catch (\Throwable $e) {
     DB::rollBack();
-    echo "Pengecualian tertangkap: " . $e->getMessage() . " -> Transaksi sukses di-rollback!\n";
+    echo 'Pengecualian tertangkap: '.$e->getMessage()." -> Transaksi sukses di-rollback!\n";
 }
 
 $countAfterRollback = Member::count();

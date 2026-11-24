@@ -6,10 +6,10 @@ use App\Filament\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Filament\Resources\ActivityLogs\Tables\ActivityLogTable;
 use App\Models\ActivityLog;
 use BackedEnum;
-use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class ActivityLogResource extends Resource
 {

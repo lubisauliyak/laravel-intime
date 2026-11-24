@@ -2,40 +2,48 @@
 
 namespace App\Exports\Sheets;
 
+use App\Enums\AttendanceStatus;
+use App\Enums\MeetingTargetGender;
+use App\Models\Attendance;
 use App\Models\Group;
 use App\Models\Meeting;
-use App\Models\Attendance;
 use App\Models\Member;
-use App\Enums\MeetingTargetGender;
-use App\Enums\AttendanceStatus;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Events\BeforeSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping, WithHeadings, WithStyles, WithColumnWidths, WithEvents, WithCustomStartCell
+class GroupMemberSummarySheet implements FromCollection, WithColumnWidths, WithCustomStartCell, WithEvents, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected Group $group;
+
     protected $filters;
+
     protected $meetings;
+
     protected $groupsData = [];
+
     protected $rowCount = 0;
+
     protected ?Collection $allMembers = null;
+
     protected ?Collection $attendancesByMeeting = null;
+
     protected int $ageGroupsCount = 0;
+
     protected array $meetingTargetGroupIds = [];
 
     public function __construct(Group $group, array $filters, Collection $meetings)
@@ -66,7 +74,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
 
         $this->allMembers = Member::whereIn('group_id', $allDescendantIds)
             ->where('status', true)
-            ->when($ageGroupIds, fn($q) => $q->whereIn('age_group_id', $ageGroupIds))
+            ->when($ageGroupIds, fn ($q) => $q->whereIn('age_group_id', $ageGroupIds))
             ->with('ageGroup')
             ->get();
 
@@ -124,7 +132,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
         $depth = $data['depth'];
 
         $row = [
-            str_repeat('    ', $depth) . $group->name,
+            str_repeat('    ', $depth).$group->name,
             $group->level?->name ?? '-',
         ];
 
@@ -137,6 +145,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
 
             if (empty($commonGroupIds)) {
                 $row = array_merge($row, ['-', '-', '-', '-', '-']);
+
                 continue;
             }
 
@@ -150,7 +159,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
             // 2. Filter target members in-memory
             $targetMemberLookup = [];
             foreach ($this->allMembers as $member) {
-                if (!isset($commonGroupLookup[$member->group_id])) {
+                if (! isset($commonGroupLookup[$member->group_id])) {
                     continue;
                 }
                 if ($member->created_at->toDateString() > $meetingDateStr) {
@@ -163,7 +172,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
                     }
                 }
                 if ($shouldFilterByAge) {
-                    if (!$member->ageGroup || !in_array($member->ageGroup->name, $targetAgeGroups, true)) {
+                    if (! $member->ageGroup || ! in_array($member->ageGroup->name, $targetAgeGroups, true)) {
                         continue;
                     }
                 }
@@ -191,7 +200,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
                 }
 
                 $alpha = max(0, $totalTarget - $hadir - $izinSakit);
-                $pct = round(($hadir / $totalTarget) * 100, 1) . '%';
+                $pct = round(($hadir / $totalTarget) * 100, 1).'%';
 
                 $row = array_merge($row, [$hadir, $izinSakit, $alpha, $totalTarget, $pct]);
             }
@@ -247,13 +256,17 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
 
                 // Percent color dots
                 for ($m = 0; $m < count($this->meetings); $m++) {
-                    $pctCell = Coordinate::stringFromColumnIndex(2 + (($m + 1) * 5)) . $rowIdx;
+                    $pctCell = Coordinate::stringFromColumnIndex(2 + (($m + 1) * 5)).$rowIdx;
                     $val = $sheet->getCell($pctCell)->getValue();
                     if ($val && $val !== '-' && strpos($val, '%') !== false) {
                         $pct = (float) str_replace('%', '', $val);
                         $color = 'FFDC2626'; // Red
-                        if ($pct >= 80) $color = 'FF15803D'; // Green
-                        elseif ($pct >= 50) $color = 'FFB45309'; // Orange
+                        if ($pct >= 80) {
+                            $color = 'FF15803D';
+                        } // Green
+                        elseif ($pct >= 50) {
+                            $color = 'FFB45309';
+                        } // Orange
                         $sheet->getStyle($pctCell)->getFont()->getColor()->setARGB($color);
                     }
                 }
@@ -273,7 +286,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
                 $lastColLetter = Coordinate::stringFromColumnIndex($totalCols);
 
                 // Title
-                $sheet->setCellValue('A1', 'RINGKASAN REKAPITULASI KEHADIRAN - ' . $this->group->name);
+                $sheet->setCellValue('A1', 'RINGKASAN REKAPITULASI KEHADIRAN - '.$this->group->name);
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
                 // Periode
@@ -281,20 +294,20 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
                 $until = data_get($this->filters, 'date_range.date_to');
                 $periodeText = 'Semua Waktu';
                 if ($from && $until) {
-                    $periodeText = Carbon::parse($from)->translatedFormat('d F Y') . ' s.d ' . Carbon::parse($until)->translatedFormat('d F Y');
+                    $periodeText = Carbon::parse($from)->translatedFormat('d F Y').' s.d '.Carbon::parse($until)->translatedFormat('d F Y');
                 } elseif ($from) {
-                    $periodeText = 'Mulai ' . Carbon::parse($from)->translatedFormat('d F Y');
+                    $periodeText = 'Mulai '.Carbon::parse($from)->translatedFormat('d F Y');
                 } elseif ($until) {
-                    $periodeText = 'Sampai ' . Carbon::parse($until)->translatedFormat('d F Y');
+                    $periodeText = 'Sampai '.Carbon::parse($until)->translatedFormat('d F Y');
                 }
 
                 $sheet->setCellValue('A2', "Periode: {$periodeText}");
-                $sheet->setCellValue('A3', "Dicetak oleh: " . (auth()->user()?->name ?? '-'));
+                $sheet->setCellValue('A3', 'Dicetak oleh: '.(auth()->user()?->name ?? '-'));
 
                 // Headers Row 5-6
-                $sheet->mergeCells("A5:A6");
+                $sheet->mergeCells('A5:A6');
                 $sheet->setCellValue('A5', 'Nama Grup');
-                $sheet->mergeCells("B5:B6");
+                $sheet->mergeCells('B5:B6');
                 $sheet->setCellValue('B5', 'Level');
 
                 $colIdx = 3;
@@ -302,11 +315,11 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
                     $startCol = Coordinate::stringFromColumnIndex($colIdx);
                     $endCol = Coordinate::stringFromColumnIndex($colIdx + 4);
                     $sheet->mergeCells("{$startCol}5:{$endCol}5");
-                    $sheet->setCellValue("{$startCol}5", $meeting->meeting_date->format('d/m/y') . "\n" . $meeting->name);
+                    $sheet->setCellValue("{$startCol}5", $meeting->meeting_date->format('d/m/y')."\n".$meeting->name);
 
                     $subHeaders = ['H', 'I/S', 'A', 'T', '%'];
                     for ($s = 0; $s < 5; $s++) {
-                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx + $s) . '6', $subHeaders[$s]);
+                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx + $s).'6', $subHeaders[$s]);
                     }
                     $colIdx += 5;
                 }
@@ -333,7 +346,7 @@ class GroupMemberSummarySheet implements FromCollection, WithTitle, WithMapping,
                 for ($i = 1; $i <= $lastRow; $i++) {
                     $sheet->getRowDimension($i)->setRowHeight(20);
                 }
-            }
+            },
         ];
     }
 }

@@ -2,17 +2,17 @@
 
 namespace App\Filament\Resources\Users;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\Users\Pages\ManageUsers;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Tables\UserTable;
 use App\Models\User;
 use BackedEnum;
-use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class UserResource extends Resource
 {
@@ -54,7 +54,7 @@ class UserResource extends Resource
 
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return $query->whereRaw('1 = 0');
         }
 
@@ -64,7 +64,7 @@ class UserResource extends Resource
         }
 
         // Non-Super Admins NEVER see Super Admins
-        $query->where('users.role', '!=', config('filament-shield.super_admin.name', 'super_admin'));
+        $query->where('users.role', '!=', UserRole::SUPER_ADMIN->value);
 
         // Operator can ONLY see themselves
         if ($user->isOperator()) {
@@ -74,10 +74,11 @@ class UserResource extends Resource
         // Admin sees users in their own group, descendant groups, OR users with no group
         if ($user->group_id) {
             $allowedGroupIds = $user->group->getAllDescendantIds();
-            $query->where(function($q) use ($allowedGroupIds) {
+            $query->where(function ($q) use ($allowedGroupIds) {
                 $q->whereIn('users.group_id', $allowedGroupIds)
-                  ->orWhereNull('users.group_id');
+                    ->orWhereNull('users.group_id');
             });
+
             return $query;
         }
 

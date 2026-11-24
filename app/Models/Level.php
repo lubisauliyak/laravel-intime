@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 class Level extends Model
 {
     use SoftDeletes;
+
     protected $fillable = [
         'name',
         'code',

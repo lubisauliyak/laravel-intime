@@ -2,21 +2,22 @@
 
 namespace App\Filament\Resources\Meetings\Widgets;
 
-use Livewire\Attributes\On;
-
 use App\Models\Attendance;
-use App\Models\Meeting;
 use App\Models\Group;
-use App\Models\AgeGroup;
+use App\Models\Meeting;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 
 class AgeGroupParticipationWidget extends ChartWidget
 {
     public $filters = [];
+
     protected ?string $heading = 'Aktivitas Anggota Berdasarkan Usia';
+
     protected static bool $isLazy = true;
+
     protected int|string|array $columnSpan = ['md' => 1, 'xl' => 1];
+
     protected ?string $maxHeight = '300px';
 
     public function getExtraAttributes(): array
@@ -63,38 +64,45 @@ class AgeGroupParticipationWidget extends ChartWidget
     {
         $data = $this->getData();
         $total = 0;
-        if (!empty($data['datasets'])) {
+        if (! empty($data['datasets'])) {
             foreach ($data['datasets'] as $dataset) {
                 $total += array_sum($dataset['data']);
             }
         }
-        if ($total === 0) return 'Belum ada data partisipasi';
+        if ($total === 0) {
+            return 'Belum ada data partisipasi';
+        }
+
         return "Total : {$total} Anggota";
     }
 
     protected function getData(): array
     {
         $user = auth()->user();
-        $cacheKey = 'meeting_act_age_' . ($user->id) . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'meeting_act_age_'.($user->id).'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, 300, function () use ($user) {
             $filterMeetingId = $this->filters['meeting_id'] ?? null;
-            if (!$filterMeetingId) return ['datasets' => [], 'labels' => []];
+            if (! $filterMeetingId) {
+                return ['datasets' => [], 'labels' => []];
+            }
 
             $meeting = Meeting::find($filterMeetingId);
-            if (!$meeting) return ['datasets' => [], 'labels' => []];
+            if (! $meeting) {
+                return ['datasets' => [], 'labels' => []];
+            }
 
             $filterGroupId = $this->filters['group_id'] ?? null;
             $filterLevelId = $this->filters['level_id'] ?? null;
 
             $query = Attendance::where('meeting_id', $meeting->id)->where('attendances.status', \App\Enums\AttendanceStatus::HADIR);
-            
+
             if ($filterGroupId) {
-                $query->whereHas('member', fn($q) => $q->whereIn('group_id', Group::find($filterGroupId)->getAllDescendantIds()));
+                $query->whereHas('member', fn ($q) => $q->whereIn('group_id', Group::find($filterGroupId)->getAllDescendantIds()));
             } elseif ($filterLevelId) {
-                $query->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
-                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
+                $query->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
+                $query->whereHas('member', fn ($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
             }
 
             $data = $query->join('members', 'attendances.member_id', '=', 'members.id')
@@ -110,5 +118,8 @@ class AgeGroupParticipationWidget extends ChartWidget
         });
     }
 
-    protected function getType(): string { return 'bar'; }
+    protected function getType(): string
+    {
+        return 'bar';
+    }
 }

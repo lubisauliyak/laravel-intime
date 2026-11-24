@@ -2,13 +2,13 @@
 
 namespace App\Filament\Resources\Meetings\Schemas;
 
-use App\Models\Meeting;
 use App\Enums\UserRole;
-use Filament\Infolists\Components\TextEntry;
+use App\Models\Meeting;
 use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 
 class MeetingInfolist
@@ -37,12 +37,12 @@ class MeetingInfolist
                                     ->label('Kategori Usia')
                                     ->state(function ($record) {
                                         $groups = $record->target_age_groups;
-                                        
+
                                         // Jika kosong, tampilkan 'Semua Kategori Usia'
                                         if (empty($groups)) {
                                             return ['Semua'];
                                         }
-                                        
+
                                         return \App\Models\AgeGroup::whereIn('name', (array) $groups)
                                             ->orderBy('sort_order')
                                             ->pluck('name')
@@ -51,7 +51,7 @@ class MeetingInfolist
                                     ->badge()
                                     ->color(fn ($state) => match (true) {
                                         empty($state) || $state === 'Semua' => 'gray',
-                                        default => \App\Models\AgeGroup::getColorMapping()[(string)$state] ?? 'gray',
+                                        default => \App\Models\AgeGroup::getColorMapping()[(string) $state] ?? 'gray',
                                     }),
                                 TextEntry::make('start_time')
                                     ->label('Jam Dimulai')
@@ -100,13 +100,14 @@ class MeetingInfolist
                                     ->get()
                                     ->sortBy(function ($attendance) {
                                         $primary = $attendance->member->getPrimaryPosition();
+
                                         return [
                                             $primary?->category?->sort_order ?? 7, // Urutan Kategori (Awal = Kecil)
                                             -($primary?->group?->level?->level_number ?? 1), // Level Grup (Tinggi = Angka Besar)
                                             $primary?->sort_order ?? 0, // Urutan Manual
                                             $primary?->group?->parent?->name, // Nama Parent Grup
                                             $primary?->group?->name, // Nama Grup
-                                            $attendance->member->full_name
+                                            $attendance->member->full_name,
                                         ];
                                     });
                             })
@@ -116,36 +117,34 @@ class MeetingInfolist
                                         TextEntry::make('member.full_name')
                                             ->label('Nama')
                                             ->weight(FontWeight::Bold)
-                                            ->color(fn($record) => $record->member?->getMemberColor())
-                                            ->tooltip(fn($record) => $record->member?->getMemberColorTooltip())
+                                            ->color(fn ($record) => $record->member?->getMemberColor())
+                                            ->tooltip(fn ($record) => $record->member?->getMemberColorTooltip())
                                             ->columnSpan(3),
                                         TextEntry::make('consolidated_positions')
                                             ->label('Pengurus')
                                             ->columnSpan(7)
-                                            ->state(fn($record) => $record->member->positions()
+                                            ->state(fn ($record) => $record->member->positions()
                                                 ->with(['category', 'group.level'])
                                                 ->get()
-                                                ->sortBy(fn($pos) => [
+                                                ->sortBy(fn ($pos) => [
                                                     $pos->category?->sort_order ?? 999,
                                                     -($pos->group?->level?->level_number ?? 0),
                                                     $pos->sort_order ?? 0,
                                                 ])
                                             )
                                             ->listWithLineBreaks()
-                                            ->formatStateUsing(fn ($state) => 
-                                                ($state->position_name ?? '-') . ' ' . 
-                                                ($state->category?->name ?? '-') . ' ' . 
-                                                ($state->group?->level?->name ?? '-') . ' ' . 
+                                            ->formatStateUsing(fn ($state) => ($state->position_name ?? '-').' '.
+                                                ($state->category?->name ?? '-').' '.
+                                                ($state->group?->level?->name ?? '-').' '.
                                                 ($state->group?->name ?? '-')
                                             )
                                             ->color('gray')
                                             ->weight(FontWeight::Medium),
-                                         TextEntry::make('status')
+                                        TextEntry::make('status')
                                             ->label('Status')
                                             ->columnSpan(2)
                                             ->badge()
-                                            ->formatStateUsing(fn ($state, $record) => 
-                                                $state->getLabel() . ($state === \App\Enums\AttendanceStatus::HADIR && $record->checkin_time ? ' (' . $record->checkin_time->format('H:i') . ')' : '')
+                                            ->formatStateUsing(fn ($state, $record) => $state->getLabel().($state === \App\Enums\AttendanceStatus::HADIR && $record->checkin_time ? ' ('.$record->checkin_time->format('H:i').')' : '')
                                             ),
                                     ]),
                             ])

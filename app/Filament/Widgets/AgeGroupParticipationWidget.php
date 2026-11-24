@@ -2,20 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\AttendanceStatus;
 use App\Models\AgeGroup;
+use App\Models\Attendance;
 use App\Models\Meeting;
 use App\Models\Member;
-use App\Models\Attendance;
-use App\Enums\AttendanceStatus;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class AgeGroupParticipationWidget extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
@@ -53,7 +51,7 @@ class AgeGroupParticipationWidget extends ChartWidget
     {
         $data = $this->getData();
         $total = 0;
-        if (!empty($data['datasets'])) {
+        if (! empty($data['datasets'])) {
             foreach ($data['datasets'] as $dataset) {
                 $total += array_sum($dataset['data']);
             }
@@ -71,13 +69,13 @@ class AgeGroupParticipationWidget extends ChartWidget
         $user = auth()->user();
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return ['datasets' => [], 'labels' => []];
         }
 
-        $cacheKey = 'age_participation_v3_' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'age_participation_v3_'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
-        return Cache::remember($cacheKey, 180, fn() => $this->getParticipationStats($user, $ref));
+        return Cache::remember($cacheKey, 180, fn () => $this->getParticipationStats($user, $ref));
     }
 
     private function getParticipationStats($user, Meeting $ref): array
@@ -96,8 +94,9 @@ class AgeGroupParticipationWidget extends ChartWidget
 
         foreach ($ageGroups as $ageGroup) {
             $totalMembers = $memberCounts[$ageGroup->id] ?? 0;
-            if ($totalMembers === 0)
+            if ($totalMembers === 0) {
                 continue;
+            }
 
             $counts = $attendanceCounts->get($ageGroup->id, collect());
             $hadirCount = $counts->where('status', AttendanceStatus::HADIR->value)->sum('count');
@@ -166,7 +165,7 @@ class AgeGroupParticipationWidget extends ChartWidget
     private function getFilteredAgeGroups(array $targetAgeGroups)
     {
         $query = AgeGroup::orderBy('sort_order');
-        if (!empty($targetAgeGroups)) {
+        if (! empty($targetAgeGroups)) {
             $query->whereIn('name', $targetAgeGroups);
         }
         $ageGroups = $query->get();
@@ -187,7 +186,7 @@ class AgeGroupParticipationWidget extends ChartWidget
             return \App\Models\Group::where('level_id', $filterLevelId)->get()->flatMap->getAllDescendantIds()->unique()->toArray();
         }
 
-        if ($user && !$user->isSuperAdmin() && $user->group_id) {
+        if ($user && ! $user->isSuperAdmin() && $user->group_id) {
             return $user->group->getAllDescendantIds();
         }
 
@@ -197,8 +196,8 @@ class AgeGroupParticipationWidget extends ChartWidget
     private function getMemberCounts(?array $allowedGroupIds, array $targetAgeGroups)
     {
         return Member::where('status', true)
-            ->when($allowedGroupIds, fn($q) => $q->whereIn('group_id', $allowedGroupIds))
-            ->when(!empty($targetAgeGroups), fn($q) => $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups)))
+            ->when($allowedGroupIds, fn ($q) => $q->whereIn('group_id', $allowedGroupIds))
+            ->when(! empty($targetAgeGroups), fn ($q) => $q->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', $targetAgeGroups)))
             ->select('age_group_id', DB::raw('count(*) as total'))
             ->groupBy('age_group_id')
             ->pluck('total', 'age_group_id');
@@ -211,8 +210,8 @@ class AgeGroupParticipationWidget extends ChartWidget
                 if ($allowedGroupIds) {
                     $q->whereIn('group_id', $allowedGroupIds);
                 }
-                if (!empty($targetAgeGroups)) {
-                    $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups));
+                if (! empty($targetAgeGroups)) {
+                    $q->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', $targetAgeGroups));
                 }
             })
             ->join('members', 'attendances.member_id', '=', 'members.id')

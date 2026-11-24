@@ -2,44 +2,52 @@
 
 namespace App\Exports\Sheets;
 
-use App\Models\Meeting;
-use App\Models\Group;
-use App\Models\Member;
-use App\Models\Attendance;
-use App\Models\MemberPosition;
-use App\Enums\MeetingTargetGender;
 use App\Enums\AttendanceStatus;
 use App\Enums\Gender;
+use App\Enums\MeetingTargetGender;
 use App\Enums\MembershipType;
+use App\Models\Attendance;
+use App\Models\Group;
+use App\Models\Meeting;
+use App\Models\Member;
+use App\Models\MemberPosition;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Events\BeforeSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents
+class MeetingAttendanceSummarySheet implements FromCollection, WithColumnWidths, WithEvents, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected $meeting;
+
     protected $currentRow = 0;
+
     protected $parentRows = [];
 
     // Track table ranges for styling
     protected $table1StartRow;
+
     protected $table1EndRow;
+
     protected $table2TitleRow;
+
     protected $table2HeadingRow;
+
     protected $table2StartRow;
+
     protected $table2EndRow;
+
     protected $table2ParentRows = [];
+
     protected $memberIds;
 
     public function __construct(Meeting $meeting, $memberIds = null)
@@ -117,34 +125,34 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         $attendancesQuery = Attendance::where('meeting_id', $this->meeting->id)
             ->whereHas('member', function ($q) use ($descendantIds) {
                 $q->whereIn('group_id', $descendantIds)
-                    ->when($this->memberIds !== null, fn($mq) => $mq->whereIn('id', $this->memberIds));
+                    ->when($this->memberIds !== null, fn ($mq) => $mq->whereIn('id', $this->memberIds));
             })
             ->join('members', 'attendances.member_id', '=', 'members.id')
             ->selectRaw('attendances.status, members.gender, attendances.member_id');
 
         $attendancesData = $attendancesQuery->get();
 
-        $hadir = $attendancesData->filter(fn($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value)->count();
-        $hadirL = $attendancesData->filter(fn($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value && $a->gender === Gender::MALE->value)->count();
-        $hadirP = $attendancesData->filter(fn($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value && $a->gender === Gender::FEMALE->value)->count();
-        
-        $izinSakit = $attendancesData->filter(fn($a) => in_array($a->status->value ?? $a->status, [AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
+        $hadir = $attendancesData->filter(fn ($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value)->count();
+        $hadirL = $attendancesData->filter(fn ($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value && $a->gender === Gender::MALE->value)->count();
+        $hadirP = $attendancesData->filter(fn ($a) => ($a->status->value ?? $a->status) === AttendanceStatus::HADIR->value && $a->gender === Gender::FEMALE->value)->count();
+
+        $izinSakit = $attendancesData->filter(fn ($a) => in_array($a->status->value ?? $a->status, [AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
 
         // Non-target yang hadir atau izin/sakit
-        $nonTargetAttended = $attendancesData->filter(fn($a) => !in_array($a->member_id, $targetMemberIds) && in_array($a->status->value ?? $a->status, [AttendanceStatus::HADIR->value, AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
+        $nonTargetAttended = $attendancesData->filter(fn ($a) => ! in_array($a->member_id, $targetMemberIds) && in_array($a->status->value ?? $a->status, [AttendanceStatus::HADIR->value, AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
 
         $totalTarget = $baseTarget + $nonTargetAttended;
 
         // Target dasar yang hadir atau izin/sakit
-        $targetAttended = $attendancesData->filter(fn($a) => in_array($a->member_id, $targetMemberIds) && in_array($a->status->value ?? $a->status, [AttendanceStatus::HADIR->value, AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
+        $targetAttended = $attendancesData->filter(fn ($a) => in_array($a->member_id, $targetMemberIds) && in_array($a->status->value ?? $a->status, [AttendanceStatus::HADIR->value, AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]))->count();
 
         $tidakHadir = max(0, $baseTarget - $targetAttended);
-        
+
         $percentage = $totalTarget > 0 ? round(($hadir / $totalTarget) * 100, 1) : 0;
 
         $hasChildren = $group->children()->exists();
         $levelNumber = $group->level?->level_number ?? 0;
-        
+
         $this->currentRow++;
         // Only color DAERAH/DESA rows (level > 1), not KELOMPOK
         if ($hasChildren && $levelNumber > 1) {
@@ -152,7 +160,7 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         }
 
         $rows->push([
-            'group_name' => str_repeat('    ', $depth) . $group->name,
+            'group_name' => str_repeat('    ', $depth).$group->name,
             'level' => $group->level?->name ?? '-',
             'target' => $totalTarget,
             'hadir' => $hadir,
@@ -160,7 +168,7 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
             'hadir_p' => $hadirP,
             'izin_sakit' => $izinSakit,
             'tidak_hadir' => $tidakHadir,
-            'percentage' => $percentage . '%',
+            'percentage' => $percentage.'%',
         ]);
 
         foreach ($group->children()->orderBy('name')->get() as $child) {
@@ -177,7 +185,7 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
     private function addPengurusStats(Group $group, int $depth, $rows)
     {
         $hadir = $this->getPengurusHadirCountForGroup($group);
-        
+
         $hasChildren = $group->children()->exists();
         $levelNumber = $group->level?->level_number ?? 0;
         $this->currentRow++;
@@ -187,7 +195,7 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         }
 
         $rows->push([
-            'group_name' => str_repeat('    ', $depth) . $group->name,
+            'group_name' => str_repeat('    ', $depth).$group->name,
             'level' => $group->level?->name ?? '-',
             'target' => $hadir,  // Hadir placed in Column C (right next to Level)
             'hadir' => '',
@@ -205,11 +213,11 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
                 foreach ($children as $child) {
                     $totalHadir += $this->getPengurusHadirCountForGroup($child);
                 }
-                
+
                 $this->currentRow++;
                 // SEMUA is KELOMPOK level, no coloring
                 $rows->push([
-                    'group_name' => str_repeat('    ', $depth + 1) . 'SEMUA',
+                    'group_name' => str_repeat('    ', $depth + 1).'SEMUA',
                     'level' => $firstChild->level?->name ?? 'KELOMPOK',
                     'target' => $totalHadir,  // Hadir placed in Column C
                     'hadir' => '',
@@ -327,7 +335,7 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         foreach ($this->parentRows as $row) {
             $sheet->getStyle("A{$row}:I{$row}")->getFill()
                 ->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('CEDCEA'); 
+                ->getStartColor()->setRGB('CEDCEA');
         }
 
         // === TABLE 2 STYLES ===
@@ -359,37 +367,37 @@ class MeetingAttendanceSummarySheet implements FromCollection, WithTitle, WithHe
         foreach ($this->table2ParentRows as $row) {
             $sheet->getStyle("A{$row}:C{$row}")->getFill()
                 ->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('CEDCEA'); 
+                ->getStartColor()->setRGB('CEDCEA');
         }
 
         // === GLOBAL ===
         // Title Styling
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        
+
         return [];
     }
 
     public function registerEvents(): array
     {
         return [
-            BeforeSheet::class => function(BeforeSheet $event) {
+            BeforeSheet::class => function (BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                
+
                 // $sheet->mergeCells('A1:G1');
                 $sheet->setCellValue('A1', 'LAPORAN RINGKASAN STATISTIK KEHADIRAN');
-                
+
                 // $sheet->mergeCells('A2:G2');
                 $sheet->setCellValue('A2', "Pertemuan/Penyelenggara : {$this->meeting->name} / {$this->meeting->group->name}");
-                
+
                 // $sheet->mergeCells('A3:G3');
                 $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
                 $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
-                $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
+                $sheet->setCellValue('A3', 'Tanggal/Waktu : '.$this->meeting->meeting_date->translatedFormat('d F Y')." ({$startTime} s.d {$endTime})");
 
                 // $sheet->mergeCells('A4:G4'); // Spacer
-                $sheet->setCellValue('A4', "");
+                $sheet->setCellValue('A4', '');
             },
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
                 $lastRow = $this->currentRow + 5;
 

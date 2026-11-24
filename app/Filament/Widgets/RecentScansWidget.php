@@ -2,19 +2,16 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Attendance;
 use App\Enums\MembershipType;
+use App\Models\Attendance;
 use App\Models\Meeting;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
-use Filament\Tables;
-use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Widgets\TableWidget as BaseWidget;
+use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentScansWidget extends BaseWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
@@ -25,6 +22,7 @@ class RecentScansWidget extends BaseWidget
     protected int|string|array $columnSpan = 'full';
 
     protected ?string $pollingInterval = null;
+
     protected static ?string $heading = 'Pindaian Terakhir';
 
     public function table(Table $table): Table
@@ -38,7 +36,7 @@ class RecentScansWidget extends BaseWidget
 
         $refMeeting = $filterMeetingId ? Meeting::find($filterMeetingId) : null;
 
-        if (!$refMeeting) {
+        if (! $refMeeting) {
             return $table
                 ->query(Attendance::query()->whereRaw('0 = 1'))
                 ->columns([
@@ -73,8 +71,8 @@ class RecentScansWidget extends BaseWidget
             $allowedGroupIds = \App\Models\Group::find($filterGroupId)->getAllDescendantIds();
             $query->whereIn('member_id', \App\Models\Member::whereIn('group_id', $allowedGroupIds)->pluck('id'));
         } elseif ($filterLevelId) {
-            $query->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
-        } elseif (!$user->isSuperAdmin() && $user->group_id) {
+            $query->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
+        } elseif (! $user->isSuperAdmin() && $user->group_id) {
             $allowedGroupIds = $user->group->getAllDescendantIds();
             $authGroupIds = array_merge([$user->group_id], $user->group->getAllAncestorIds());
 
@@ -82,7 +80,7 @@ class RecentScansWidget extends BaseWidget
                 $q->whereIn('group_id', $allowedGroupIds)
                     ->orWhere(function ($sq) use ($authGroupIds) {
                         $sq->where('membership_type', MembershipType::PENGURUS->value)
-                            ->whereHas('positions', fn($pq) => $pq->whereIn('group_id', $authGroupIds));
+                            ->whereHas('positions', fn ($pq) => $pq->whereIn('group_id', $authGroupIds));
                     });
             });
         }
@@ -109,7 +107,7 @@ class RecentScansWidget extends BaseWidget
                 TextColumn::make('notes')
                     ->label('Keterangan')
                     ->badge()
-                    ->color(fn($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),
+                    ->color(fn ($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),
             ])
             ->paginated(false);
     }

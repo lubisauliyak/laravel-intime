@@ -4,67 +4,61 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Level;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class LevelPolicy
 {
     use HandlesAuthorization;
-    
-    public function viewAny(AuthUser $authUser): bool
+
+    public function viewAny(User $user): bool
     {
-        return $authUser->can('ViewAny:Level');
+        return true;
     }
 
-    public function view(AuthUser $authUser, Level $level): bool
+    public function view(User $user, Level $level): bool
     {
-        return $authUser->can('View:Level');
+        return true;
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(User $user): bool
     {
-        return $authUser->can('Create:Level');
+        return false;
     }
 
-    public function update(AuthUser $authUser, Level $level): bool
+    public function update(User $user, Level $level): bool
     {
-        return $authUser->can('Update:Level');
+        return false;
     }
 
-    public function delete(AuthUser $authUser, Level $level): bool
+    public function delete(User $user, Level $level): bool
     {
-        return $authUser->can('Delete:Level');
+        return false;
     }
 
-    public function restore(AuthUser $authUser, Level $level): bool
+    public function restore(User $user, Level $level): bool
     {
-        return $authUser->can('Restore:Level');
+        return false;
     }
 
-    public function forceDelete(AuthUser $authUser, Level $level): bool
+    public function forceDelete(User $user, Level $level): bool
     {
-        return $authUser->can('ForceDelete:Level');
+        return false;
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $authUser->can('ForceDeleteAny:Level');
+        return false;
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(User $user): bool
     {
-        return $authUser->can('RestoreAny:Level');
+        return false;
     }
 
-    public function replicate(AuthUser $authUser, Level $level): bool
+    public function replicate(User $user, Level $level): bool
     {
-        return $authUser->can('Replicate:Level');
+        return false;
     }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:Level');
-    }
-
 }

@@ -5,23 +5,20 @@ namespace App\Filament\Resources\Levels;
 use App\Filament\Resources\Levels\Pages\ManageLevels;
 use App\Models\Level;
 use BackedEnum;
-use UnitEnum;
-use Filament\Forms\Components\TextInput;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ActionGroup;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class LevelResource extends Resource
 {
@@ -41,8 +38,6 @@ class LevelResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-
-
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -52,14 +47,14 @@ class LevelResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn($state) => strtoupper($state)),
+                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state)),
                 TextInput::make('code')
                     ->label('Kode')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(50)
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn($state) => strtoupper($state))
+                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state))
                     ->validationMessages([
                         'unique' => 'Kode tingkatan ini sudah digunakan. Mohon gunakan kode lain yang berbeda.',
                     ]),
@@ -109,7 +104,7 @@ class LevelResource extends Resource
                         ->label('Ubah'),
                     DeleteAction::make()
                         ->label('Hapus'),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

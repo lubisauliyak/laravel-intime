@@ -9,7 +9,7 @@ Panduan ini wajib dipatuhi oleh seluruh AI coding assistant (Antigravity, Cursor
 * **PHP:** ^8.2 (Running: PHP 8.4)
 * **Framework:** Laravel 12.x (`laravel/framework: ^12.0`)
 * **Admin Panel:** **Filament v5.0** (`filament/filament: 5`)
-* **Role & Permission:** Filament Shield v4.x (`bezhansalleh/filament-shield: ^4.1`)
+* **Role & Otorisasi:** Native Laravel Policy & Hierarchical ABAC (Group-scoped, `UserRole` Enum)
 * **Livewire:** v4.x
 * **Tailwind CSS:** v4.x
 * **Code Styler:** Laravel Pint (`laravel/pint: ^1.24`)

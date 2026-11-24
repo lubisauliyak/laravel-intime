@@ -1,22 +1,22 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
+use App\Filament\Resources\Members\Pages\ViewMember;
 use App\Models\CardTemplate;
 use App\Models\Group;
 use App\Models\Level;
 use App\Models\Member;
-use App\Filament\Resources\Members\Schemas\MemberForm;
-use App\Filament\Resources\Members\Pages\ViewMember;
 use Illuminate\Support\Facades\DB;
 
 $passed = 0;
 $failed = 0;
 
-function assert_it(string $name, bool $condition, string $details = '') {
+function assert_it(string $name, bool $condition, string $details = '')
+{
     global $passed, $failed;
     if ($condition) {
         $passed++;
@@ -51,7 +51,7 @@ try {
     ]);
     $member1->save();
 
-    assert_it('Test 1.1: 1st member code auto-generated', $member1->member_code === '7766001', 'Got: ' . ($member1->member_code ?? 'null'));
+    assert_it('Test 1.1: 1st member code auto-generated', $member1->member_code === '7766001', 'Got: '.($member1->member_code ?? 'null'));
 
     $member2 = new Member([
         'full_name' => 'Siti Rahma',
@@ -62,7 +62,7 @@ try {
     ]);
     $member2->save();
 
-    assert_it('Test 1.2: 2nd member code auto-incremented to 7766002', $member2->member_code === '7766002', 'Got: ' . ($member2->member_code ?? 'null'));
+    assert_it('Test 1.2: 2nd member code auto-incremented to 7766002', $member2->member_code === '7766002', 'Got: '.($member2->member_code ?? 'null'));
 
     // ── TEST 2: Preserve manual ID ──
     $memberManual = new Member([
@@ -75,7 +75,7 @@ try {
     ]);
     $memberManual->save();
 
-    assert_it('Test 2: Manual member_code preserved', $memberManual->member_code === 'MANUAL-7788', 'Got: ' . ($memberManual->member_code ?? 'null'));
+    assert_it('Test 2: Manual member_code preserved', $memberManual->member_code === 'MANUAL-7788', 'Got: '.($memberManual->member_code ?? 'null'));
 
     // ── TEST 3: Safety Net - Group without codes ──
     $desNoCode = Group::create(['name' => 'DESA TANPA KODE', 'level_id' => $lvlDes->id, 'code' => null]);
@@ -90,7 +90,7 @@ try {
     ]);
     $memberNoCode->save();
 
-    assert_it('Test 3: Member in no-code group keeps member_code as NULL', $memberNoCode->member_code === null, 'Got: ' . ($memberNoCode->member_code ?? 'not null'));
+    assert_it('Test 3: Member in no-code group keeps member_code as NULL', $memberNoCode->member_code === null, 'Got: '.($memberNoCode->member_code ?? 'not null'));
 
     // ── TEST 4: ViewMember KTA template inheritance resolution ──
     $template = CardTemplate::create([

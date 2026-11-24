@@ -55,7 +55,7 @@ class ManageGroups extends ManageRecords
                     if ($scope === 'all_manageable') {
                         $user = auth()->user();
                         $query = Group::query();
-                        if ($user && !$user->isSuperAdmin()) {
+                        if ($user && ! $user->isSuperAdmin()) {
                             $query->whereIn('id', $user->getManageableGroupIds());
                         }
                         $groupIds = $query->pluck('id')->toArray();
@@ -70,6 +70,7 @@ class ManageGroups extends ManageRecords
                             ->title('Tidak Ada Data')
                             ->body('Tidak ditemukan data grup yang dapat diekspor sesuai cakupan yang dipilih.')
                             ->send();
+
                         return;
                     }
 
@@ -79,7 +80,7 @@ class ManageGroups extends ManageRecords
                         ->body('File data grup sedang dipersiapkan dan akan segera diunduh.')
                         ->send();
 
-                    $filename = 'Data_Grup_' . now()->format('Ymd_His') . '.xlsx';
+                    $filename = 'Data_Grup_'.now()->format('Ymd_His').'.xlsx';
 
                     return Excel::download(new GroupsRawExport($groupIds), $filename);
                 }),
@@ -122,7 +123,7 @@ class ManageGroups extends ManageRecords
             $count = $levelCounts[$level->id] ?? 0;
             // Tampilkan tab level jika ada grup pada level ini dalam jangkauan user
             if ($count > 0) {
-                $tabs['level_' . $level->id] = Tab::make($level->display_name)
+                $tabs['level_'.$level->id] = Tab::make($level->display_name)
                     ->modifyQueryUsing(fn (Builder $query) => $query->where('groups.level_id', $level->id))
                     ->badge($count)
                     ->badgeColor($level->getColor());

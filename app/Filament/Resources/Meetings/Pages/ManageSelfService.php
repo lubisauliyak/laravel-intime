@@ -3,10 +3,11 @@
 namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
+use App\Models\Meeting;
 use Filament\Actions\Action;
-use Filament\Resources\Pages\ViewRecord;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -17,9 +18,15 @@ class ManageSelfService extends ViewRecord
     public static function canAccess(array $parameters = []): bool
     {
         $record = $parameters['record'] ?? null;
-        return $record
-            ? auth()->user()->can('manageSelfService', $record)
-            : auth()->user()->can('ManageSelfService:Meeting');
+        if (is_string($record) || is_int($record)) {
+            $record = Meeting::where('uid', $record)->orWhere('id', $record)->first();
+        }
+
+        if ($record instanceof Meeting) {
+            return auth()->user()?->can('manageSelfService', $record) ?? false;
+        }
+
+        return auth()->user()?->can('create', Meeting::class) ?? false;
     }
 
     public static function getNavigationIcon(): string
@@ -62,7 +69,7 @@ class ManageSelfService extends ViewRecord
                             ->falseColor('danger'),
                         TextEntry::make('self_presence_url')
                             ->label('URL Presensi Mandiri')
-                            ->state(fn ($record) => $record->is_presence_enabled && !$record->isExpired() ? url("/self-presence/{$record->uid}") : null)
+                            ->state(fn ($record) => $record->is_presence_enabled && ! $record->isExpired() ? url("/self-presence/{$record->uid}") : null)
                             ->copyable(fn ($state) => $state !== null)
                             ->icon(fn ($state) => $state !== null ? 'heroicon-m-link' : null)
                             ->color(fn ($state) => $state !== null ? 'info' : 'gray')
@@ -82,7 +89,7 @@ class ManageSelfService extends ViewRecord
                             ->falseColor('danger'),
                         TextEntry::make('self_perizinan_url')
                             ->label('URL Perizinan Mandiri')
-                            ->state(fn ($record) => $record->is_permission_enabled && !$record->isExpired() ? url("/self-permission/{$record->uid}") : null)
+                            ->state(fn ($record) => $record->is_permission_enabled && ! $record->isExpired() ? url("/self-permission/{$record->uid}") : null)
                             ->copyable(fn ($state) => $state !== null)
                             ->icon(fn ($state) => $state !== null ? 'heroicon-m-link' : null)
                             ->color(fn ($state) => $state !== null ? 'info' : 'gray')

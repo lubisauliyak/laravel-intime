@@ -2,19 +2,16 @@
 
 namespace App\Filament\Resources\Meetings\Tables;
 
-use Filament\Actions\Action;
+use App\Models\Meeting;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Actions\BulkActionGroup;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Filament\Actions\ActionGroup;
-use App\Models\Meeting;
-use App\Exports\MeetingAttendanceExport;
 
 class MeetingsTable
 {
@@ -60,8 +57,8 @@ class MeetingsTable
                     ->label('L/P')
                     ->alignCenter()
                     ->badge()
-                    ->formatStateUsing(fn($state) => $state instanceof \App\Enums\MeetingTargetGender ? $state->getLabel() : $state)
-                    ->color(fn($state) => $state instanceof \App\Enums\MeetingTargetGender ? $state->getColor() : 'gray')
+                    ->formatStateUsing(fn ($state) => $state instanceof \App\Enums\MeetingTargetGender ? $state->getLabel() : $state)
+                    ->color(fn ($state) => $state instanceof \App\Enums\MeetingTargetGender ? $state->getColor() : 'gray')
                     ->visibleFrom('md')
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -79,7 +76,7 @@ class MeetingsTable
                             ->pluck('name')
                             ->toArray();
                     })
-                    ->color(fn($state) => match (true) {
+                    ->color(fn ($state) => match (true) {
                         empty($state) || $state === 'Semua' => 'gray',
                         default => \App\Models\AgeGroup::getColorMapping()[(string) $state] ?? 'gray',
                     })
@@ -109,16 +106,16 @@ class MeetingsTable
                         ->label('Lihat'),
                     EditAction::make()
                         ->label('Ubah')
-                        ->visible(fn(Meeting $record) => auth()->user()->can('update', $record)),
-                ])
+                        ->visible(fn (Meeting $record) => auth()->user()->can('update', $record)),
+                ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->label('Hapus Terpilih')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, DeleteBulkAction $action) {
-                            $allowedRecords = $records->filter(fn($record) => auth()->user()->can('delete', $record));
-                            $allowedRecords->each(fn($record) => $record->delete());
+                            $allowedRecords = $records->filter(fn ($record) => auth()->user()->can('delete', $record));
+                            $allowedRecords->each(fn ($record) => $record->delete());
 
                             if ($allowedRecords->count() < $records->count()) {
                                 \Filament\Notifications\Notification::make()
@@ -133,8 +130,8 @@ class MeetingsTable
                     ForceDeleteBulkAction::make()
                         ->label('Hapus Permanen')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, ForceDeleteBulkAction $action) {
-                            $allowedRecords = $records->filter(fn($record) => auth()->user()->can('forceDelete', $record));
-                            $allowedRecords->each(fn($record) => $record->forceDelete());
+                            $allowedRecords = $records->filter(fn ($record) => auth()->user()->can('forceDelete', $record));
+                            $allowedRecords->each(fn ($record) => $record->forceDelete());
 
                             if ($allowedRecords->count() < $records->count()) {
                                 \Filament\Notifications\Notification::make()
@@ -149,8 +146,8 @@ class MeetingsTable
                     RestoreBulkAction::make()
                         ->label('Pulihkan Terpilih')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, RestoreBulkAction $action) {
-                            $allowedRecords = $records->filter(fn($record) => auth()->user()->can('restore', $record));
-                            $allowedRecords->each(fn($record) => $record->restore());
+                            $allowedRecords = $records->filter(fn ($record) => auth()->user()->can('restore', $record));
+                            $allowedRecords->each(fn ($record) => $record->restore());
 
                             if ($allowedRecords->count() < $records->count()) {
                                 \Filament\Notifications\Notification::make()

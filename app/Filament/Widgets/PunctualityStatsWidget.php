@@ -4,19 +4,18 @@ namespace App\Filament\Widgets;
 
 use App\Models\Attendance;
 use App\Models\Meeting;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Cache;
 
 class PunctualityStatsWidget extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 6;
+
     protected int|string|array $columnSpan = ['md' => 1, 'xl' => 1];
 
     public function getExtraAttributes(): array
@@ -25,6 +24,7 @@ class PunctualityStatsWidget extends ChartWidget
             'style' => 'min-height: 480px',
         ];
     }
+
     protected ?string $maxHeight = '300px';
 
     private function getReferenceMeeting(): ?Meeting
@@ -43,7 +43,7 @@ class PunctualityStatsWidget extends ChartWidget
     {
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return [
                 'total' => 0,
                 'late' => 0,
@@ -54,7 +54,7 @@ class PunctualityStatsWidget extends ChartWidget
         }
 
         $user = auth()->user();
-        $cacheKey = 'punctuality_stats_v2' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'punctuality_stats_v2'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, 180, function () use ($user, $ref) {
             $query = Attendance::where('meeting_id', $ref->id);
@@ -63,13 +63,13 @@ class PunctualityStatsWidget extends ChartWidget
             $filterLevelId = $this->filters['level_id'] ?? null;
 
             if ($filterGroupId) {
-                $query->whereHas('member', fn($q) => $q->whereIn('group_id', \App\Models\Group::find($filterGroupId)->getAllDescendantIds()));
+                $query->whereHas('member', fn ($q) => $q->whereIn('group_id', \App\Models\Group::find($filterGroupId)->getAllDescendantIds()));
             } elseif ($filterLevelId) {
-                $query->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
-                $query->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
+                $query->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
+                $query->whereHas('member', fn ($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
             } else {
-                $query->whereHas('member', fn($q) => $q->where('status', true));
+                $query->whereHas('member', fn ($q) => $q->where('status', true));
             }
 
             // Filter by target audience (gender and age groups) from meeting
@@ -79,12 +79,12 @@ class PunctualityStatsWidget extends ChartWidget
                         $q->where('gender', $ref->target_gender->value);
                     }
 
-                    $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => \App\Models\AgeGroup::count());
+                    $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn () => \App\Models\AgeGroup::count());
                     $selectedAgeGroupsCount = empty($ref->target_age_groups) ? 0 : count($ref->target_age_groups);
                     $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
                     if ($shouldFilterByAge) {
-                        $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', (array) $ref->target_age_groups));
+                        $q->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', (array) $ref->target_age_groups));
                     }
                 });
             }
@@ -104,7 +104,7 @@ class PunctualityStatsWidget extends ChartWidget
 
             $lateCount = (clone $query)->where('notes', 'LIKE', '%TERLAMBAT%')->count();
             $onTimeCount = max(0, $total - $lateCount);
-            
+
             return [
                 'total' => $total,
                 'late' => $lateCount,
@@ -144,7 +144,7 @@ class PunctualityStatsWidget extends ChartWidget
             ],
             'labels' => [
                 "Tepat Waktu: {$data['on_time']} ({$data['on_time_percent']}%)",
-                "Terlambat: {$data['late']} ({$data['late_percent']}%)"
+                "Terlambat: {$data['late']} ({$data['late_percent']}%)",
             ],
         ];
     }

@@ -12,7 +12,7 @@ class EnsureOperatorExistsSeeder extends Seeder
     public function run(): void
     {
         // Ensure operator role exists (it should, but safety first)
-        if (!Role::where('name', 'operator')->exists()) {
+        if (! Role::where('name', 'operator')->exists()) {
             Role::create(['name' => 'operator']);
         }
 
@@ -26,7 +26,7 @@ class EnsureOperatorExistsSeeder extends Seeder
         );
 
         $user->assignRole('operator');
-        
+
         $this->command->info('Operator user created/ensured with password: password');
     }
 }

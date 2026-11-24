@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();
-            
+
             // Ensure a member can only have one attendance record per meeting
             $table->unique(['meeting_id', 'member_id']);
         });

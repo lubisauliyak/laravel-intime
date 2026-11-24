@@ -1,17 +1,17 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
-use App\Models\Group;
 use App\Models\AgeGroup;
+use App\Models\Group;
 use App\Models\Member;
 use App\Services\Members\MemberImportParser;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 echo "=== MEMULAI PENGUJIAN MEMBER IMPORT PARSER (ISOLATED SQLITE MEMORY) ===\n\n";
 
@@ -94,7 +94,7 @@ echo "- Member Trashed: {$trashedMember->member_code}\n";
 echo "- Member Active: {$activeMember->member_code}\n\n";
 
 // Siapkan file CSV pengujian
-$csvPath = __DIR__ . '/sample_test_import.csv';
+$csvPath = __DIR__.'/sample_test_import.csv';
 $csvData = [
     ['ID Anggota', 'Kelompok (Wajib)', 'Nama Lengkap (Wajib)', 'Nama Panggilan', 'Tanggal Lahir', 'L/P (Wajib)', 'Keterangan Error'],
     ['', 'KELOMPOK MAWAR', 'Budi Santoso', 'Budi', '15/01/1995', 'L', ''], // Valid 1: Umur ~31 -> Dewasa
@@ -112,22 +112,22 @@ foreach ($csvData as $line) {
 }
 fclose($fp);
 
-$parser = new MemberImportParser();
+$parser = new MemberImportParser;
 $result = $parser->parse($csvPath);
 
 echo "--- HASIL PARSING ---\n";
-echo "Total Baris Terbaca: " . $result['total_rows'] . " (Ekspektasi: 7)\n";
-echo "Data Valid: " . $result['valid_count'] . " (Ekspektasi: 2)\n";
-echo "Data Bermasalah: " . $result['invalid_count'] . " (Ekspektasi: 5)\n\n";
+echo 'Total Baris Terbaca: '.$result['total_rows']." (Ekspektasi: 7)\n";
+echo 'Data Valid: '.$result['valid_count']." (Ekspektasi: 2)\n";
+echo 'Data Bermasalah: '.$result['invalid_count']." (Ekspektasi: 5)\n\n";
 
 echo "--- DETAIL DATA BERMASALAH ---\n";
 foreach ($result['invalid_rows'] as $inv) {
-    echo "[Baris Excel " . $inv['excel_row'] . "] " . ($inv['full_name'] ?: '<Nama Kosong>') . " => " . $inv['error_message'] . "\n";
+    echo '[Baris Excel '.$inv['excel_row'].'] '.($inv['full_name'] ?: '<Nama Kosong>').' => '.$inv['error_message']."\n";
 }
 
 echo "\n--- DETAIL DATA VALID ---\n";
 foreach ($result['valid_rows'] as $v) {
-    echo "[Baris Excel " . $v['excel_row'] . "] " . $v['full_name'] . " (Update: " . ($v['is_update'] ? 'YA' : 'TIDAK') . ", Grup: " . $v['group_id'] . ", Gender: " . $v['gender'] . ", Usia: " . ($v['age'] ?? 'null') . ", AgeGroup: " . $v['age_group_id'] . ")\n";
+    echo '[Baris Excel '.$v['excel_row'].'] '.$v['full_name'].' (Update: '.($v['is_update'] ? 'YA' : 'TIDAK').', Grup: '.$v['group_id'].', Gender: '.$v['gender'].', Usia: '.($v['age'] ?? 'null').', AgeGroup: '.$v['age_group_id'].")\n";
 }
 
 // Bersihkan file uji

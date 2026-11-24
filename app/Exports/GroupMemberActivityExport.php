@@ -2,8 +2,8 @@
 
 namespace App\Exports;
 
-use App\Exports\Sheets\GroupMemberSummarySheet;
 use App\Exports\Sheets\GroupMemberRekapitulasiSheet;
+use App\Exports\Sheets\GroupMemberSummarySheet;
 use App\Models\Group;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
@@ -13,7 +13,9 @@ class GroupMemberActivityExport implements WithMultipleSheets
     use Exportable;
 
     protected Group $group;
+
     protected array $filters;
+
     protected ?array $memberIds;
 
     public function __construct(Group $group, array $filters = [], ?array $memberIds = null)

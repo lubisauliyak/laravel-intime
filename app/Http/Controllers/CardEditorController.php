@@ -21,7 +21,7 @@ class CardEditorController extends Controller
                     $fontName = pathinfo($file, PATHINFO_FILENAME);
                     // Remove common weight suffixes like -Regular to get the clean family name
                     $familyName = preg_replace('/-(Regular|Bold|Italic|BoldItalic)$/i', '', $fontName);
-                    
+
                     $weight = 'normal';
                     $style = 'normal';
                     if (preg_match('/-BoldItalic$/i', $fontName)) {
@@ -34,16 +34,16 @@ class CardEditorController extends Controller
                     }
 
                     $customFonts[$familyName][] = [
-                        'url' => asset('storage/' . $file),
+                        'url' => asset('storage/'.$file),
                         'weight' => $weight,
                         'style' => $style,
                     ];
                 }
             }
         }
-        
-        $qrPlaceholderUri = 'data:image/png;base64,' . base64_encode(\App\Services\QrGenerator::generatePng('PREVIEW-QR-SAMPLE', 150, 0));
-        
+
+        $qrPlaceholderUri = 'data:image/png;base64,'.base64_encode(\App\Services\QrGenerator::generatePng('PREVIEW-QR-SAMPLE', 150, 0));
+
         return view('card-editor.index', compact('template', 'customFonts', 'qrPlaceholderUri'));
     }
 
@@ -75,10 +75,10 @@ class CardEditorController extends Controller
         }
 
         // Check if font already exists
-        if (\Illuminate\Support\Facades\Storage::disk('public')->exists('fonts/' . $fileName)) {
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists('fonts/'.$fileName)) {
             return response()->json([
                 'success' => false,
-                'message' => 'File font ini (' . $fileName . ') sudah pernah diunggah. Silakan pilih dari daftar yang tersedia.'
+                'message' => 'File font ini ('.$fileName.') sudah pernah diunggah. Silakan pilih dari daftar yang tersedia.',
             ], 422);
         }
 
@@ -90,7 +90,7 @@ class CardEditorController extends Controller
             'name' => $familyName,
             'weight' => $weight,
             'style' => $style,
-            'url' => asset('storage/' . $path)
+            'url' => asset('storage/'.$path),
         ]);
     }
 
@@ -110,7 +110,7 @@ class CardEditorController extends Controller
         $template->update(['background_path' => $path]);
 
         return response()->json([
-            'path' => asset('storage/' . $path)
+            'path' => asset('storage/'.$path),
         ]);
     }
 
@@ -125,12 +125,12 @@ class CardEditorController extends Controller
         $template->update(['elements' => $request->elements ?? []]);
 
         try {
-            $service = new \App\Services\CardGeneratorService();
+            $service = new \App\Services\CardGeneratorService;
             $path = $service->preview($template);
             $template->update(['preview_path' => $path]);
         } catch (\Exception $e) {
             // Log or ignore if preview generation fails, the elements are still saved
-            \Illuminate\Support\Facades\Log::error('Failed to generate card preview: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Failed to generate card preview: '.$e->getMessage());
         }
 
         return response()->json(['success' => true]);
@@ -146,19 +146,20 @@ class CardEditorController extends Controller
         ]);
 
         try {
-            $service = new \App\Services\CardGeneratorService();
+            $service = new \App\Services\CardGeneratorService;
             $scenario = $request->input('scenario', 'default');
             $path = $service->preview($template, $scenario, $request->input('elements'));
 
             return response()->json([
                 'success' => true,
-                'url' => asset('storage/' . $path) . '?t=' . time(),
+                'url' => asset('storage/'.$path).'?t='.time(),
             ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to render card preview modal: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Failed to render card preview modal: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal merender pratinjau kartu: ' . $e->getMessage()
+                'message' => 'Gagal merender pratinjau kartu: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -166,7 +167,7 @@ class CardEditorController extends Controller
     private function authorizeEditor(CardTemplate $template): void
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401);
         }
 
@@ -174,7 +175,7 @@ class CardEditorController extends Controller
             return;
         }
 
-        if (!$user->can('openEditor', $template)) {
+        if (! $user->can('openEditor', $template)) {
             abort(403, 'Anda tidak memiliki hak akses untuk membuka atau mengedit Card Editor.');
         }
     }

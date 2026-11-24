@@ -1,8 +1,8 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -23,15 +23,15 @@ Group::whereIn('code', ['88', '99', '77'])->delete();
 
 // Setup test hierarchy
 $daerah = Group::create(['name' => 'Bench Daerah', 'code' => '88', 'depth' => 0]);
-$desa   = Group::create(['name' => 'Bench Desa', 'code' => '99', 'parent_id' => $daerah->id, 'depth' => 1]);
-$kel    = Group::create(['name' => 'Bench Kelompok', 'code' => '77', 'parent_id' => $desa->id, 'depth' => 2]);
+$desa = Group::create(['name' => 'Bench Desa', 'code' => '99', 'parent_id' => $daerah->id, 'depth' => 1]);
+$kel = Group::create(['name' => 'Bench Kelompok', 'code' => '77', 'parent_id' => $desa->id, 'depth' => 2]);
 
 // Seed 10 members in Kelompok
 for ($i = 1; $i <= 10; $i++) {
     Member::create([
         'group_id' => $kel->id,
-        'member_code' => '889977' . str_pad($i, 3, '0', STR_PAD_LEFT),
-        'full_name' => 'Bench Member ' . $i,
+        'member_code' => '889977'.str_pad($i, 3, '0', STR_PAD_LEFT),
+        'full_name' => 'Bench Member '.$i,
         'gender' => 'male',
         'is_active' => true,
     ]);
@@ -48,7 +48,7 @@ $avgPrefix = $prefixDuration / $iterations;
 
 echo sprintf("[BENCHMARK 1] Prefix Calculation (1,000 runs): Total = %.2f ms | Avg = %.4f ms / call\n", $prefixDuration, $avgPrefix);
 if ($avgPrefix < 5.0) {
-    echo "  -> PASS: Prefix calculation is blazingly fast (< 5ms target, actual: " . round($avgPrefix, 4) . "ms)\n";
+    echo '  -> PASS: Prefix calculation is blazingly fast (< 5ms target, actual: '.round($avgPrefix, 4)."ms)\n";
 } else {
     echo "  -> WARN: Prefix calculation exceeded 5ms\n";
 }
@@ -63,7 +63,7 @@ $avgChain = $chainDuration / $iterations;
 
 echo sprintf("[BENCHMARK 2] Chain Integrity Check (1,000 runs): Total = %.2f ms | Avg = %.4f ms / call\n", $chainDuration, $avgChain);
 if ($avgChain < 5.0) {
-    echo "  -> PASS: Chain integrity check is blazingly fast (< 5ms target, actual: " . round($avgChain, 4) . "ms)\n";
+    echo '  -> PASS: Chain integrity check is blazingly fast (< 5ms target, actual: '.round($avgChain, 4)."ms)\n";
 } else {
     echo "  -> WARN: Chain integrity check exceeded 5ms\n";
 }
@@ -84,7 +84,7 @@ $avgGen = $genDuration / $genCount;
 
 echo sprintf("[BENCHMARK 3] Atomic Next Code Generation (50 runs with lock): Total = %.2f ms | Avg = %.2f ms / call\n", $genDuration, $avgGen);
 if ($avgGen < 20.0) {
-    echo "  -> PASS: Atomic code generation is well within target (< 20ms target, actual: " . round($avgGen, 2) . "ms)\n";
+    echo '  -> PASS: Atomic code generation is well within target (< 20ms target, actual: '.round($avgGen, 2)."ms)\n";
 } else {
     echo "  -> WARN: Atomic code generation exceeded 20ms\n";
 }
@@ -97,7 +97,7 @@ $explainMember = DB::select("EXPLAIN SELECT member_code FROM members WHERE membe
 echo "1. Member Code Query Plan:\n";
 foreach ($explainMember as $row) {
     $rowArr = (array) $row;
-    echo "   Table: {$rowArr['table']} | Type: {$rowArr['type']} | Possible Keys: " . ($rowArr['possible_keys'] ?? 'NULL') . " | Key: " . ($rowArr['key'] ?? 'NULL') . " | Rows: {$rowArr['rows']}\n";
+    echo "   Table: {$rowArr['table']} | Type: {$rowArr['type']} | Possible Keys: ".($rowArr['possible_keys'] ?? 'NULL').' | Key: '.($rowArr['key'] ?? 'NULL')." | Rows: {$rowArr['rows']}\n";
 }
 
 // Explain group parent lookup
@@ -105,7 +105,7 @@ $explainGroup = DB::select("EXPLAIN SELECT * FROM `groups` WHERE parent_id = {$d
 echo "2. Group Parent + Code Query Plan:\n";
 foreach ($explainGroup as $row) {
     $rowArr = (array) $row;
-    echo "   Table: {$rowArr['table']} | Type: {$rowArr['type']} | Possible Keys: " . ($rowArr['possible_keys'] ?? 'NULL') . " | Key: " . ($rowArr['key'] ?? 'NULL') . " | Key_Len: " . ($rowArr['key_len'] ?? 'NULL') . "\n";
+    echo "   Table: {$rowArr['table']} | Type: {$rowArr['type']} | Possible Keys: ".($rowArr['possible_keys'] ?? 'NULL').' | Key: '.($rowArr['key'] ?? 'NULL').' | Key_Len: '.($rowArr['key_len'] ?? 'NULL')."\n";
 }
 
 // Cleanup

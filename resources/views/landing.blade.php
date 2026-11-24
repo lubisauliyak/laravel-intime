@@ -839,7 +839,7 @@
                     </div>
                     <ul class="list-disc list-inside text-sm mt-3 space-y-2 text-slate-600 dark:text-slate-400">
                         <li><strong>Keamanan Ekspor Data:</strong> Refactoring hak akses pada fitur ekspor (Excel &amp;
-                            PDF) yang kini terintegrasi penuh dengan sistem proteksi Filament Shield.</li>
+                            PDF) yang kini terintegrasi penuh dengan sistem proteksi otorisasi hierarkis (Native Policy).</li>
                     </ul>
                 </div>
 
@@ -931,8 +931,8 @@
                             Update</span>
                     </div>
                     <ul class="list-disc list-inside text-sm mt-3 space-y-2 text-slate-600 dark:text-slate-400">
-                        <li><strong>Manajemen Otorisasi (Filament Shield):</strong> Penerapan sistem Role dan Permission
-                            yang ketat untuk berbagai tingkatan akses (Users &amp; Roles).</li>
+                        <li><strong>Manajemen Otorisasi Terpadu:</strong> Penerapan sistem Role dan Kebijakan Akses (Policy)
+                            hierarkis yang ketat untuk berbagai tingkatan akses grup dan organisasi.</li>
                     </ul>
                 </div>
 

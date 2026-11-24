@@ -3,21 +3,22 @@
 namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
-use Filament\Resources\Pages\Page;
-use Filament\Resources\Pages\Concerns\InteractsWithRecord;
-use App\Filament\Widgets\AttendanceOverview;
-use App\Filament\Widgets\TopInsightWidget;
-use App\Filament\Widgets\TargetPopulationWidget;
 use App\Filament\Widgets\AgeGroupParticipationWidget;
-use App\Filament\Widgets\TargetGenderDistributionWidget;
-use App\Filament\Widgets\GenderActivityWidget;
-use App\Filament\Widgets\PunctualityStatsWidget;
-use App\Filament\Widgets\PunctualityScansWidget;
-use App\Filament\Widgets\ScanningPeakTimeWidget;
-use App\Filament\Widgets\EarlyScansWidget;
-use App\Filament\Widgets\RecentScansWidget;
-use App\Filament\Widgets\GroupRanking;
+use App\Filament\Widgets\AttendanceOverview;
 use App\Filament\Widgets\AttendanceTrend;
+use App\Filament\Widgets\EarlyScansWidget;
+use App\Filament\Widgets\GenderActivityWidget;
+use App\Filament\Widgets\GroupRanking;
+use App\Filament\Widgets\PunctualityScansWidget;
+use App\Filament\Widgets\PunctualityStatsWidget;
+use App\Filament\Widgets\RecentScansWidget;
+use App\Filament\Widgets\ScanningPeakTimeWidget;
+use App\Filament\Widgets\TargetGenderDistributionWidget;
+use App\Filament\Widgets\TargetPopulationWidget;
+use App\Filament\Widgets\TopInsightWidget;
+use App\Models\Meeting;
+use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Filament\Resources\Pages\Page;
 
 class MeetingStats extends Page
 {
@@ -28,12 +29,16 @@ class MeetingStats extends Page
     public static function canAccess(array $parameters = []): bool
     {
         $record = $parameters['record'] ?? null;
-        return $record
-            ? auth()->user()->can('viewStats', $record)
-            : auth()->user()->can('ViewStats:Meeting');
+        if (is_string($record) || is_int($record)) {
+            $record = Meeting::where('uid', $record)->orWhere('id', $record)->first();
+        }
+
+        if ($record instanceof Meeting) {
+            return auth()->user()?->can('viewStats', $record) ?? false;
+        }
+
+        return auth()->user()?->can('viewAny', Meeting::class) ?? false;
     }
-
-
 
     protected string $view = 'filament.resources.meetings.pages.meeting-stats';
 
@@ -43,24 +48,25 @@ class MeetingStats extends Page
         'meeting_id' => null,
     ];
 
-    public function mount(int | string $record): void
+    public function mount(int|string $record): void
     {
         $this->record = $this->resolveRecord($record);
         $this->filters['meeting_id'] = $this->record->id;
-        
+
         if ($this->record->group) {
             $user = auth()->user();
-            
+
             // Limit stats to the admin's own group if they are viewing a parent meeting
-            if ($user && !$user->isSuperAdmin() && $user->group_id) {
+            if ($user && ! $user->isSuperAdmin() && $user->group_id) {
                 $ancestorIds = $user->group->getAllAncestorIds();
                 if (in_array($this->record->group_id, $ancestorIds)) {
                     $this->filters['group_id'] = $user->group_id;
                     $this->filters['level_id'] = $user->group->level_id;
+
                     return;
                 }
             }
-            
+
             $this->filters['group_id'] = $this->record->group_id;
             $this->filters['level_id'] = $this->record->group->level_id;
         }
@@ -108,7 +114,7 @@ class MeetingStats extends Page
         ];
     }
 
-    public function getHeaderWidgetsColumns(): int | array
+    public function getHeaderWidgetsColumns(): int|array
     {
         return 2;
     }

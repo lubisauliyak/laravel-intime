@@ -2,20 +2,17 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Attendance;
-use App\Models\Meeting;
 use App\Enums\AttendanceStatus;
 use App\Enums\MembershipType;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
+use App\Models\Attendance;
+use App\Models\Meeting;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Support\Facades\Cache;
+use Filament\Widgets\TableWidget as BaseWidget;
 
 class EarlyScansWidget extends BaseWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static ?int $sort = 9;
@@ -37,7 +34,7 @@ class EarlyScansWidget extends BaseWidget
     {
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return $table
                 ->query(Attendance::query()->whereRaw('0 = 1'))
                 ->columns([
@@ -72,8 +69,8 @@ class EarlyScansWidget extends BaseWidget
             $allowedGroupIds = \App\Models\Group::find($filterGroupId)->getAllDescendantIds();
             $query->whereIn('member_id', \App\Models\Member::whereIn('group_id', $allowedGroupIds)->pluck('id'));
         } elseif ($filterLevelId) {
-            $query->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
-        } elseif (!$user->isSuperAdmin() && $user->group_id) {
+            $query->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
+        } elseif (! $user->isSuperAdmin() && $user->group_id) {
             $allowedGroupIds = $user->group->getAllDescendantIds();
             $authGroupIds = array_merge([$user->group_id], $user->group->getAllAncestorIds());
 
@@ -81,7 +78,7 @@ class EarlyScansWidget extends BaseWidget
                 $q->whereIn('group_id', $allowedGroupIds)
                     ->orWhere(function ($sq) use ($authGroupIds) {
                         $sq->where('membership_type', MembershipType::PENGURUS->value)
-                            ->whereHas('positions', fn($pq) => $pq->whereIn('group_id', $authGroupIds));
+                            ->whereHas('positions', fn ($pq) => $pq->whereIn('group_id', $authGroupIds));
                     });
             });
         }
@@ -108,7 +105,7 @@ class EarlyScansWidget extends BaseWidget
                 Tables\Columns\TextColumn::make('notes')
                     ->label('Keterangan')
                     ->badge()
-                    ->color(fn($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),
+                    ->color(fn ($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),
             ])
             ->paginated(false);
     }

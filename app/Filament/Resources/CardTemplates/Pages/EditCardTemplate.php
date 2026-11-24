@@ -18,7 +18,7 @@ class EditCardTemplate extends EditRecord
                 ->label('Buka Editor')
                 ->icon('heroicon-o-paint-brush')
                 ->color('info')
-                ->url(fn () => url('/card-editor/' . $this->record->id))
+                ->url(fn () => url('/card-editor/'.$this->record->id))
                 ->openUrlInNewTab()
                 ->visible(fn () => auth()->user()?->can('openEditor', $this->record)),
             // DeleteAction::make(),

@@ -5,25 +5,22 @@ namespace App\Filament\Resources\AgeGroups;
 use App\Filament\Resources\AgeGroups\Pages\ManageAgeGroups;
 use App\Models\AgeGroup;
 use BackedEnum;
-use UnitEnum;
-use Filament\Forms\Components\TextInput;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ActionGroup;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use UnitEnum;
 
 class AgeGroupResource extends Resource
 {
@@ -38,9 +35,8 @@ class AgeGroupResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?string $pluralLabel = 'Kategori Usia';
+
     protected static ?string $modelLabel = 'Kategori Usia';
-
-
 
     public static function form(Schema $schema): Schema
     {
@@ -51,14 +47,14 @@ class AgeGroupResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn($state) => strtoupper($state)),
+                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state)),
                 TextInput::make('code')
                     ->label('Kode')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(50)
                     ->extraInputAttributes(['style' => 'text-transform: uppercase'])
-                    ->mutateDehydratedStateUsing(fn($state) => strtoupper($state)),
+                    ->mutateDehydratedStateUsing(fn ($state) => strtoupper($state)),
                 TextInput::make('sort_order')
                     ->label('Urutan')
                     ->numeric()
@@ -100,8 +96,8 @@ class AgeGroupResource extends Resource
                     ->label('Max')
                     ->numeric()
                     ->alignCenter()
-                    ->formatStateUsing(fn($state) => $state ?? '∞')
-                    ->suffix(fn($state) => $state ? ' Thn' : ''),
+                    ->formatStateUsing(fn ($state) => $state ?? '∞')
+                    ->suffix(fn ($state) => $state ? ' Thn' : ''),
                 TextColumn::make('members_count')
                     ->label('Jumlah')
                     ->counts('members')
@@ -119,7 +115,7 @@ class AgeGroupResource extends Resource
                         ->label('Ubah'),
                     DeleteAction::make()
                         ->label('Hapus'),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

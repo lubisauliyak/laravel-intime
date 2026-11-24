@@ -2,17 +2,17 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -61,13 +61,7 @@ class UserTable
                 ActionGroup::make([
                     EditAction::make()
                         ->label('Ubah')
-                        ->hidden(fn ($record) => $record->trashed())
-                        ->after(function ($record) {
-                            // Sync Spatie role when role column is changed
-                            if ($record->role) {
-                                $record->syncRoles([$record->role]);
-                            }
-                        }),
+                        ->hidden(fn ($record) => $record->trashed()),
                     DeleteAction::make()
                         ->label('Hapus')
                         ->disabled(fn ($record) => $record->id === auth()->id())
@@ -78,7 +72,7 @@ class UserTable
                         ->label('Hapus Permanen')
                         ->disabled(fn ($record) => $record->id === auth()->id())
                         ->tooltip(fn ($record) => $record->id === auth()->id() ? 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif.' : null),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

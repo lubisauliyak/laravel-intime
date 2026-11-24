@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use App\Traits\LogsActivity;
 
 /**
  * @property \Illuminate\Support\Carbon $meeting_date
@@ -20,7 +20,7 @@ use App\Traits\LogsActivity;
 class Meeting extends Model
 {
     /** @use HasFactory<\Database\Factories\MeetingFactory> */
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'uid',
@@ -87,7 +87,7 @@ class Meeting extends Model
     {
         return $this->hasMany(Attendance::class)->whereHas('member', function ($query) {
             $query->where('membership_type', \App\Enums\MembershipType::PENGURUS->value)
-                  ->orWhereHas('positions');
+                ->orWhereHas('positions');
         });
     }
 
@@ -98,12 +98,12 @@ class Meeting extends Model
 
     public function isExpired(): bool
     {
-        if (!$this->meeting_date || !$this->end_time) {
+        if (! $this->meeting_date || ! $this->end_time) {
             return false;
         }
 
         $endDateTime = $this->meeting_date->copy()->setTimeFrom($this->end_time);
-        
+
         return now()->isAfter($endDateTime);
     }
 
@@ -113,7 +113,7 @@ class Meeting extends Model
      */
     public function isCheckinOpen(): bool
     {
-        if (!$this->meeting_date || !$this->meeting_date->isToday()) {
+        if (! $this->meeting_date || ! $this->meeting_date->isToday()) {
             return false;
         }
 
@@ -124,6 +124,7 @@ class Meeting extends Model
         $openTime = $this->checkin_open_time ?? $this->start_time;
         if ($openTime) {
             $openDateTime = $this->meeting_date->copy()->setTimeFrom($openTime);
+
             return now()->isAfter($openDateTime);
         }
 

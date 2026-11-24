@@ -2,38 +2,40 @@
 
 namespace App\Exports;
 
-use App\Models\Member;
 use App\Enums\Gender;
 use App\Enums\MembershipType;
+use App\Models\Member;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class MembersRawExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithColumnFormatting, WithEvents
+class MembersRawExport implements FromCollection, WithColumnFormatting, WithColumnWidths, WithEvents, WithHeadings, WithMapping, WithStyles
 {
     use Exportable;
 
     protected ?array $memberIds = null;
+
     protected ?Collection $customCollection = null;
+
     protected int $rowCount = 0;
 
     /**
-     * @param array|Collection|null $members Array of IDs, Collection of Member, or null for all manageable
+     * @param  array|Collection|null  $members  Array of IDs, Collection of Member, or null for all manageable
      */
     public function __construct(array|Collection|null $members = null)
     {
@@ -61,7 +63,7 @@ class MembersRawExport implements FromCollection, WithHeadings, WithMapping, Wit
             ]);
 
         $user = auth()->user();
-        if ($user && !$user->isSuperAdmin()) {
+        if ($user && ! $user->isSuperAdmin()) {
             $manageableIds = $user->getManageableGroupIds();
             $query->whereIn('members.group_id', $manageableIds);
         }
@@ -78,7 +80,7 @@ class MembersRawExport implements FromCollection, WithHeadings, WithMapping, Wit
             ->orderBy('daerah.name', 'asc')
             ->orderBy('desa.name', 'asc')
             ->orderBy('kelompok.name', 'asc')
-            ->orderByRaw("FIELD(members.gender, '" . Gender::MALE->value . "', '" . Gender::FEMALE->value . "')")
+            ->orderByRaw("FIELD(members.gender, '".Gender::MALE->value."', '".Gender::FEMALE->value."')")
             ->orderBy('members.full_name', 'asc')
             ->get();
     }
@@ -149,11 +151,12 @@ class MembersRawExport implements FromCollection, WithHeadings, WithMapping, Wit
                     $pos->category?->name,
                     $pos->group?->name,
                 ]);
+
                 return Str::title(strtolower(implode(' ', $parts)));
             })->filter()->unique()->implode(', ');
         }
 
-        $hasKta = !empty($member->membership_card_photo_path)
+        $hasKta = ! empty($member->membership_card_photo_path)
             && Storage::disk('public')->exists($member->membership_card_photo_path);
 
         return [
@@ -295,4 +298,3 @@ class MembersRawExport implements FromCollection, WithHeadings, WithMapping, Wit
         ];
     }
 }
-

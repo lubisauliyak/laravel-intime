@@ -2,17 +2,15 @@
 
 namespace App\Filament\Resources\Meetings\Widgets;
 
-use Livewire\Attributes\On;
-
-use Filament\Widgets\Widget;
+use App\Models\Group;
+use App\Models\Level;
+use App\Models\Meeting;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
-use App\Models\Level;
-use App\Models\Group;
-use App\Models\Meeting;
+use Filament\Schemas\Schema;
+use Filament\Widgets\Widget;
 
 class MeetingFilterWidget extends Widget implements HasForms
 {
@@ -20,10 +18,10 @@ class MeetingFilterWidget extends Widget implements HasForms
 
     protected string $view = 'filament.resources.meetings.widgets.meeting-filter-widget';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public ?Meeting $record = null;
-    
+
     public $filters = [
         'level_id' => null,
         'group_id' => null,
@@ -45,7 +43,7 @@ class MeetingFilterWidget extends Widget implements HasForms
                             ->label('Level Grup')
                             ->options(Level::pluck('name', 'id'))
                             ->live()
-                            ->afterStateUpdated(fn($set) => $set('group_id', null))
+                            ->afterStateUpdated(fn ($set) => $set('group_id', null))
                             ->placeholder('Semua Level'),
                         Select::make('group_id')
                             ->label('Nama Grup')
@@ -55,7 +53,7 @@ class MeetingFilterWidget extends Widget implements HasForms
 
                                 $query = Group::query();
 
-                                if (!$user->isSuperAdmin() && $user->group_id) {
+                                if (! $user->isSuperAdmin() && $user->group_id) {
                                     $query->whereIn('groups.id', $user->group->getAllDescendantIds());
                                 }
 
@@ -69,8 +67,8 @@ class MeetingFilterWidget extends Widget implements HasForms
                                     ->orderBy('groups.name', 'asc')
                                     ->select('groups.*')
                                     ->get()
-                                    ->mapWithKeys(fn($g) => [
-                                        $g->id => "({$g->level?->code}) {$g->name}"
+                                    ->mapWithKeys(fn ($g) => [
+                                        $g->id => "({$g->level?->code}) {$g->name}",
                                     ]);
                             })
                             ->live()

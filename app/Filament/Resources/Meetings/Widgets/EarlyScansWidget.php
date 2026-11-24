@@ -2,12 +2,8 @@
 
 namespace App\Filament\Resources\Meetings\Widgets;
 
-use Livewire\Attributes\On;
-
 use App\Models\Attendance;
-use App\Models\Meeting;
 use App\Models\Group;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -15,8 +11,11 @@ use Filament\Widgets\TableWidget as BaseWidget;
 class EarlyScansWidget extends BaseWidget
 {
     public $filters = [];
+
     protected static bool $isLazy = true;
+
     protected static ?string $heading = 'Pindaian Terawal';
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -28,7 +27,7 @@ class EarlyScansWidget extends BaseWidget
 
         if ($groupId) {
             $descendantIds = Group::find($groupId)->getAllDescendantIds();
-            $query->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds));
+            $query->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds));
         }
 
         $query->limit(10);
@@ -47,7 +46,7 @@ class EarlyScansWidget extends BaseWidget
                 TextColumn::make('status')->label('Status')->badge(),
                 TextColumn::make('notes')->label('Keterangan')
                     ->badge()
-                    ->color(fn($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),
+                    ->color(fn ($state) => str_contains($state ?? '', 'TERLAMBAT') ? 'danger' : 'gray'),
             ])
             ->paginated(false);
     }

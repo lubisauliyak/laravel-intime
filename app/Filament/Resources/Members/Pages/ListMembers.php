@@ -53,7 +53,7 @@ class ListMembers extends ListRecords
                     if ($scope === 'all_manageable') {
                         $user = auth()->user();
                         $query = Member::query()->where('status', true);
-                        if ($user && !$user->isSuperAdmin()) {
+                        if ($user && ! $user->isSuperAdmin()) {
                             $query->whereIn('group_id', $user->getManageableGroupIds());
                         }
                         $memberIds = $query->pluck('id')->toArray();
@@ -67,6 +67,7 @@ class ListMembers extends ListRecords
                             ->title('Tidak Ada Data')
                             ->body('Tidak ditemukan data anggota yang dapat diekspor sesuai cakupan yang dipilih.')
                             ->send();
+
                         return;
                     }
 
@@ -76,7 +77,7 @@ class ListMembers extends ListRecords
                         ->body('File Excel sedang dipersiapkan dan akan segera diunduh.')
                         ->send();
 
-                    $filename = 'Data-Anggota-' . now()->format('Ymd_His') . '.xlsx';
+                    $filename = 'Data-Anggota-'.now()->format('Ymd_His').'.xlsx';
 
                     return (new MembersRawExport($memberIds))->download($filename);
                 }),

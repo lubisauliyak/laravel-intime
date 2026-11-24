@@ -16,13 +16,21 @@ use Maatwebsite\Excel\Facades\Excel;
 class GroupImportParser
 {
     protected array $levelCache = [];
+
     protected array $groupCache = [];
+
     protected array $pendingGroups = [];
+
     protected array $existingCodesByParent = [];
+
     protected array $pendingCodesByParent = [];
+
     protected array $existingNamesByLevel = [];
+
     protected array $pendingNamesByLevel = [];
+
     protected array $manageableGroupIds = [];
+
     protected ?User $user = null;
 
     public function __construct(?User $user = null)
@@ -42,21 +50,22 @@ class GroupImportParser
         $manageableIds = $this->manageableGroupIds;
         $this->groupCache = Cache::remember("import_group_cache_{$userCacheKey}", 300, function () use ($manageableIds, $isSuperAdmin) {
             $query = Group::query();
-            if (!$isSuperAdmin) {
+            if (! $isSuperAdmin) {
                 $query->whereIn('id', $manageableIds);
             }
+
             return $query->pluck('id', 'name')->mapWithKeys(function ($id, $name) {
                 return [strtoupper(trim($name)) => $id];
             })->toArray();
         });
 
         $existing = Group::select('id', 'name', 'level_id', 'parent_id', 'code')
-            ->when(!$isSuperAdmin, fn($q) => $q->whereIn('id', $manageableIds))
+            ->when(! $isSuperAdmin, fn ($q) => $q->whereIn('id', $manageableIds))
             ->get();
 
         foreach ($existing as $g) {
             $nameUpper = strtoupper(trim($g->name));
-            if (!is_null($g->code)) {
+            if (! is_null($g->code)) {
                 $pId = $g->parent_id ?? 0;
                 $this->existingCodesByParent[$pId][strtoupper(trim((string) $g->code))] = $nameUpper;
             }
@@ -80,6 +89,7 @@ class GroupImportParser
         $level = Level::whereRaw('UPPER(name) = ?', [$levelName])->first();
         if ($level) {
             $this->levelCache[$levelName] = $level->id;
+
             return $level->id;
         }
 
@@ -101,24 +111,26 @@ class GroupImportParser
         $isSuperAdmin = $this->user ? $this->user->isSuperAdmin() : true;
 
         $query = Group::whereRaw('UPPER(name) = ?', [$groupName]);
-        if (!$isSuperAdmin) {
+        if (! $isSuperAdmin) {
             $query->whereIn('id', $this->manageableGroupIds);
         }
         $group = $query->first();
 
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return true;
         }
 
         $queryLower = Group::whereRaw('LOWER(name) = ?', [strtolower($groupName)]);
-        if (!$isSuperAdmin) {
+        if (! $isSuperAdmin) {
             $queryLower->whereIn('id', $this->manageableGroupIds);
         }
         $group = $queryLower->first();
 
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return true;
         }
 
@@ -135,13 +147,14 @@ class GroupImportParser
         $isSuperAdmin = $this->user ? $this->user->isSuperAdmin() : true;
 
         $query = Group::whereRaw('UPPER(name) = ?', [$groupName]);
-        if (!$isSuperAdmin) {
+        if (! $isSuperAdmin) {
             $query->whereIn('id', $this->manageableGroupIds);
         }
         $group = $query->first();
 
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return $group->id;
         }
 
@@ -154,7 +167,7 @@ class GroupImportParser
     protected function extractField(Collection $row, array $candidateKeys): mixed
     {
         foreach ($candidateKeys as $key) {
-            if ($row->has($key) && !is_null($row->get($key))) {
+            if ($row->has($key) && ! is_null($row->get($key))) {
                 return $row->get($key);
             }
         }
@@ -171,7 +184,8 @@ class GroupImportParser
         $this->pendingCodesByParent = [];
         $this->pendingNamesByLevel = [];
 
-        $sheetReader = new class implements ToCollection, WithHeadingRow, WithMultipleSheets {
+        $sheetReader = new class implements ToCollection, WithHeadingRow, WithMultipleSheets
+        {
             protected ?Collection $rows = null;
 
             public function sheets(): array
@@ -205,7 +219,7 @@ class GroupImportParser
 
             // Jika seluruh nilai baris kosong, lewati
             $nonEmptyValues = array_filter($rowArray, function ($value) {
-                return !is_null($value) && trim((string) $value) !== '';
+                return ! is_null($value) && trim((string) $value) !== '';
             });
 
             if (empty($nonEmptyValues)) {
@@ -222,7 +236,7 @@ class GroupImportParser
             $rawCode = $this->extractField($row, ['kode_grup_opsional', 'kode_grup', 'kode']);
 
             // Cek jika kolom wajib sama sekali tidak ditemukan pada header
-            if ($rawLevel === null && $rawName === null && !array_key_exists('tingkat_grup_wajib', $rowArray) && !array_key_exists('nama_grup_wajib', $rowArray)) {
+            if ($rawLevel === null && $rawName === null && ! array_key_exists('tingkat_grup_wajib', $rowArray) && ! array_key_exists('nama_grup_wajib', $rowArray)) {
                 $keys = implode(', ', array_keys($rowArray));
                 $rowErrors[] = "Format Header/Kolom tidak sesuai. Kolom terdeteksi: [{$keys}]. Pastikan menggunakan Template resmi.";
             }
@@ -251,29 +265,29 @@ class GroupImportParser
             }
 
             $levelId = null;
-            if (!empty($tingkatGrup)) {
+            if (! empty($tingkatGrup)) {
                 $levelId = $this->findLevel($tingkatGrup);
-                if (!$levelId) {
+                if (! $levelId) {
                     $rowErrors[] = "Tingkat Grup '{$tingkatGrup}' tidak ditemukan di sistem";
                 }
             }
 
-            $isNonSuperAdmin = $this->user && !$this->user->isSuperAdmin();
+            $isNonSuperAdmin = $this->user && ! $this->user->isSuperAdmin();
             if ($isNonSuperAdmin && empty($this->manageableGroupIds)) {
-                $rowErrors[] = "Pengguna tidak memiliki wewenang pada grup manapun untuk melakukan impor data.";
+                $rowErrors[] = 'Pengguna tidak memiliki wewenang pada grup manapun untuk melakukan impor data.';
             }
 
             $parentId = null;
-            if (!empty($indukGrup)) {
-                if (!$this->findGroup($indukGrup)) {
+            if (! empty($indukGrup)) {
+                if (! $this->findGroup($indukGrup)) {
                     $rowErrors[] = "Induk Grup '{$indukGrup}' tidak ditemukan di sistem, dan belum/tidak dibuat pada baris di atasnya";
                 } else {
                     $parentId = $this->getGroupId($indukGrup);
                 }
             } else {
                 if ($isNonSuperAdmin) {
-                    if (!$this->findGroup($namaGrup)) {
-                        $rowErrors[] = "Induk grup wajib diisi. Pengguna non-Super Admin tidak dapat membuat grup tingkat teratas baru.";
+                    if (! $this->findGroup($namaGrup)) {
+                        $rowErrors[] = 'Induk grup wajib diisi. Pengguna non-Super Admin tidak dapat membuat grup tingkat teratas baru.';
                     }
                 }
             }
@@ -281,7 +295,7 @@ class GroupImportParser
             $groupNameUpper = strtoupper($namaGrup);
 
             // Validasi Keunikan Nama Grup pada Tingkat (Level) yang Sama
-            if (!empty($namaGrup) && $levelId) {
+            if (! empty($namaGrup) && $levelId) {
                 // 1. Cek duplikasi di baris sebelumnya dalam file yang sama pada level yang sama
                 if (isset($this->pendingNamesByLevel[$levelId][$groupNameUpper])) {
                     $prevRow = $this->pendingNamesByLevel[$levelId][$groupNameUpper];
@@ -304,8 +318,8 @@ class GroupImportParser
                 if (strlen($kodeGrup) > 10) {
                     $rowErrors[] = "Kode Grup '{$kodeGrup}' terlalu panjang (maksimal 10 karakter)";
                 } else {
-                    $parentLookupKey = !empty($indukGrup) ? strtoupper($indukGrup) : 'ROOT';
-                    $parentLabel = !empty($indukGrup) ? "induk '{$indukGrup}'" : "tingkat teratas (tanpa induk)";
+                    $parentLookupKey = ! empty($indukGrup) ? strtoupper($indukGrup) : 'ROOT';
+                    $parentLabel = ! empty($indukGrup) ? "induk '{$indukGrup}'" : 'tingkat teratas (tanpa induk)';
 
                     // 1. Cek duplikasi di baris sebelumnya dalam file yang sama
                     if (isset($this->pendingCodesByParent[$parentLookupKey][$kodeGrup])) {

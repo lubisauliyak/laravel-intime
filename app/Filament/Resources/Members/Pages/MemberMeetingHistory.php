@@ -2,34 +2,36 @@
 
 namespace App\Filament\Resources\Members\Pages;
 
-use App\Filament\Resources\Members\MemberResource;
-use App\Models\Meeting;
-use App\Models\Level;
-use App\Enums\AttendanceStatus;
 use App\Enums\AttendanceMethod;
+use App\Enums\AttendanceStatus;
+use App\Filament\Resources\Members\MemberResource;
+use App\Models\Attendance;
+use App\Models\Level;
+use App\Models\Meeting;
+use App\Models\Member;
 use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
-use Filament\Resources\Pages\Page;
+use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Filament\Resources\Pages\Page;
+use Filament\Schemas\Components\Grid as SchemaGrid;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\Attendance;
-use Filament\Tables\Columns\ImageColumn;
-use Filament\Actions\Action;
-use Filament\Schemas\Schema;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\ImageEntry;
-use Filament\Schemas\Components\Grid as SchemaGrid;
 use Illuminate\Support\Facades\Storage;
+
 class MemberMeetingHistory extends Page implements HasTable
 {
-    use InteractsWithTable;
     use InteractsWithRecord;
+    use InteractsWithTable;
 
     protected static string $resource = MemberResource::class;
 
@@ -38,9 +40,15 @@ class MemberMeetingHistory extends Page implements HasTable
     public static function canAccess(array $parameters = []): bool
     {
         $record = $parameters['record'] ?? null;
-        return $record
-            ? auth()->user()->can('viewMeetingHistory', $record)
-            : auth()->user()->can('ViewMeetingHistory:Member');
+        if (is_string($record) || is_int($record)) {
+            $record = Member::where('uid', $record)->orWhere('id', $record)->first();
+        }
+
+        if ($record instanceof Member) {
+            return auth()->user()?->can('viewMeetingHistory', $record) ?? false;
+        }
+
+        return auth()->user()?->can('viewAny', Member::class) ?? false;
     }
 
     public function mount(int|string $record): void
@@ -67,6 +75,7 @@ class MemberMeetingHistory extends Page implements HasTable
     {
         $resource = static::getResource();
         $member = $this->getRecord();
+
         return [
             $resource::getUrl() => $resource::getNavigationLabel(),
             $resource::getUrl('view', ['record' => $member]) => $member->full_name,
@@ -88,8 +97,9 @@ class MemberMeetingHistory extends Page implements HasTable
                         'tidak_hadir' => 'Tidak Hadir',
                     ])
                     ->query(function (Builder $query, array $data) {
-                        if (!$data['value'])
+                        if (! $data['value']) {
                             return;
+                        }
                         if ($data['value'] === 'hadir') {
                             $query->where('attendances.status', AttendanceStatus::HADIR);
                         } elseif ($data['value'] === 'izin_sakit') {
@@ -100,11 +110,12 @@ class MemberMeetingHistory extends Page implements HasTable
                     }),
                 SelectFilter::make('level')
                     ->label('Tingkat')
-                    ->options(fn() => Level::orderBy('level_number', 'desc')->pluck('name', 'id'))
+                    ->options(fn () => Level::orderBy('level_number', 'desc')->pluck('name', 'id'))
                     ->query(function (Builder $query, array $data) {
-                        if (!$data['value'])
+                        if (! $data['value']) {
                             return;
-                        $query->whereHas('group', fn($q) => $q->where('level_id', $data['value']));
+                        }
+                        $query->whereHas('group', fn ($q) => $q->where('level_id', $data['value']));
                     }),
                 Filter::make('date_range')
                     ->form([
@@ -117,8 +128,8 @@ class MemberMeetingHistory extends Page implements HasTable
                     ])
                     ->query(function (Builder $query, array $data) {
                         return $query
-                            ->when($data['date_from'], fn($q) => $q->whereDate('meeting_date', '>=', $data['date_from']))
-                            ->when($data['date_to'], fn($q) => $q->whereDate('meeting_date', '<=', $data['date_to']));
+                            ->when($data['date_from'], fn ($q) => $q->whereDate('meeting_date', '>=', $data['date_from']))
+                            ->when($data['date_to'], fn ($q) => $q->whereDate('meeting_date', '<=', $data['date_to']));
                     }),
             ])
             ->defaultSort('meeting_date', 'desc');
@@ -173,7 +184,7 @@ class MemberMeetingHistory extends Page implements HasTable
                             });
                         });
 
-                        if (!empty($pengurusGroupIds)) {
+                        if (! empty($pengurusGroupIds)) {
                             $qMatch->orWhereIn('meetings.group_id', $pengurusGroupIds);
                         }
                     });
@@ -203,13 +214,17 @@ class MemberMeetingHistory extends Page implements HasTable
                 ->label('Status Kehadiran')
                 ->badge()
                 ->getStateUsing(function (Meeting $record) {
-                    if (!$record->attendance_status)
+                    if (! $record->attendance_status) {
                         return 'TIDAK HADIR';
+                    }
+
                     return AttendanceStatus::tryFrom($record->attendance_status)?->getLabel() ?? strtoupper($record->attendance_status);
                 })
                 ->color(function ($state, Meeting $record) {
-                    if (!$record->attendance_status)
+                    if (! $record->attendance_status) {
                         return 'danger';
+                    }
+
                     return AttendanceStatus::tryFrom($record->attendance_status)?->getColor() ?? 'gray';
                 })
                 ->icon(function (Meeting $record) {
@@ -218,19 +233,21 @@ class MemberMeetingHistory extends Page implements HasTable
             TextColumn::make('method')
                 ->label('Metode')
                 ->badge()
-                ->color(fn($state) => AttendanceMethod::tryFrom($state)?->getColor() ?? 'gray')
-                ->icon(fn($state) => AttendanceMethod::tryFrom($state)?->getIcon())
-                ->formatStateUsing(fn($state) => AttendanceMethod::tryFrom($state)?->getLabel() ?? '-')
+                ->color(fn ($state) => AttendanceMethod::tryFrom($state)?->getColor() ?? 'gray')
+                ->icon(fn ($state) => AttendanceMethod::tryFrom($state)?->getIcon())
+                ->formatStateUsing(fn ($state) => AttendanceMethod::tryFrom($state)?->getLabel() ?? '-')
                 ->placeholder('-'),
             TextColumn::make('checkin_time')
                 ->label('Waktu')
                 ->formatStateUsing(function ($state, Meeting $record) {
-                    if (!$state)
+                    if (! $state) {
                         return '-';
+                    }
                     $carbon = Carbon::parse($state);
                     if ($record->attendance_status === AttendanceStatus::HADIR->value) {
                         return $carbon->format('H:i');
                     }
+
                     return $carbon->format('d/m/Y H:i');
                 })
                 ->placeholder('-'),
@@ -250,7 +267,7 @@ class MemberMeetingHistory extends Page implements HasTable
                         ->modalWidth('md')
                         ->modalSubmitAction(false)
                         ->modalCancelActionLabel('Tutup')
-                        ->hidden(fn(Meeting $record) => !$record->evidence_path)
+                        ->hidden(fn (Meeting $record) => ! $record->evidence_path)
                         ->infolist(function (Meeting $record) {
                             return Schema::make($this)
                                 ->record(new Attendance([
@@ -264,7 +281,7 @@ class MemberMeetingHistory extends Page implements HasTable
                                             TextEntry::make('status')
                                                 ->label('Status Kehadiran')
                                                 ->badge()
-                                                ->formatStateUsing(fn($state) => $state ? strtoupper($state->value) : '-'),
+                                                ->formatStateUsing(fn ($state) => $state ? strtoupper($state->value) : '-'),
                                             TextEntry::make('notes')
                                                 ->label('Keterangan / Alasan')
                                                 ->prose()
@@ -276,7 +293,7 @@ class MemberMeetingHistory extends Page implements HasTable
                                                 ->extraImgAttributes([
                                                     'class' => 'rounded-xl shadow-lg cursor-zoom-in border border-gray-200 dark:border-white/10',
                                                 ])
-                                                ->url(fn($record) => $record->evidence_path ? Storage::url($record->evidence_path) : null)
+                                                ->url(fn ($record) => $record->evidence_path ? Storage::url($record->evidence_path) : null)
                                                 ->openUrlInNewTab()
                                                 ->placeholder('Tidak ada foto lampiran'),
                                         ]),

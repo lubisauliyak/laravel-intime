@@ -28,7 +28,6 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
-use Illuminate\Support\HtmlString;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -36,6 +35,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -103,7 +103,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                 ->hiddenLabel()
                 ->outlined()
                 ->tooltip('Mulai Ulang Pemeriksaan File')
-                ->visible(fn () => !empty($this->parsedData))
+                ->visible(fn () => ! empty($this->parsedData))
                 ->action(function () {
                     $this->resetImportState();
                     Notification::make()
@@ -163,8 +163,9 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         ->color('info')
                                         ->outlined()
                                         ->action(function (): BinaryFileResponse {
-                                            $fileName = 'Template_Import_Anggota_' . now()->format('Ymd_His') . '.xlsx';
-                                            return Excel::download(new MemberTemplateExport(), $fileName);
+                                            $fileName = 'Template_Import_Anggota_'.now()->format('Ymd_His').'.xlsx';
+
+                                            return Excel::download(new MemberTemplateExport, $fileName);
                                         }),
                                 ])
                                 ->schema([
@@ -178,7 +179,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         Html::make(new HtmlString('<strong>Kolom Tanggal Lahir:</strong> Gunakan format <code>DD/MM/YYYY</code> (contoh: <code>15/01/1990</code>).')),
                                         Html::make(new HtmlString('<strong>Kriteria Validasi:</strong> Hanya baris dengan data valid yang akan disimpan ke dalam database.')),
                                     ])
-                                    ->columns(['default' => 1, 'sm' => 1, 'lg' => 1]),
+                                        ->columns(['default' => 1, 'sm' => 1, 'lg' => 1]),
                                 ])
                                 ->collapsed(),
 
@@ -213,7 +214,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                     ->warning()
                                     ->send();
 
-                                throw new \Filament\Support\Exceptions\Halt();
+                                throw new \Filament\Support\Exceptions\Halt;
                             }
                         }),
 
@@ -232,7 +233,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         Section::make('Total Data Dibaca')
                                             ->icon('heroicon-o-document-text')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['total_rows'] ?? 0) . ' Baris')
+                                                Text::make(fn () => ($this->parsedData['total_rows'] ?? 0).' Baris')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('gray'),
@@ -241,7 +242,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         Section::make('Siap Diimpor')
                                             ->icon('heroicon-o-check-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0) . ' Data Valid')
+                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0).' Data Valid')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('success'),
@@ -250,7 +251,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         Section::make('Perlu Perbaikan')
                                             ->icon('heroicon-o-x-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0) . ' Data Bermasalah')
+                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0).' Data Bermasalah')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('danger'),
@@ -260,10 +261,10 @@ class ImportMembers extends Page implements HasForms, HasTable
 
                             // Section 4: Tindakan Data Bermasalah
                             Section::make('Tindakan Data Bermasalah')
-                                ->description(fn () => 'Ditemukan ' . ($this->parsedData['invalid_count'] ?? 0) . ' baris data yang belum memenuhi kriteria validasi. Baris ini dilewati pada sesi saat ini dan dapat diperbaiki di Excel.')
+                                ->description(fn () => 'Ditemukan '.($this->parsedData['invalid_count'] ?? 0).' baris data yang belum memenuhi kriteria validasi. Baris ini dilewati pada sesi saat ini dan dapat diperbaiki di Excel.')
                                 ->icon('heroicon-m-exclamation-triangle')
                                 ->iconColor('danger')
-                                ->visible(fn () => !empty($this->parsedData) && ($this->parsedData['invalid_count'] ?? 0) > 0)
+                                ->visible(fn () => ! empty($this->parsedData) && ($this->parsedData['invalid_count'] ?? 0) > 0)
                                 ->schema([
                                     FormActions::make([
                                         Action::make('download_errors')
@@ -281,7 +282,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                                         ->send();
                                                 }
 
-                                                $fileName = 'Data_Bermasalah_Import_Anggota_' . now()->format('Ymd_His') . '.csv';
+                                                $fileName = 'Data_Bermasalah_Import_Anggota_'.now()->format('Ymd_His').'.csv';
 
                                                 return Excel::download(
                                                     new MemberImportErrorsExport($invalidRows),
@@ -295,9 +296,9 @@ class ImportMembers extends Page implements HasForms, HasTable
                             ToggleButtons::make('filter_tab')
                                 ->label('Filter Tampilan Pratinjau Data')
                                 ->options(fn () => [
-                                    'all' => 'Semua Data (' . ($this->parsedData['total_rows'] ?? 0) . ')',
-                                    'valid' => 'Siap Diimpor (' . ($this->parsedData['valid_count'] ?? 0) . ')',
-                                    'invalid' => 'Perlu Perbaikan (' . ($this->parsedData['invalid_count'] ?? 0) . ')',
+                                    'all' => 'Semua Data ('.($this->parsedData['total_rows'] ?? 0).')',
+                                    'valid' => 'Siap Diimpor ('.($this->parsedData['valid_count'] ?? 0).')',
+                                    'invalid' => 'Perlu Perbaikan ('.($this->parsedData['invalid_count'] ?? 0).')',
                                 ])
                                 ->colors([
                                     'all' => 'gray',
@@ -328,7 +329,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                     ->danger()
                                     ->send();
 
-                                throw new \Filament\Support\Exceptions\Halt();
+                                throw new \Filament\Support\Exceptions\Halt;
                             }
                         }),
 
@@ -347,7 +348,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         Section::make('Data Siap Diproses')
                                             ->icon('heroicon-o-check-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0) . ' Anggota Siap Disimpan')
+                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0).' Anggota Siap Disimpan')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('success'),
@@ -359,7 +360,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                         Section::make('Data Dilewati')
                                             ->icon('heroicon-o-x-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0) . ' Baris Dilewati')
+                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0).' Baris Dilewati')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color(fn () => ($this->parsedData['invalid_count'] ?? 0) > 0 ? 'danger' : 'gray'),
@@ -398,19 +399,19 @@ class ImportMembers extends Page implements HasForms, HasTable
                                 ]),
                         ]),
                 ])
-                ->skippable(false)
-                ->nextAction(fn (Action $action) => $action->label('Lanjut'))
-                ->previousAction(fn (Action $action) => $action->label('Kembali'))
-                ->submitAction(
-                    Action::make('saveImport')
-                        ->label('Mulai Impor')
-                        ->color('primary')
-                        ->icon('heroicon-m-check')
-                        ->extraAttributes([
-                            'wire:confirm' => 'Apakah Anda yakin ingin mulai mengimpor data?',
-                        ])
-                        ->action('saveImport')
-                ),
+                    ->skippable(false)
+                    ->nextAction(fn (Action $action) => $action->label('Lanjut'))
+                    ->previousAction(fn (Action $action) => $action->label('Kembali'))
+                    ->submitAction(
+                        Action::make('saveImport')
+                            ->label('Mulai Impor')
+                            ->color('primary')
+                            ->icon('heroicon-m-check')
+                            ->extraAttributes([
+                                'wire:confirm' => 'Apakah Anda yakin ingin mulai mengimpor data?',
+                            ])
+                            ->action('saveImport')
+                    ),
             ]);
     }
 
@@ -422,22 +423,23 @@ class ImportMembers extends Page implements HasForms, HasTable
         if (empty($state)) {
             $this->parsedData = [];
             $this->resetTable();
+
             return;
         }
 
         try {
             $filePath = null;
             if (is_string($state)) {
-                $filePath = storage_path('app/public/' . $state);
+                $filePath = storage_path('app/public/'.$state);
             } elseif (is_object($state) && method_exists($state, 'getRealPath')) {
                 $filePath = $state->getRealPath();
             }
 
-            if (!$filePath || !file_exists($filePath)) {
+            if (! $filePath || ! file_exists($filePath)) {
                 $filePath = Storage::disk('public')->path($state);
             }
 
-            if (!file_exists($filePath)) {
+            if (! file_exists($filePath)) {
                 throw new \Exception("Berkas spreadsheet tidak ditemukan di penyimpanan: {$filePath}");
             }
 
@@ -482,7 +484,7 @@ class ImportMembers extends Page implements HasForms, HasTable
             $this->parsedData = [];
             Notification::make()
                 ->title('Gagal Membaca File')
-                ->body('Terjadi kesalahan saat memproses berkas: ' . $e->getMessage())
+                ->body('Terjadi kesalahan saat memproses berkas: '.$e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -523,7 +525,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                     ->visible(fn () => ($this->parsedData['invalid_count'] ?? 0) > 0)
                     ->action(function (): BinaryFileResponse {
                         $invalidRows = $this->parsedData['invalid_rows'] ?? [];
-                        $fileName = 'Data_Bermasalah_Import_Anggota_' . now()->format('Ymd_His') . '.csv';
+                        $fileName = 'Data_Bermasalah_Import_Anggota_'.now()->format('Ymd_His').'.csv';
 
                         return Excel::download(
                             new MemberImportErrorsExport($invalidRows),
@@ -561,19 +563,21 @@ class ImportMembers extends Page implements HasForms, HasTable
                     ->label('ID Anggota')
                     ->badge()
                     ->state(function ($record) {
-                        if (!empty($record['member_code'])) {
+                        if (! empty($record['member_code'])) {
                             return ($record['is_update'] ?? false)
                                 ? "{$record['member_code']} (Update)"
                                 : $record['member_code'];
                         }
                         if (($record['id_status'] ?? '') === 'auto_id') {
                             $prefix = $record['calculated_prefix'] ?? '';
-                            return $prefix ? "Otomatis ({$prefix}XXX)" : "Otomatis";
+
+                            return $prefix ? "Otomatis ({$prefix}XXX)" : 'Otomatis';
                         }
                         if (($record['id_status'] ?? '') === 'no_code') {
-                            return "Tanpa ID";
+                            return 'Tanpa ID';
                         }
-                        return "-";
+
+                        return '-';
                     })
                     ->color(fn ($record) => match ($record['id_status'] ?? '') {
                         'auto_id' => 'info',
@@ -590,13 +594,13 @@ class ImportMembers extends Page implements HasForms, HasTable
                 TextColumn::make('group_name')
                     ->label('Kelompok')
                     ->badge()
-                    ->color(fn ($record) => !empty($record['group_id']) ? 'info' : 'danger')
+                    ->color(fn ($record) => ! empty($record['group_id']) ? 'info' : 'danger')
                     ->placeholder('-'),
 
                 TextColumn::make('gender_label')
                     ->label('L/P')
                     ->badge()
-                    ->color(fn ($state) => match (strtoupper((string)$state)) {
+                    ->color(fn ($state) => match (strtoupper((string) $state)) {
                         'L' => 'info',
                         'P' => 'danger',
                         default => 'gray',
@@ -606,11 +610,14 @@ class ImportMembers extends Page implements HasForms, HasTable
                 TextColumn::make('birth_date')
                     ->label('Tgl Lahir / Usia')
                     ->formatStateUsing(function ($state, $record) {
-                        if (!$state) return '-';
+                        if (! $state) {
+                            return '-';
+                        }
                         $formatted = Carbon::parse($state)->format('d/m/Y');
                         if (isset($record['age']) && $record['age'] !== null) {
                             $formatted .= " ({$record['age']} th)";
                         }
+
                         return $formatted;
                     })
                     ->placeholder('-'),
@@ -639,6 +646,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                 ->body('Tidak ada baris data valid yang dapat disimpan.')
                 ->danger()
                 ->send();
+
             return;
         }
 
@@ -660,7 +668,7 @@ class ImportMembers extends Page implements HasForms, HasTable
             $manageableIds = $user ? $user->getManageableGroupIds() : [];
 
             foreach ($validRows as $row) {
-                if (!$isSuperAdmin && !in_array($row['group_id'], $manageableIds)) {
+                if (! $isSuperAdmin && ! in_array($row['group_id'], $manageableIds)) {
                     throw new \Exception("Kelompok ID {$row['group_id']} berada di luar wilayah wewenang Anda.");
                 }
 
@@ -678,21 +686,23 @@ class ImportMembers extends Page implements HasForms, HasTable
                 ];
 
                 // Mode Update jika ID Anggota sudah terdaftar aktif
-                if (!empty($row['member_code']) && ($row['is_update'] ?? false)) {
-                    if (!$allowUpdate) {
+                if (! empty($row['member_code']) && ($row['is_update'] ?? false)) {
+                    if (! $allowUpdate) {
                         $skippedCount++;
+
                         continue;
                     }
                     $existingMember = Member::where('member_code', $row['member_code'])->first();
                     if ($existingMember) {
                         $existingMember->update($memberData);
                         $updatedCount++;
+
                         continue;
                     }
                 }
 
                 // Tambah Anggota Baru (member_code null akan di-generate otomatis oleh MemberObserver jika kelompok punya kode)
-                $memberData['member_code'] = !empty($row['member_code']) ? $row['member_code'] : null;
+                $memberData['member_code'] = ! empty($row['member_code']) ? $row['member_code'] : null;
                 $newMember = new Member($memberData);
                 $newMember->save(); // Memicu MemberObserver untuk auto-ID & auto-QR
                 $createdMembers[] = $newMember;
@@ -730,9 +740,9 @@ class ImportMembers extends Page implements HasForms, HasTable
 
             // Pembuatan KTA Otomatis (Anti-timeout)
             $ktaCreatedCount = 0;
-            if ($autoGenerateKta && !empty($createdMembers)) {
+            if ($autoGenerateKta && ! empty($createdMembers)) {
                 if (count($createdMembers) <= 30) {
-                    $cardService = new \App\Services\CardGeneratorService();
+                    $cardService = new \App\Services\CardGeneratorService;
                     $hierarchyService = app(\App\Services\Groups\GroupHierarchyService::class);
 
                     foreach ($createdMembers as $member) {
@@ -743,7 +753,7 @@ class ImportMembers extends Page implements HasForms, HasTable
                                     $cardService->generate($resTmpl['template'], $member);
                                     $ktaCreatedCount++;
                                 } catch (\Throwable $e) {
-                                    \Illuminate\Support\Facades\Log::warning("Gagal generate KTA anggota #{$member->id}: " . $e->getMessage());
+                                    \Illuminate\Support\Facades\Log::warning("Gagal generate KTA anggota #{$member->id}: ".$e->getMessage());
                                 }
                             }
                         }
@@ -751,11 +761,11 @@ class ImportMembers extends Page implements HasForms, HasTable
                 }
             }
 
-            $bodyMsg = implode(', ', $summary) . '. Seluruh QR Code anggota telah dihasilkan secara otomatis.';
+            $bodyMsg = implode(', ', $summary).'. Seluruh QR Code anggota telah dihasilkan secara otomatis.';
             if ($ktaCreatedCount > 0) {
                 $bodyMsg .= " Sebanyak {$ktaCreatedCount} KTA berhasil dibuat.";
             } elseif ($autoGenerateKta && count($createdMembers) > 30) {
-                $bodyMsg .= " Karena data cukup banyak (" . count($createdMembers) . " anggota baru), KTA dapat dibuat secara massal via tombol 'Buat KTA Terpilih' di daftar anggota.";
+                $bodyMsg .= ' Karena data cukup banyak ('.count($createdMembers)." anggota baru), KTA dapat dibuat secara massal via tombol 'Buat KTA Terpilih' di daftar anggota.";
             }
 
             Notification::make()
@@ -770,7 +780,7 @@ class ImportMembers extends Page implements HasForms, HasTable
 
             Notification::make()
                 ->title('Gagal Menyimpan Data')
-                ->body('Terjadi kesalahan database saat menyimpan: ' . $e->getMessage())
+                ->body('Terjadi kesalahan database saat menyimpan: '.$e->getMessage())
                 ->danger()
                 ->send();
         }

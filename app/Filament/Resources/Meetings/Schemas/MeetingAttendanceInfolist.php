@@ -2,16 +2,15 @@
 
 namespace App\Filament\Resources\Meetings\Schemas;
 
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use App\Models\Member;
-use App\Models\Attendance;
-use App\Enums\MeetingTargetGender;
-use App\Enums\Gender;
 use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
+use App\Enums\MeetingTargetGender;
+use App\Models\Attendance;
+use App\Models\Member;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class MeetingAttendanceInfolist
 {
@@ -44,7 +43,7 @@ class MeetingAttendanceInfolist
         // Fetch all attendances for this meeting within descendant groups
         $attendances = Attendance::with('member.ageGroup')
             ->where('meeting_id', $meeting->id)
-            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds))
+            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds))
             ->whereIn('status', [
                 \App\Enums\AttendanceStatus::HADIR,
                 \App\Enums\AttendanceStatus::IZIN,
@@ -53,7 +52,7 @@ class MeetingAttendanceInfolist
             ->get();
 
         // Non-target attendances: members who attended/excused but not in base target
-        $nonTargetAttendances = $attendances->reject(fn($att) => in_array($att->member_id, $baseTargetMemberIds));
+        $nonTargetAttendances = $attendances->reject(fn ($att) => in_array($att->member_id, $baseTargetMemberIds));
 
         // Total Target Dinamis = Base Target + Non-Target yang hadir/izin/sakit
         $totalTarget = $baseTargetCount + $nonTargetAttendances->count();
@@ -81,22 +80,22 @@ class MeetingAttendanceInfolist
         $baseMaleTarget = (clone $baseTargetQuery)->where('gender', Gender::MALE->value)->count();
         $baseFemaleTarget = (clone $baseTargetQuery)->where('gender', Gender::FEMALE->value)->count();
 
-        $nonTargetMale = $nonTargetAttendances->filter(fn($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::MALE->value)->count();
-        $nonTargetFemale = $nonTargetAttendances->filter(fn($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::FEMALE->value)->count();
+        $nonTargetMale = $nonTargetAttendances->filter(fn ($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::MALE->value)->count();
+        $nonTargetFemale = $nonTargetAttendances->filter(fn ($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::FEMALE->value)->count();
 
         $maleTarget = $baseMaleTarget + $nonTargetMale;
         $femaleTarget = $baseFemaleTarget + $nonTargetFemale;
 
         $malePresent = $attendances->where('status', \App\Enums\AttendanceStatus::HADIR)
-            ->filter(fn($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::MALE->value)
+            ->filter(fn ($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::MALE->value)
             ->count();
         $femalePresent = $attendances->where('status', \App\Enums\AttendanceStatus::HADIR)
-            ->filter(fn($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::FEMALE->value)
+            ->filter(fn ($a) => ($a->member?->gender instanceof Gender ? $a->member->gender->value : $a->member?->gender) === Gender::FEMALE->value)
             ->count();
 
         // Age category breakdown
         $ageCategoryStats = [];
-        if (!empty($meeting->target_age_groups)) {
+        if (! empty($meeting->target_age_groups)) {
             $sortedNames = \App\Models\AgeGroup::whereIn('name', (array) $meeting->target_age_groups)
                 ->orderBy('sort_order')
                 ->pluck('name')
@@ -104,12 +103,12 @@ class MeetingAttendanceInfolist
 
             foreach ($sortedNames as $ageGroupName) {
                 $baseAgeTarget = (clone $baseTargetQuery)
-                    ->whereHas('ageGroup', fn($q) => $q->where('name', $ageGroupName))
+                    ->whereHas('ageGroup', fn ($q) => $q->where('name', $ageGroupName))
                     ->count();
-                $nonTargetAge = $nonTargetAttendances->filter(fn($a) => $a->member?->ageGroup?->name === $ageGroupName)->count();
+                $nonTargetAge = $nonTargetAttendances->filter(fn ($a) => $a->member?->ageGroup?->name === $ageGroupName)->count();
 
                 $agePresent = $attendances->where('status', \App\Enums\AttendanceStatus::HADIR)
-                    ->filter(fn($a) => $a->member?->ageGroup?->name === $ageGroupName)
+                    ->filter(fn ($a) => $a->member?->ageGroup?->name === $ageGroupName)
                     ->count();
 
                 $ageCategoryStats[$ageGroupName] = [
@@ -158,37 +157,37 @@ class MeetingAttendanceInfolist
                                     ->badge()
                                     ->formatStateUsing(fn ($state): ?string => $state instanceof \App\Enums\MeetingTargetGender ? $state->getLabel() : $state)
                                     ->color(fn ($state): ?string => $state instanceof \App\Enums\MeetingTargetGender ? $state->getColor() : 'gray'),
-                                  TextEntry::make('target_age_groups')
+                                TextEntry::make('target_age_groups')
                                     ->label('Target Kategori Usia')
                                     ->formatStateUsing(fn ($state) => empty($state) ? '✓ Semua Kategori Usia' : $state)
                                     ->badge()
                                     ->color(fn ($state): string => match (true) {
                                         empty($state) || $state === '✓ Semua Kategori Usia' => 'success',
-                                        default => \App\Models\AgeGroup::getColorMapping()[(string)$state] ?? 'gray',
+                                        default => \App\Models\AgeGroup::getColorMapping()[(string) $state] ?? 'gray',
                                     }),
                             ]),
                     ]),
                 Section::make('Ringkasan Kehadiran')
                     ->schema([
                         Grid::make(['default' => 2, 'lg' => 4])
-                             ->schema([
-                                 TextEntry::make('total_target')
-                                     ->label('Total Anggota')
-                                     ->badge()
-                                     ->color('gray'),
-                                 TextEntry::make('present_count')
-                                     ->label(AttendanceStatus::HADIR->getLabel())
-                                     ->badge()
-                                     ->color('success'),
+                            ->schema([
+                                TextEntry::make('total_target')
+                                    ->label('Total Anggota')
+                                    ->badge()
+                                    ->color('gray'),
+                                TextEntry::make('present_count')
+                                    ->label(AttendanceStatus::HADIR->getLabel())
+                                    ->badge()
+                                    ->color('success'),
                                 TextEntry::make('excused_sick_count')
                                     ->label('Izin / Sakit')
                                     ->badge()
                                     ->color('warning'),
-                                 TextEntry::make('absent_count')
-                                     ->label($isMeetingOver ? 'Tidak Hadir' : 'Belum Scan')
-                                     ->badge()
-                                     ->color('danger'),
-                             ]),
+                                TextEntry::make('absent_count')
+                                    ->label($isMeetingOver ? 'Tidak Hadir' : 'Belum Scan')
+                                    ->badge()
+                                    ->color('danger'),
+                            ]),
                     ])
                     ->compact(),
             ]);

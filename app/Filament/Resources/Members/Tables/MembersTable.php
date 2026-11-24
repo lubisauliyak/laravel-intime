@@ -2,35 +2,34 @@
 
 namespace App\Filament\Resources\Members\Tables;
 
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Collection;
-use Filament\Tables\Table;
+use App\Enums\Gender;
+use App\Enums\MembershipType;
+use App\Exports\MembersRawExport;
+use App\Models\AgeGroup;
+use App\Models\Level;
+use App\Models\Member;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
-use App\Models\Member;
-use App\Models\AgeGroup;
-use App\Models\Level;
-use App\Enums\Gender;
-use App\Enums\MembershipType;
-use App\Exports\MembersRawExport;
-use Filament\Actions\ActionGroup;
-use Filament\Notifications\Notification;
-use Filament\Forms\Components\Toggle;
+use Filament\Tables\Table;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 class MembersTable
@@ -44,7 +43,7 @@ class MembersTable
                     ->label('Foto')
                     ->circular()
                     ->disk('public')
-                    ->defaultImageUrl(fn($record) => "https://ui-avatars.com/api/?name=" . urlencode($record->full_name) . "&color=FFFFFF&background=111827")
+                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->full_name).'&color=FFFFFF&background=111827')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('member_code')
                     ->label('ID Anggota')
@@ -57,8 +56,8 @@ class MembersTable
                     ->searchable()
                     ->sortable()
                     ->toggleable()
-                    ->color(fn(Member $record): ?string => $record->getMemberColor())
-                    ->tooltip(fn(Member $record): ?string => $record->getMemberColorTooltip()),
+                    ->color(fn (Member $record): ?string => $record->getMemberColor())
+                    ->tooltip(fn (Member $record): ?string => $record->getMemberColorTooltip()),
                 TextColumn::make('nick_name')
                     ->label('Panggilan')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -78,29 +77,29 @@ class MembersTable
                     ->placeholder('Tanpa Kategori')
                     ->alignCenter()
                     ->badge()
-                    ->color(fn($state): string => AgeGroup::getColorMapping()[(string) $state] ?? 'gray')
+                    ->color(fn ($state): string => AgeGroup::getColorMapping()[(string) $state] ?? 'gray')
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('gender')
                     ->label('L/P')
                     ->badge()
-                    ->formatStateUsing(fn($state) => $state instanceof Gender ? $state->getCode() : (Gender::tryFrom($state)?->getCode() ?? $state))
+                    ->formatStateUsing(fn ($state) => $state instanceof Gender ? $state->getCode() : (Gender::tryFrom($state)?->getCode() ?? $state))
                     ->visibleFrom('sm'),
                 TextColumn::make('membership_type')
                     ->label('Kepengurusan')
-                    ->badge(fn(Member $record) => ($record->membership_type instanceof MembershipType ? $record->membership_type : MembershipType::tryFrom($record->membership_type)) === MembershipType::PENGURUS && $record->positions->isNotEmpty())
-                    ->color(fn(Member $record) => ($record->membership_type instanceof MembershipType ? $record->membership_type : MembershipType::tryFrom($record->membership_type)) === MembershipType::PENGURUS ? 'info' : 'gray')
+                    ->badge(fn (Member $record) => ($record->membership_type instanceof MembershipType ? $record->membership_type : MembershipType::tryFrom($record->membership_type)) === MembershipType::PENGURUS && $record->positions->isNotEmpty())
+                    ->color(fn (Member $record) => ($record->membership_type instanceof MembershipType ? $record->membership_type : MembershipType::tryFrom($record->membership_type)) === MembershipType::PENGURUS ? 'info' : 'gray')
                     ->formatStateUsing(function (Member $record) {
                         $isPengurus = ($record->membership_type instanceof MembershipType ? $record->membership_type : MembershipType::tryFrom($record->membership_type)) === MembershipType::PENGURUS;
-                        if (!$isPengurus || $record->positions->isEmpty()) {
+                        if (! $isPengurus || $record->positions->isEmpty()) {
                             return '-';
                         }
 
                         $levels = $record->positions
-                            ->map(fn($pos) => $pos->group?->level)
+                            ->map(fn ($pos) => $pos->group?->level)
                             ->filter()
                             ->sortBy('level_number')
-                            ->map(fn($level) => ($level->name))
+                            ->map(fn ($level) => ($level->name))
                             ->unique()
                             ->values();
 
@@ -110,12 +109,14 @@ class MembersTable
                         if ($record->positions->isEmpty()) {
                             return null;
                         }
+
                         return $record->positions->map(function ($pos) {
                             $parts = array_filter([
                                 $pos->position_name,
                                 $pos->category?->name,
                                 $pos->group?->name,
                             ]);
+
                             return Str::title(strtolower(implode(' ', $parts)));
                         })->implode(', ');
                     })
@@ -147,14 +148,14 @@ class MembersTable
                     ->relationship(
                         'group',
                         'groups.name',
-                        fn($query) => $query
-                            ->whereHas('level', fn($q) => $q->where('level_number', 1))
+                        fn ($query) => $query
+                            ->whereHas('level', fn ($q) => $q->where('level_number', 1))
                             ->leftJoin('groups as desa', 'groups.parent_id', '=', 'desa.id')
                             ->select('groups.*')
                             ->orderBy('desa.name', 'asc')
                             ->orderBy('groups.name', 'asc')
                     )
-                    ->getOptionLabelFromRecordUsing(fn($record) => $record->full_name)
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('age_group_id')
@@ -163,6 +164,7 @@ class MembersTable
                     ->options(function () {
                         $options = AgeGroup::orderBy('sort_order')->pluck('name', 'id')->toArray();
                         $options['null'] = 'Tanpa Kategori Usia';
+
                         return $options;
                     })
                     ->query(function ($query, array $data) {
@@ -175,7 +177,7 @@ class MembersTable
                         $normalIds = array_diff($values, ['null']);
 
                         return $query->where(function ($q) use ($hasNull, $normalIds) {
-                            if ($hasNull && !empty($normalIds)) {
+                            if ($hasNull && ! empty($normalIds)) {
                                 $q->whereNull('age_group_id')
                                     ->orWhereIn('age_group_id', $normalIds);
                             } elseif ($hasNull) {
@@ -203,10 +205,10 @@ class MembersTable
                         ->label('Unduh KTA')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->action(fn(Member $record) => response()->download(Storage::disk('public')->path($record->membership_card_photo_path), "KTA_{$record->member_code}.png"))
-                        ->visible(fn(Member $record) => auth()->user()->can('downloadKta', $record))
-                        ->disabled(fn(Member $record) => empty($record->membership_card_photo_path) || !Storage::disk('public')->exists($record->membership_card_photo_path))
-                        ->tooltip(fn(Member $record) => empty($record->membership_card_photo_path) || !Storage::disk('public')->exists($record->membership_card_photo_path) ? 'KTA belum dibuat untuk anggota ini. Silakan buat KTA terlebih dahulu.' : null),
+                        ->action(fn (Member $record) => response()->download(Storage::disk('public')->path($record->membership_card_photo_path), "KTA_{$record->member_code}.png"))
+                        ->visible(fn (Member $record) => auth()->user()->can('downloadKta', $record))
+                        ->disabled(fn (Member $record) => empty($record->membership_card_photo_path) || ! Storage::disk('public')->exists($record->membership_card_photo_path))
+                        ->tooltip(fn (Member $record) => empty($record->membership_card_photo_path) || ! Storage::disk('public')->exists($record->membership_card_photo_path) ? 'KTA belum dibuat untuk anggota ini. Silakan buat KTA terlebih dahulu.' : null),
                     Action::make('make_permanent')
                         ->label('Setujui Anggota')
                         ->icon('heroicon-o-check-badge')
@@ -222,7 +224,7 @@ class MembersTable
                         ])
                         ->action(function (Member $record, array $data) {
                             $updateData = ['is_permanent' => true];
-                            if (!empty($data['set_as_target'])) {
+                            if (! empty($data['set_as_target'])) {
                                 $updateData['status'] = true;
                             }
                             $record->update($updateData);
@@ -233,17 +235,17 @@ class MembersTable
                                 ->body("Keanggotaan {$record->full_name} kini berstatus permanen.")
                                 ->send();
                         })
-                        ->visible(fn(Member $record) => auth()->user()->can('makePermanent', $record))
-                        ->disabled(fn(Member $record) => (bool) $record->is_permanent)
-                        ->tooltip(fn(Member $record) => $record->is_permanent ? 'Anggota ini sudah berstatus permanen.' : null),
+                        ->visible(fn (Member $record) => auth()->user()->can('makePermanent', $record))
+                        ->disabled(fn (Member $record) => (bool) $record->is_permanent)
+                        ->tooltip(fn (Member $record) => $record->is_permanent ? 'Anggota ini sudah berstatus permanen.' : null),
                     Action::make('download_qr')
                         ->label('Unduh QR')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->action(fn(Member $record) => response()->download(Storage::disk('public')->path($record->qr_code_path), "{$record->member_code}.png"))
-                        ->visible(fn(Member $record) => auth()->user()->can('downloadQr', $record))
-                        ->disabled(fn(Member $record) => empty($record->qr_code_path) || !Storage::disk('public')->exists($record->qr_code_path))
-                        ->tooltip(fn(Member $record) => empty($record->qr_code_path) || !Storage::disk('public')->exists($record->qr_code_path) ? 'Kode QR belum tersedia untuk anggota ini.' : null),
+                        ->action(fn (Member $record) => response()->download(Storage::disk('public')->path($record->qr_code_path), "{$record->member_code}.png"))
+                        ->visible(fn (Member $record) => auth()->user()->can('downloadQr', $record))
+                        ->disabled(fn (Member $record) => empty($record->qr_code_path) || ! Storage::disk('public')->exists($record->qr_code_path))
+                        ->tooltip(fn (Member $record) => empty($record->qr_code_path) || ! Storage::disk('public')->exists($record->qr_code_path) ? 'Kode QR belum tersedia untuk anggota ini.' : null),
                     EditAction::make()
                         ->label('Ubah'),
                     DeleteAction::make()
@@ -252,10 +254,10 @@ class MembersTable
                         ->label('Pulihkan'),
                     ForceDeleteAction::make()
                         ->label('Hapus Permanen'),
-                ])
+                ]),
             ])
             ->modifyQueryUsing(
-                fn($query) => $query
+                fn ($query) => $query
                     ->with(['positions.category', 'positions.group.level'])
                     ->join('groups as kelompok', 'members.group_id', '=', 'kelompok.id')
                     ->leftJoin('groups as desa', 'kelompok.parent_id', '=', 'desa.id')
@@ -264,7 +266,7 @@ class MembersTable
                     ->orderBy('daerah.name', 'asc')
                     ->orderBy('desa.name', 'asc')
                     ->orderBy('kelompok.name', 'asc')
-                    ->orderByRaw("FIELD(gender, '" . Gender::MALE->value . "', '" . Gender::FEMALE->value . "')")
+                    ->orderByRaw("FIELD(gender, '".Gender::MALE->value."', '".Gender::FEMALE->value."')")
                     ->orderBy('members.member_code', 'asc')
             )
             ->toolbarActions([
@@ -273,9 +275,9 @@ class MembersTable
                         ->label('Ekspor Terpilih')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->visible(fn() => auth()->user()?->can('export', Member::class) ?? false)
+                        ->visible(fn () => auth()->user()?->can('export', Member::class) ?? false)
                         ->action(function (Collection $records) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('export', $record));
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('export', $record));
 
                             if ($allowedRecords->isEmpty()) {
                                 Notification::make()
@@ -283,6 +285,7 @@ class MembersTable
                                     ->title('Tidak Ada Data yang Diizinkan')
                                     ->body('Seluruh anggota yang dipilih berada di luar wilayah wewenang Anda.')
                                     ->send();
+
                                 return;
                             }
 
@@ -295,7 +298,7 @@ class MembersTable
                                     ->send();
                             }
 
-                            $filename = 'Data-Anggota-Terpilih-' . now()->format('Ymd_His') . '.xlsx';
+                            $filename = 'Data-Anggota-Terpilih-'.now()->format('Ymd_His').'.xlsx';
 
                             return (new MembersRawExport($allowedRecords->pluck('id')->toArray()))
                                 ->download($filename);
@@ -305,7 +308,7 @@ class MembersTable
                         ->label('Buat KTA Terpilih')
                         ->icon('heroicon-o-identification')
                         ->color('success')
-                        ->visible(fn() => auth()->user()->can('GenerateCard:Member'))
+                        ->visible(fn () => auth()->user()->can('GenerateCard:Member'))
                         ->form([
                             \Filament\Forms\Components\Select::make('template_id')
                                 ->label('Pilih Template')
@@ -315,10 +318,10 @@ class MembersTable
                         ->action(function (Collection $records, array $data) {
                             $template = \App\Models\CardTemplate::find($data['template_id']);
                             if ($template) {
-                                $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('generateCard', $record));
+                                $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('generateCard', $record));
                                 $skippedCount = $records->count() - $allowedRecords->count();
 
-                                $service = new \App\Services\CardGeneratorService();
+                                $service = new \App\Services\CardGeneratorService;
                                 foreach ($allowedRecords as $record) {
                                     $service->generate($template, $record);
                                 }
@@ -351,11 +354,11 @@ class MembersTable
                                 ->default(true),
                         ])
                         ->action(function (Collection $records, array $data) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('makePermanent', $record) && !$record->is_permanent);
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('makePermanent', $record) && ! $record->is_permanent);
                             $skippedCount = $records->count() - $allowedRecords->count();
 
                             $updateData = ['is_permanent' => true];
-                            if (!empty($data['set_as_target'])) {
+                            if (! empty($data['set_as_target'])) {
                                 $updateData['status'] = true;
                             }
 
@@ -380,9 +383,9 @@ class MembersTable
                         ->label('Nonaktifkan Terpilih')
                         ->icon('heroicon-o-x-circle')
                         ->color('warning')
-                        ->visible(fn() => auth()->user()->can('Deactivate:Member'))
+                        ->visible(fn () => auth()->user()->can('Deactivate:Member'))
                         ->action(function (Collection $records) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('deactivate', $record) && $record->status);
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('deactivate', $record) && $record->status);
                             $skippedCount = $records->count() - $allowedRecords->count();
 
                             $allowedRecords->each->update(['status' => false]);
@@ -406,14 +409,14 @@ class MembersTable
                         ->label('Unduh QR Terpilih')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->visible(fn() => auth()->user()->can('DownloadQr:Member'))
+                        ->visible(fn () => auth()->user()->can('DownloadQr:Member'))
                         ->action(function (Collection $records) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('downloadQr', $record));
-                            $zipName = 'QR_Codes_' . now()->format('Ymd_His') . '.zip';
-                            $zipPath = storage_path('app/public/' . $zipName);
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('downloadQr', $record));
+                            $zipName = 'QR_Codes_'.now()->format('Ymd_His').'.zip';
+                            $zipPath = storage_path('app/public/'.$zipName);
                             $zip = new ZipArchive;
 
-                            if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+                            if ($zip->open($zipPath, ZipArchive::CREATE) === true) {
                                 foreach ($allowedRecords as $record) {
                                     if ($record->qr_code_path && Storage::disk('public')->exists($record->qr_code_path)) {
                                         $filePath = Storage::disk('public')->path($record->qr_code_path);
@@ -429,14 +432,14 @@ class MembersTable
                         ->label('Unduh KTA Terpilih')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->visible(fn() => auth()->user()->can('DownloadKta:Member'))
+                        ->visible(fn () => auth()->user()->can('DownloadKta:Member'))
                         ->action(function (Collection $records) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('downloadKta', $record));
-                            $zipName = 'KTA_Codes_' . now()->format('Ymd_His') . '.zip';
-                            $zipPath = storage_path('app/public/' . $zipName);
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('downloadKta', $record));
+                            $zipName = 'KTA_Codes_'.now()->format('Ymd_His').'.zip';
+                            $zipPath = storage_path('app/public/'.$zipName);
                             $zip = new ZipArchive;
 
-                            if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+                            if ($zip->open($zipPath, ZipArchive::CREATE) === true) {
                                 foreach ($allowedRecords as $record) {
                                     if ($record->membership_card_photo_path && Storage::disk('public')->exists($record->membership_card_photo_path)) {
                                         $filePath = Storage::disk('public')->path($record->membership_card_photo_path);
@@ -451,7 +454,7 @@ class MembersTable
                     DeleteBulkAction::make()
                         ->label('Hapus Terpilih')
                         ->action(function (Collection $records, DeleteBulkAction $action) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('delete', $record));
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('delete', $record));
                             $allowedRecords->each->delete();
 
                             if ($allowedRecords->count() < $records->count()) {
@@ -467,7 +470,7 @@ class MembersTable
                     RestoreBulkAction::make()
                         ->label('Pulihkan Terpilih')
                         ->action(function (Collection $records, RestoreBulkAction $action) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('restore', $record));
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('restore', $record));
                             $allowedRecords->each->restore();
 
                             if ($allowedRecords->count() < $records->count()) {
@@ -483,7 +486,7 @@ class MembersTable
                     ForceDeleteBulkAction::make()
                         ->label('Hapus Permanen Terpilih')
                         ->action(function (Collection $records, ForceDeleteBulkAction $action) {
-                            $allowedRecords = $records->filter(fn(Member $record) => auth()->user()->can('forceDelete', $record));
+                            $allowedRecords = $records->filter(fn (Member $record) => auth()->user()->can('forceDelete', $record));
                             $allowedRecords->each->forceDelete();
 
                             if ($allowedRecords->count() < $records->count()) {
@@ -510,7 +513,7 @@ class MembersTable
 
             return TextColumn::make("level_{$level->level_number}")
                 ->label(ucwords(strtolower($level->name)))
-                ->getStateUsing(fn($record) => $record->group?->getParentAtLevel($level->level_number)?->name)
+                ->getStateUsing(fn ($record) => $record->group?->getParentAtLevel($level->level_number)?->name)
                 ->placeholder('-')
                 ->toggleable(isToggledHiddenByDefault: true);
         })->toArray();

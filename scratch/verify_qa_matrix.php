@@ -1,29 +1,29 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use App\Models\Member;
-use App\Models\Meeting;
-use App\Models\Group;
-use App\Models\Level;
-use App\Models\AgeGroup;
-use App\Models\Attendance;
 use App\Enums\AttendanceMethod;
 use App\Enums\AttendanceStatus;
 use App\Enums\MeetingTargetGender;
-use App\Http\Controllers\LiveScannerController;
 use App\Http\Controllers\SelfPermissionController;
 use App\Http\Controllers\SelfPresenceController;
+use App\Models\AgeGroup;
+use App\Models\Attendance;
+use App\Models\Group;
+use App\Models\Level;
+use App\Models\Meeting;
+use App\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 $passed = 0;
 $failed = 0;
 
-function assert_it($name, $condition, $details = '') {
+function assert_it($name, $condition, $details = '')
+{
     global $passed, $failed;
     if ($condition) {
         $passed++;
@@ -52,7 +52,7 @@ config([
 \Illuminate\Support\Facades\DB::purge('mysql');
 \Illuminate\Support\Facades\DB::setDefaultConnection('sqlite');
 
-echo "Menyiapkan skema database in-memory (SQLite)... ";
+echo 'Menyiapkan skema database in-memory (SQLite)... ';
 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
 echo "SELESAI.\n\n";
 
@@ -65,7 +65,7 @@ try {
     ]);
 
     $group = Group::first();
-    if (!$group) {
+    if (! $group) {
         $level = Level::firstOrCreate(['name' => 'Ranting', 'level_number' => 1, 'code' => 'PR']);
         $group = Group::create([
             'name' => 'GRUP QA TEST',
@@ -99,7 +99,7 @@ try {
     // UJI KASUS 1: Perizinan Anggota Tanpa Tanggal Lahir (Frictionless)
     // -------------------------------------------------------------
     echo "--- UJI KASUS 1: Lengkapi Tanggal Lahir & Usia Otomatis ---\n";
-    
+
     $member1 = Member::create([
         'group_id' => $group->id,
         'full_name' => 'TEST MEMBER NO BIRTHDATE',
@@ -114,14 +114,14 @@ try {
 
     // 1.1 Lookup harus mendeteksi incomplete_biodata
     $reqLookup = Request::create("/self-permission/{$meeting->uid}/lookup", 'GET', [
-        'member_id' => $member1->id
+        'member_id' => $member1->id,
     ]);
     $resLookup = $permController->lookupMember($reqLookup, $meeting);
     $dataLookup = json_decode($resLookup->getContent(), true);
 
-    assert_it('1.1 Lookup mendeteksi incomplete_biodata', 
+    assert_it('1.1 Lookup mendeteksi incomplete_biodata',
         $dataLookup['status'] === 'incomplete_biodata' && $dataLookup['member']['has_birth_date'] === false,
-        'Status bukan incomplete_biodata: ' . ($dataLookup['status'] ?? 'null')
+        'Status bukan incomplete_biodata: '.($dataLookup['status'] ?? 'null')
     );
 
     // 1.2 Lengkapi tanggal lahir via completeBiodata
@@ -135,18 +135,18 @@ try {
 
     assert_it('1.2 completeBiodata mengembalikan status success',
         $dataComplete['status'] === 'success',
-        'Status: ' . ($dataComplete['status'] ?? 'null')
+        'Status: '.($dataComplete['status'] ?? 'null')
     );
 
     $member1->refresh();
     $bDateStr = $member1->birth_date ? \Carbon\Carbon::parse($member1->birth_date)->format('Y-m-d') : null;
     assert_it('1.3 Tanggal lahir berhasil disimpan di DB',
         $bDateStr === $birthDateInput,
-        'Tanggal lahir DB: ' . ($bDateStr ?? 'null')
+        'Tanggal lahir DB: '.($bDateStr ?? 'null')
     );
 
     assert_it('1.4 Usia dan AgeGroup terhitung otomatis via MemberObserver',
-        $member1->age === 20 && !empty($member1->age_group_id),
+        $member1->age === 20 && ! empty($member1->age_group_id),
         "Age: {$member1->age}, AgeGroupId: {$member1->age_group_id}"
     );
 
@@ -177,12 +177,12 @@ try {
 
     assert_it('2.1 Tanggal lahir yang sudah ada TIDAK DAPAT ditimpa',
         $bDate2Str === '2000-01-01',
-        'Tanggal lahir tertimpa: ' . ($bDate2Str ?? 'null')
+        'Tanggal lahir tertimpa: '.($bDate2Str ?? 'null')
     );
 
     assert_it('2.2 Gender yang sudah ada TIDAK DAPAT ditimpa',
         $gender2Val === 'male',
-        'Gender tertimpa: ' . $gender2Val
+        'Gender tertimpa: '.$gender2Val
     );
 
     // -------------------------------------------------------------
@@ -212,7 +212,7 @@ try {
 
     assert_it('3.1 Presensi pertama berhasil',
         $dataPresence1['status'] === 'success',
-        'Status: ' . ($dataPresence1['status'] ?? 'null')
+        'Status: '.($dataPresence1['status'] ?? 'null')
     );
 
     // Presensi 2: Double scan langsung
@@ -225,7 +225,7 @@ try {
 
     assert_it('3.2 Presensi kedua mengembalikan status warning elegan (Bukan HTTP 500)',
         $dataPresence2['status'] === 'warning' && str_contains($dataPresence2['message'], 'sudah melakukan presensi'),
-        'Status: ' . ($dataPresence2['status'] ?? 'null') . ', Pesan: ' . ($dataPresence2['message'] ?? 'null')
+        'Status: '.($dataPresence2['status'] ?? 'null').', Pesan: '.($dataPresence2['message'] ?? 'null')
     );
 
     // Uji ketahanan langsung jika DB melempar Duplicate Entry 1062 saat create paralel
@@ -258,10 +258,12 @@ try {
 
     // Pastikan ada AgeGroup untuk rentang 16-25
     $ageGroupPemuda = AgeGroup::where('min_age', '<=', 20)
-        ->where(function($q) { $q->where('max_age', '>=', 20)->orWhereNull('max_age'); })
+        ->where(function ($q) {
+            $q->where('max_age', '>=', 20)->orWhereNull('max_age');
+        })
         ->first();
 
-    if (!$ageGroupPemuda) {
+    if (! $ageGroupPemuda) {
         $ageGroupPemuda = AgeGroup::create([
             'name' => 'Pemuda',
             'code' => 'PMD',
@@ -294,7 +296,7 @@ try {
 
     assert_it('4.1 Pendaftaran instan berhasil dengan status success',
         $dataTemp['status'] === 'success',
-        'Status: ' . ($dataTemp['status'] ?? 'null') . ', Pesan: ' . ($dataTemp['message'] ?? 'null')
+        'Status: '.($dataTemp['status'] ?? 'null').', Pesan: '.($dataTemp['message'] ?? 'null')
     );
 
     $createdMember = Member::where('full_name', 'ANGGOTA INSTAN PEMUDA')->first();

@@ -13,7 +13,6 @@ class GroupHierarchyService
     /**
      * Get the hierarchy chain from root ancestor down to the specified group (leaf).
      *
-     * @param Group $group
      * @return Collection<int, Group>
      */
     public function getHierarchyChain(Group $group): Collection
@@ -22,11 +21,11 @@ class GroupHierarchyService
         $visited = [];
         $curr = $group;
 
-        while ($curr && !isset($visited[$curr->id])) {
+        while ($curr && ! isset($visited[$curr->id])) {
             $visited[$curr->id] = true;
             $chain->prepend($curr);
 
-            if (!$curr->parent_id) {
+            if (! $curr->parent_id) {
                 break;
             }
 
@@ -44,7 +43,6 @@ class GroupHierarchyService
      * - If an ancestor has a code, all descendants down to the group MUST have codes -> invalid if broken ('broken_chain').
      * - If chain from first non-empty code to group is continuous -> valid ('valid').
      *
-     * @param Group $group
      * @return array{is_valid: bool, status: string, prefix: ?string, message: string, broken_group: ?Group}
      */
     public function validateChainIntegrity(Group $group): array
@@ -105,9 +103,6 @@ class GroupHierarchyService
     /**
      * Get the calculated prefix string for a group (e.g. '1007').
      * Returns null if all groups have empty codes or if chain is broken.
-     *
-     * @param Group $group
-     * @return string|null
      */
     public function getCalculatedPrefix(Group $group): ?string
     {
@@ -124,7 +119,6 @@ class GroupHierarchyService
      *   all children inherit it and are locked from modifying it.
      * - If no ancestor has a template, returns the group's own template (unlocked).
      *
-     * @param Group $group
      * @return array{template: ?CardTemplate, inherited_from: ?Group, is_locked: bool}
      */
     public function getEffectiveCardTemplate(Group $group): array
@@ -177,8 +171,6 @@ class GroupHierarchyService
      * - Locks the group row in a DB transaction to guarantee race-condition free incrementing.
      * - Format: prefix + 3-digit padded number (e.g. 1007001), expanding to 4+ digits if >= 1000.
      *
-     * @param Group $group
-     * @return string|null
      * @throws \InvalidArgumentException
      */
     public function generateNextMemberCode(Group $group): ?string
@@ -189,7 +181,7 @@ class GroupHierarchyService
             return null;
         }
 
-        if (!$validation['is_valid']) {
+        if (! $validation['is_valid']) {
             throw new \InvalidArgumentException($validation['message']);
         }
 
@@ -202,14 +194,14 @@ class GroupHierarchyService
             // 2. Query the highest member_code starting with this prefix globally
             // Include soft-deleted records to prevent unique constraint collisions
             $latestMember = Member::withTrashed()
-                ->where('member_code', 'like', $prefix . '%')
+                ->where('member_code', 'like', $prefix.'%')
                 ->orderByRaw('LENGTH(member_code) DESC')
                 ->orderBy('member_code', 'DESC')
                 ->lockForUpdate()
                 ->first();
 
             $nextNumber = 1;
-            if ($latestMember && !empty($latestMember->member_code)) {
+            if ($latestMember && ! empty($latestMember->member_code)) {
                 $suffix = substr($latestMember->member_code, strlen($prefix));
                 if (is_numeric($suffix)) {
                     $nextNumber = ((int) $suffix) + 1;
@@ -219,7 +211,7 @@ class GroupHierarchyService
             // At least 3 digits padded (001 - 999), expandable to 4+ digits
             $formattedSuffix = str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
 
-            return $prefix . $formattedSuffix;
+            return $prefix.$formattedSuffix;
         });
     }
 }

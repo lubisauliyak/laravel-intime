@@ -2,28 +2,28 @@
 
 namespace App\Exports\Sheets;
 
+use App\Enums\MeetingTargetGender;
 use App\Models\Meeting;
 use App\Models\Member;
-use App\Models\Attendance;
-use App\Enums\MeetingTargetGender;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Events\BeforeSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents
+class MeetingAttendanceDetailSheet implements FromCollection, WithColumnWidths, WithEvents, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected $meeting;
+
     protected $memberIds;
+
     protected $rowCount = 0;
 
     public function __construct(Meeting $meeting, $memberIds = null)
@@ -41,7 +41,7 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
     {
         $allowedGroupIds = $this->meeting->group->getAllDescendantIds();
         $targetAgeGroups = $this->meeting->target_age_groups;
-        
+
         $allAgeGroupsCount = \App\Models\AgeGroup::count();
         $selectedAgeGroupsCount = empty($targetAgeGroups) ? 0 : count($targetAgeGroups);
         $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
@@ -151,7 +151,7 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
     public function styles(Worksheet $sheet)
     {
         $lastRow = $this->rowCount + 6; // Shifted due to extra header line
-        
+
         // Hide columns Daerah (D) and Desa (E) as requested
         $sheet->getColumnDimension('D')->setVisible(false);
         $sheet->getColumnDimension('E')->setVisible(false);
@@ -185,24 +185,24 @@ class MeetingAttendanceDetailSheet implements FromCollection, WithTitle, WithHea
     public function registerEvents(): array
     {
         return [
-            BeforeSheet::class => function(BeforeSheet $event) {
+            BeforeSheet::class => function (BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                
+
                 // $sheet->mergeCells('A1:J1');
                 $sheet->setCellValue('A1', 'LAPORAN DETAIL PRESENSI ANGGOTA');
-                
+
                 // $sheet->mergeCells('A2:J2');
                 $sheet->setCellValue('A2', "Pertemuan/Penyelenggara : {$this->meeting->name} / {$this->meeting->group->name}");
-                
+
                 // $sheet->mergeCells('A3:J3');
                 $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
                 $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
-                $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
+                $sheet->setCellValue('A3', 'Tanggal/Waktu : '.$this->meeting->meeting_date->translatedFormat('d F Y')." ({$startTime} s.d {$endTime})");
 
                 // $sheet->mergeCells('A4:J4'); // Spacer
-                $sheet->setCellValue('A4', "");
+                $sheet->setCellValue('A4', '');
             },
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
                 $lastRow = $this->rowCount + 6;
 

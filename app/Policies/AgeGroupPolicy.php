@@ -4,67 +4,61 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\AgeGroup;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AgeGroupPolicy
 {
     use HandlesAuthorization;
-    
-    public function viewAny(AuthUser $authUser): bool
+
+    public function viewAny(User $user): bool
     {
-        return $authUser->can('ViewAny:AgeGroup');
+        return true;
     }
 
-    public function view(AuthUser $authUser, AgeGroup $ageGroup): bool
+    public function view(User $user, AgeGroup $ageGroup): bool
     {
-        return $authUser->can('View:AgeGroup');
+        return true;
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(User $user): bool
     {
-        return $authUser->can('Create:AgeGroup');
+        return false;
     }
 
-    public function update(AuthUser $authUser, AgeGroup $ageGroup): bool
+    public function update(User $user, AgeGroup $ageGroup): bool
     {
-        return $authUser->can('Update:AgeGroup');
+        return false;
     }
 
-    public function delete(AuthUser $authUser, AgeGroup $ageGroup): bool
+    public function delete(User $user, AgeGroup $ageGroup): bool
     {
-        return $authUser->can('Delete:AgeGroup');
+        return false;
     }
 
-    public function restore(AuthUser $authUser, AgeGroup $ageGroup): bool
+    public function restore(User $user, AgeGroup $ageGroup): bool
     {
-        return $authUser->can('Restore:AgeGroup');
+        return false;
     }
 
-    public function forceDelete(AuthUser $authUser, AgeGroup $ageGroup): bool
+    public function forceDelete(User $user, AgeGroup $ageGroup): bool
     {
-        return $authUser->can('ForceDelete:AgeGroup');
+        return false;
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $authUser->can('ForceDeleteAny:AgeGroup');
+        return false;
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(User $user): bool
     {
-        return $authUser->can('RestoreAny:AgeGroup');
+        return false;
     }
 
-    public function replicate(AuthUser $authUser, AgeGroup $ageGroup): bool
+    public function replicate(User $user, AgeGroup $ageGroup): bool
     {
-        return $authUser->can('Replicate:AgeGroup');
+        return false;
     }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:AgeGroup');
-    }
-
 }

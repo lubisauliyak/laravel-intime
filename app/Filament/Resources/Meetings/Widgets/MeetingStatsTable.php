@@ -2,17 +2,16 @@
 
 namespace App\Filament\Resources\Meetings\Widgets;
 
+use App\Filament\Resources\Meetings\MeetingResource;
 use App\Models\Attendance;
 use App\Models\Group;
-use App\Models\Member;
 use App\Models\Meeting;
-use App\Filament\Resources\Meetings\MeetingResource;
+use App\Models\Member;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
-use Illuminate\Database\Eloquent\Builder;
 
 class MeetingStatsTable extends TableWidget
 {
@@ -20,7 +19,7 @@ class MeetingStatsTable extends TableWidget
 
     public $parentId = null;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Statistik Kehadiran per Grup';
 
@@ -28,8 +27,8 @@ class MeetingStatsTable extends TableWidget
     {
         $meeting = $this->record;
 
-        if (!$meeting) {
-            return $table->query(fn() => Group::whereRaw('1 = 0'));
+        if (! $meeting) {
+            return $table->query(fn () => Group::whereRaw('1 = 0'));
         }
 
         $user = auth()->user();
@@ -43,7 +42,7 @@ class MeetingStatsTable extends TableWidget
                 // Phased Screening: Tentukan titik start berdasarkan hierarki user
                 $startGroupId = $meeting->group_id;
 
-                if (!$user->isSuperAdmin() && $user->group_id) {
+                if (! $user->isSuperAdmin() && $user->group_id) {
                     // Jika user berada di bawah level penyelenggara, mulai dari grup user tersebut
                     if ($user->group_id === $meeting->group_id || in_array($meeting->group_id, $user->group->getAllAncestorIds())) {
                         $startGroupId = $user->group_id;
@@ -66,12 +65,13 @@ class MeetingStatsTable extends TableWidget
                 TextColumn::make('subgroup_count')
                     ->label('Subgrup')
                     ->alignCenter()
-                    ->getStateUsing(fn (Group $record) => $record->children()->count() . ' grup')
+                    ->getStateUsing(fn (Group $record) => $record->children()->count().' grup')
                     ->toggleable()
                     ->visible(function () use ($meeting) {
                         if ($this->parentId) {
                             return Group::where('parent_id', $this->parentId)->whereHas('children')->exists();
                         }
+
                         return $meeting->group->children()->exists();
                     }),
 
@@ -112,9 +112,10 @@ class MeetingStatsTable extends TableWidget
                     ->color('success')
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->where('status', \App\Enums\AttendanceStatus::HADIR)
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds))
                             ->count();
                     }),
 
@@ -126,9 +127,10 @@ class MeetingStatsTable extends TableWidget
                     ->toggleable(isToggledHiddenByDefault: false)
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->where('status', \App\Enums\AttendanceStatus::HADIR)
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::MALE))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::MALE))
                             ->count();
                     }),
 
@@ -140,9 +142,10 @@ class MeetingStatsTable extends TableWidget
                     ->toggleable(isToggledHiddenByDefault: false)
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->where('status', \App\Enums\AttendanceStatus::HADIR)
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::FEMALE))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::FEMALE))
                             ->count();
                     }),
 
@@ -153,9 +156,10 @@ class MeetingStatsTable extends TableWidget
                     ->color('warning')
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('status', [\App\Enums\AttendanceStatus::IZIN, \App\Enums\AttendanceStatus::SAKIT])
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds))
                             ->count();
                     }),
 
@@ -167,9 +171,10 @@ class MeetingStatsTable extends TableWidget
                     ->toggleable(isToggledHiddenByDefault: false)
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('status', [\App\Enums\AttendanceStatus::IZIN, \App\Enums\AttendanceStatus::SAKIT])
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::MALE))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::MALE))
                             ->count();
                     }),
 
@@ -181,9 +186,10 @@ class MeetingStatsTable extends TableWidget
                     ->toggleable(isToggledHiddenByDefault: false)
                     ->getStateUsing(function (Group $record) use ($meeting) {
                         $descendantIds = $record->getAllDescendantIds();
+
                         return Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('status', [\App\Enums\AttendanceStatus::IZIN, \App\Enums\AttendanceStatus::SAKIT])
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::FEMALE))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds)->where('gender', \App\Enums\Gender::FEMALE))
                             ->count();
                     }),
 
@@ -210,7 +216,9 @@ class MeetingStatsTable extends TableWidget
                             ->pluck('id');
 
                         $target = $targetMemberIds->count();
-                        if ($target === 0) return 0;
+                        if ($target === 0) {
+                            return 0;
+                        }
 
                         $attendedTargetCount = Attendance::where('meeting_id', $meeting->id)
                             ->whereIn('member_id', $targetMemberIds)
@@ -248,14 +256,16 @@ class MeetingStatsTable extends TableWidget
                             ->count();
 
                         $totalDynamicTarget = $baseTargetCount + $nonTargetAttended;
-                        if ($totalDynamicTarget === 0) return '0%';
+                        if ($totalDynamicTarget === 0) {
+                            return '0%';
+                        }
 
                         $presentCount = Attendance::where('meeting_id', $meeting->id)
                             ->where('status', \App\Enums\AttendanceStatus::HADIR)
-                            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds))
+                            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds))
                             ->count();
 
-                        return round(($presentCount / $totalDynamicTarget) * 100, 1) . '%';
+                        return round(($presentCount / $totalDynamicTarget) * 100, 1).'%';
                     })
                     ->weight('bold')
                     ->color(fn ($state) => floatval($state) >= 75 ? 'success' : (floatval($state) >= 50 ? 'warning' : 'danger')),
@@ -276,14 +286,14 @@ class MeetingStatsTable extends TableWidget
                         ->color('info')
                         ->url(fn (Group $record) => MeetingResource::getUrl('attendance-details', [
                             'record' => $meeting->uid,
-                        ]) . "?group={$record->uid}"),
+                        ])."?group={$record->uid}"),
                     Action::make('view_subgroups')
                         ->label('Lihat Subgrup')
                         ->icon('heroicon-m-chevron-right')
                         ->color('primary')
                         ->visible(fn (Group $record) => $record->children()->exists())
                         ->action(fn (Group $record) => $this->parentId = $record->id),
-                ])
+                ]),
             ])
             ->paginated(false);
     }

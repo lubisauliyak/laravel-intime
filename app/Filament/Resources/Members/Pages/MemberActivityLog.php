@@ -2,20 +2,20 @@
 
 namespace App\Filament\Resources\Members\Pages;
 
-use App\Filament\Resources\Members\MemberResource;
 use App\Filament\Resources\ActivityLogs\Tables\ActivityLogTable;
+use App\Filament\Resources\Members\MemberResource;
 use App\Models\ActivityLog;
 use App\Models\Member;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
-use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 
 class MemberActivityLog extends Page implements HasTable
 {
-    use InteractsWithTable;
     use InteractsWithRecord;
+    use InteractsWithTable;
 
     protected static string $resource = MemberResource::class;
 

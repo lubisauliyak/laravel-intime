@@ -7,33 +7,37 @@ use App\Models\Level;
 use App\Models\Member;
 use App\Services\Groups\GroupHierarchyService;
 use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class GroupsRawExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithColumnFormatting, WithEvents
+class GroupsRawExport implements FromCollection, WithColumnFormatting, WithColumnWidths, WithEvents, WithHeadings, WithMapping, WithStyles
 {
     use Exportable;
 
     protected ?array $groupIds = null;
+
     protected ?Collection $customCollection = null;
+
     protected int $rowCount = 0;
+
     protected array $memberCountsMap = [];
+
     protected ?GroupHierarchyService $hierarchyService = null;
 
     /**
-     * @param array|Collection|null $groups Array of IDs, Collection of Group, or null for all manageable
+     * @param  array|Collection|null  $groups  Array of IDs, Collection of Group, or null for all manageable
      */
     public function __construct(array|Collection|null $groups = null)
     {
@@ -66,7 +70,7 @@ class GroupsRawExport implements FromCollection, WithHeadings, WithMapping, With
             ]);
 
         $user = auth()->user();
-        if ($user && !$user->isSuperAdmin()) {
+        if ($user && ! $user->isSuperAdmin()) {
             $manageableIds = $user->getManageableGroupIds();
             $query->whereIn('groups.id', $manageableIds);
         }
@@ -79,7 +83,7 @@ class GroupsRawExport implements FromCollection, WithHeadings, WithMapping, With
             ->addSelect([
                 'level_sort' => Level::select('level_number')
                     ->whereColumn('levels.id', 'groups.level_id')
-                    ->limit(1)
+                    ->limit(1),
             ])
             ->orderBy('level_sort', 'desc')
             ->orderBy('name', 'asc')
@@ -265,4 +269,3 @@ class GroupsRawExport implements FromCollection, WithHeadings, WithMapping, With
         ];
     }
 }
-

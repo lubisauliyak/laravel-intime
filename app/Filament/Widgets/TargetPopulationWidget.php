@@ -5,21 +5,19 @@ namespace App\Filament\Widgets;
 use App\Models\AgeGroup;
 use App\Models\Meeting;
 use App\Models\Member;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class TargetPopulationWidget extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 2;
-    
+
     protected int|string|array $columnSpan = [
         'md' => 1,
         'xl' => 1,
@@ -31,7 +29,7 @@ class TargetPopulationWidget extends ChartWidget
             'style' => 'min-height: 480px',
         ];
     }
-    
+
     protected ?string $maxHeight = '300px';
 
     private function getReferenceMeeting(): ?Meeting
@@ -51,20 +49,20 @@ class TargetPopulationWidget extends ChartWidget
         $user = auth()->user();
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return [
                 'datasets' => [],
                 'labels' => [],
             ];
         }
 
-        $cacheKey = 'target_population_v2_' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'target_population_v2_'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
             $targetAgeGroups = $ref->target_age_groups ?? [];
 
             $ageGroupsQuery = AgeGroup::orderBy('sort_order');
-            if (!empty($targetAgeGroups)) {
+            if (! empty($targetAgeGroups)) {
                 $ageGroupsQuery->whereIn('name', $targetAgeGroups);
             }
             $ageGroups = $ageGroupsQuery->get();
@@ -81,15 +79,15 @@ class TargetPopulationWidget extends ChartWidget
                 $allowedGroupIds = \App\Models\Group::find($filterGroupId)->getAllDescendantIds();
             } elseif ($filterLevelId) {
                 $allowedGroupIds = \App\Models\Group::where('level_id', $filterLevelId)->get()->flatMap->getAllDescendantIds()->unique()->toArray();
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();
             }
 
             $memberQuery = Member::where('status', true)
-                ->when($allowedGroupIds, fn($q) => $q->whereIn('group_id', $allowedGroupIds));
+                ->when($allowedGroupIds, fn ($q) => $q->whereIn('group_id', $allowedGroupIds));
 
-            if (!empty($targetAgeGroups)) {
-                $memberQuery->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups));
+            if (! empty($targetAgeGroups)) {
+                $memberQuery->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', $targetAgeGroups));
             }
 
             $memberCounts = $memberQuery
@@ -101,7 +99,7 @@ class TargetPopulationWidget extends ChartWidget
             $rawLabels = [];
             $colors = [
                 '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7',
-                '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'
+                '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
             ];
 
             foreach ($ageGroups as $ageGroup) {
@@ -142,6 +140,7 @@ class TargetPopulationWidget extends ChartWidget
         }
 
         $total = array_sum($data['datasets'][0]['data']);
+
         return "Total Target Wajib: {$total} Anggota";
     }
 

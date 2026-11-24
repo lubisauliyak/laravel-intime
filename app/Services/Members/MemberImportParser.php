@@ -12,7 +12,6 @@ use App\Services\Groups\GroupHierarchyService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
@@ -42,6 +41,7 @@ class MemberImportParser
     protected ?int $defaultAgeGroupId = null;
 
     protected array $manageableGroupIds = [];
+
     protected ?User $user = null;
 
     public function __construct(?User $user = null)
@@ -64,9 +64,10 @@ class MemberImportParser
 
         $groups = Cache::remember("member_import_group_map_{$userCacheKey}", 300, function () use ($manageableIds, $isSuperAdmin) {
             $query = Group::with('level')->select(['id', 'name', 'level_id']);
-            if (!$isSuperAdmin) {
+            if (! $isSuperAdmin) {
                 $query->whereIn('id', $manageableIds);
             }
+
             return $query->get()->toArray();
         });
 
@@ -77,7 +78,7 @@ class MemberImportParser
 
             // Prioritaskan level terendah (level_number paling kecil, misal Kelompok = 1)
             $currLevelNumber = $group['level']['level_number'] ?? 99;
-            if (!isset($this->groupLevelMap[$upper]) || $currLevelNumber < $this->groupLevelMap[$upper]) {
+            if (! isset($this->groupLevelMap[$upper]) || $currLevelNumber < $this->groupLevelMap[$upper]) {
                 $this->groupMap[$upper] = $group['id'];
                 $this->groupMap[$lower] = $group['id'];
                 $this->groupLevelMap[$upper] = $currLevelNumber;
@@ -105,12 +106,12 @@ class MemberImportParser
     /**
      * Parse file spreadsheet secara dry-run dan ekstrak baris valid/invalid
      *
-     * @param string $filePath Path lengkap file spreadsheet
-     * @return array
+     * @param  string  $filePath  Path lengkap file spreadsheet
      */
     public function parse(string $filePath): array
     {
-        $sheetReader = new class implements ToCollection, WithHeadingRow, WithMultipleSheets {
+        $sheetReader = new class implements ToCollection, WithHeadingRow, WithMultipleSheets
+        {
             protected ?Collection $rows = null;
 
             public function sheets(): array
@@ -136,7 +137,7 @@ class MemberImportParser
         $memberCodes = [];
         foreach ($rawRows as $row) {
             $code = $this->extractField($row, ['id_anggota', 'kode_anggota']);
-            if (!empty($code)) {
+            if (! empty($code)) {
                 $memberCodes[] = trim((string) $code);
             }
         }
@@ -144,7 +145,7 @@ class MemberImportParser
         $existingMembers = collect();
         $trashedCodes = [];
 
-        if (!empty($memberCodes)) {
+        if (! empty($memberCodes)) {
             $membersInDb = Member::withTrashed()
                 ->whereIn('member_code', array_unique($memberCodes))
                 ->get();
@@ -173,7 +174,7 @@ class MemberImportParser
 
             // Jika seluruh nilai baris kosong, lewati
             $nonEmptyValues = array_filter($rowArray, function ($value) {
-                return !is_null($value) && trim((string)$value) !== '';
+                return ! is_null($value) && trim((string) $value) !== '';
             });
 
             if (empty($nonEmptyValues)) {
@@ -185,9 +186,9 @@ class MemberImportParser
 
             $rowErrors = [];
 
-            $isNonSuperAdmin = $this->user && !$this->user->isSuperAdmin();
+            $isNonSuperAdmin = $this->user && ! $this->user->isSuperAdmin();
             if ($isNonSuperAdmin && empty($this->manageableGroupIds)) {
-                $rowErrors[] = "Pengguna tidak memiliki wewenang pada grup manapun untuk melakukan impor data.";
+                $rowErrors[] = 'Pengguna tidak memiliki wewenang pada grup manapun untuk melakukan impor data.';
             }
 
             // Ekstraksi nilai kolom fleksibel
@@ -215,13 +216,13 @@ class MemberImportParser
                 $rowErrors[] = '[Kelompok]: Nama kelompok wajib diisi';
             } else {
                 $groupId = $this->findGroupId($groupName);
-                if (!$groupId) {
+                if (! $groupId) {
                     $rowErrors[] = "[Kelompok]: Kelompok '{$groupName}' tidak ditemukan di master data";
                 } else {
                     $groupRecord = Group::with('level')->find($groupId);
                     if ($groupRecord) {
                         $chainValidation = app(GroupHierarchyService::class)->validateChainIntegrity($groupRecord);
-                        if (!$chainValidation['is_valid']) {
+                        if (! $chainValidation['is_valid']) {
                             $rowErrors[] = "[Kelompok]: {$chainValidation['message']}";
                         }
                     }
@@ -233,21 +234,21 @@ class MemberImportParser
             $gender = null;
             if (empty($genderStr)) {
                 $rowErrors[] = '[Jenis Kelamin]: Jenis kelamin (L/P) wajib diisi';
-            } elseif (!in_array($genderStr, ['L', 'P'])) {
+            } elseif (! in_array($genderStr, ['L', 'P'])) {
                 $rowErrors[] = "[Jenis Kelamin]: Format '{$genderStr}' tidak valid. Wajib diisi 'L' atau 'P'";
             } else {
                 $gender = ($genderStr === 'P') ? Gender::FEMALE->value : Gender::MALE->value;
             }
 
             // --- Validasi 4: ID Anggota & Klasifikasi Status ID ---
-            $memberCode = !empty($rawMemberCode) ? trim((string) $rawMemberCode) : null;
+            $memberCode = ! empty($rawMemberCode) ? trim((string) $rawMemberCode) : null;
             $isUpdate = false;
             $existingMember = null;
             $idStatus = 'no_code';
             $idStatusLabel = 'Tanpa ID';
             $calculatedPrefix = null;
 
-            if ($chainValidation && !$chainValidation['is_valid']) {
+            if ($chainValidation && ! $chainValidation['is_valid']) {
                 $idStatus = 'broken_chain';
                 $idStatusLabel = 'Rantai Putus';
             } elseif ($memberCode) {
@@ -281,9 +282,9 @@ class MemberImportParser
             $age = null;
             $ageGroupId = null;
 
-            if (!empty($rawBirthDate)) {
+            if (! empty($rawBirthDate)) {
                 $parsedDate = $this->parseDate($rawBirthDate);
-                if (!$parsedDate) {
+                if (! $parsedDate) {
                     $rowErrors[] = "[Tanggal Lahir]: Format '{$rawBirthDate}' tidak valid. Gunakan format DD/MM/YYYY";
                 } else {
                     $birthDate = $parsedDate;
@@ -299,7 +300,7 @@ class MemberImportParser
                 'excel_row' => $excelRowNumber,
                 'member_code' => $memberCode,
                 'full_name' => mb_strtoupper($name),
-                'nick_name' => !empty($rawNickName) ? mb_strtoupper(trim((string) $rawNickName)) : null,
+                'nick_name' => ! empty($rawNickName) ? mb_strtoupper(trim((string) $rawNickName)) : null,
                 'group_name' => $groupName,
                 'group_id' => $groupId,
                 'gender_label' => $genderStr ?: '-',
@@ -370,7 +371,7 @@ class MemberImportParser
         // Fallback query jika master data baru bertambah tanpa clear cache
         $isSuperAdmin = $this->user ? $this->user->isSuperAdmin() : true;
         $query = Group::with('level')->whereRaw('UPPER(name) = ?', [$upper]);
-        if (!$isSuperAdmin) {
+        if (! $isSuperAdmin) {
             $query->whereIn('id', $this->manageableGroupIds);
         }
         $group = $query->get()->sortBy(fn ($g) => $g->level?->level_number ?? 99)->first();
@@ -378,6 +379,7 @@ class MemberImportParser
             $this->groupMap[$upper] = $group->id;
             $this->groupMap[$lower] = $group->id;
             $this->groupLevelMap[$upper] = $group->level?->level_number ?? 99;
+
             return $group->id;
         }
 
@@ -399,7 +401,7 @@ class MemberImportParser
         }
 
         // Format angka serial Excel (misal: 44197)
-        if (is_numeric($dateStr) && (int)$dateStr > 1000 && (int)$dateStr < 100000) {
+        if (is_numeric($dateStr) && (int) $dateStr > 1000 && (int) $dateStr < 100000) {
             try {
                 return ExcelDate::excelToDateTimeObject((int) $dateStr)->format('Y-m-d');
             } catch (\Throwable $e) {
@@ -461,7 +463,7 @@ class MemberImportParser
     protected function extractField(Collection $row, array $candidateKeys): mixed
     {
         foreach ($candidateKeys as $key) {
-            if ($row->has($key) && !is_null($row->get($key))) {
+            if ($row->has($key) && ! is_null($row->get($key))) {
                 return $row->get($key);
             }
         }

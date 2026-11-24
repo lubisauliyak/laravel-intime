@@ -2,32 +2,30 @@
 
 namespace App\Filament\Resources\Meetings;
 
+use App\Enums\AttendanceStatus;
 use App\Filament\Resources\Meetings\Pages\CreateMeeting;
 use App\Filament\Resources\Meetings\Pages\EditMeeting;
+use App\Filament\Resources\Meetings\Pages\EditSelfService;
 use App\Filament\Resources\Meetings\Pages\ListMeetings;
-use App\Filament\Resources\Meetings\Pages\ViewMeeting;
+use App\Filament\Resources\Meetings\Pages\ManageSelfService;
+use App\Filament\Resources\Meetings\Pages\MeetingActivityLog;
 use App\Filament\Resources\Meetings\Pages\MeetingAttendanceDetails;
 use App\Filament\Resources\Meetings\Pages\MeetingStats;
-use App\Filament\Resources\Meetings\Pages\ManageSelfService;
-use App\Filament\Resources\Meetings\Pages\EditSelfService;
-use App\Filament\Resources\Meetings\Pages\MeetingActivityLog;
+use App\Filament\Resources\Meetings\Pages\ViewMeeting;
 use App\Filament\Resources\Meetings\Schemas\MeetingForm;
 use App\Filament\Resources\Meetings\Schemas\MeetingInfolist;
 use App\Filament\Resources\Meetings\Tables\MeetingsTable;
-use App\Filament\Resources\Meetings\RelationManagers;
 use App\Models\Meeting;
 use BackedEnum;
-use UnitEnum;
-use Filament\Resources\Resource;
 use Filament\Pages\Enums\SubNavigationPosition;
+use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Enums\AttendanceStatus;
+use UnitEnum;
 
 class MeetingResource extends Resource
 {
@@ -36,7 +34,7 @@ class MeetingResource extends Resource
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
     protected static string|BackedEnum|null $navigationIcon = null;
-    
+
     protected static string|UnitEnum|null $navigationGroup = 'Presensi & Laporan';
 
     protected static ?int $navigationSort = 1;
@@ -116,12 +114,12 @@ class MeetingResource extends Resource
         return parent::getEloquentQuery()
             ->with(['group.level'])
             ->when(auth()->user(), function (Builder $query, $user) {
-                if (!$user->isSuperAdmin()) {
+                if (! $user->isSuperAdmin()) {
                     if ($user->group_id && $user->group) {
                         $descendantIds = $user->group->getAllDescendantIds();
                         $ancestorIds = $user->group->getAllAncestorIds();
                         $allowedGroupIds = array_unique(array_merge($descendantIds, $ancestorIds));
-                        
+
                         $query->whereIn('group_id', $allowedGroupIds);
                     } else {
                         // Non-super admin with no group sees nothing
@@ -145,7 +143,7 @@ class MeetingResource extends Resource
     public static function getMeetingStats(): array
     {
         $user = auth()->user();
-        $cacheKey = 'meeting_counts_' . ($user?->id ?? 'guest') . '_' . ($user?->group_id ?? 'all');
+        $cacheKey = 'meeting_counts_'.($user?->id ?? 'guest').'_'.($user?->group_id ?? 'all');
 
         $basicStats = Cache::remember($cacheKey, 60, function () use ($user) {
             $today = now()->toDateString();
@@ -159,13 +157,13 @@ class MeetingResource extends Resource
             $userGroupId = $user?->group_id;
 
             $stats = (clone $query)
-                ->selectRaw("
+                ->selectRaw('
                     COUNT(CASE WHEN meetings.deleted_at IS NULL THEN 1 END) as total,
                     COUNT(CASE WHEN meetings.deleted_at IS NULL AND meetings.meeting_date >= ? THEN 1 END) as upcoming_count,
                     COUNT(CASE WHEN meetings.deleted_at IS NULL AND meetings.meeting_date >= ? AND meetings.meeting_date <= ? THEN 1 END) as month_count,
                     COUNT(CASE WHEN meetings.deleted_at IS NULL AND meetings.group_id = ? THEN 1 END) as my_group_count,
                     COUNT(CASE WHEN meetings.deleted_at IS NOT NULL THEN 1 END) as trashed_count
-                ", [$today, $startOfMonth, $endOfMonth, $userGroupId ?? 0])
+                ', [$today, $startOfMonth, $endOfMonth, $userGroupId ?? 0])
                 ->first();
 
             // Tren 6 bulan terakhir untuk sparkline chart
@@ -200,7 +198,7 @@ class MeetingResource extends Resource
         // Multi-tier cache: 30 menit Super Admin, 15 menit admin lokal
         $isSuperAdmin = $user?->isSuperAdmin() ?? false;
         $avgCacheTtl = $isSuperAdmin ? 1800 : 900;
-        $avgCacheKey = 'meeting_avg_attendance_' . ($user?->id ?? 'guest') . '_' . ($user?->group_id ?? 'all');
+        $avgCacheKey = 'meeting_avg_attendance_'.($user?->id ?? 'guest').'_'.($user?->group_id ?? 'all');
 
         $avgAttendanceData = Cache::remember($avgCacheKey, $avgCacheTtl, function () use ($user, $isSuperAdmin) {
             $sixtyDaysAgo = now()->subDays(60)->toDateString();
@@ -212,7 +210,7 @@ class MeetingResource extends Resource
                 ->where('meetings.meeting_date', '>=', $sixtyDaysAgo)
                 ->where('attendances.status', AttendanceStatus::HADIR->value);
 
-            if (!$isSuperAdmin) {
+            if (! $isSuperAdmin) {
                 if ($user?->group_id && $user?->group) {
                     $descendantIds = $user->group->getAllDescendantIds();
                     $ancestorIds = $user->group->getAllAncestorIds();
@@ -238,7 +236,7 @@ class MeetingResource extends Resource
                 (int) round($avg * 1.05),
                 (int) round($avg * 0.95),
                 (int) round($avg * 1.1),
-                $avg
+                $avg,
             ];
 
             return ['avg' => $avg, 'chart' => $chart];

@@ -20,9 +20,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Facades\Excel;
@@ -36,7 +34,7 @@ class GroupsTable
                 TextColumn::make('level.name')
                     ->label('Tingkat')
                     ->badge()
-                    ->color(fn(Group $record): string => $record->level?->getColor() ?? 'gray')
+                    ->color(fn (Group $record): string => $record->level?->getColor() ?? 'gray')
                     ->sortable(),
                 TextColumn::make('name')
                     ->label('Nama Grup')
@@ -53,9 +51,9 @@ class GroupsTable
                 TextColumn::make('calculated_prefix')
                     ->label('Prefix ID')
                     ->alignCenter()
-                    ->state(fn($record) => app(\App\Services\Groups\GroupHierarchyService::class)->getCalculatedPrefix($record) ?? '-')
+                    ->state(fn ($record) => app(\App\Services\Groups\GroupHierarchyService::class)->getCalculatedPrefix($record) ?? '-')
                     ->badge()
-                    ->color(fn($state): string => $state !== '-' ? 'success' : 'gray')
+                    ->color(fn ($state): string => $state !== '-' ? 'success' : 'gray')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('parent.full_name')
@@ -68,20 +66,22 @@ class GroupsTable
                     ->label('Template KTA')
                     ->state(function ($record) {
                         $res = app(\App\Services\Groups\GroupHierarchyService::class)->getEffectiveCardTemplate($record);
-                        if (!$res['template']) {
+                        if (! $res['template']) {
                             return '-';
                         }
                         $name = $res['template']->name;
+
                         return $res['is_locked']
                             ? "🔒 {$name}"
                             : $name;
                     })
                     ->tooltip(function ($record) {
                         $res = app(\App\Services\Groups\GroupHierarchyService::class)->getEffectiveCardTemplate($record);
-                        if (!$res['template'] || !$res['is_locked']) {
+                        if (! $res['template'] || ! $res['is_locked']) {
                             return null;
                         }
                         $parentName = $res['inherited_from']?->name ?? 'Induk';
+
                         return "Template dikunci oleh {$parentName}";
                     })
                     ->placeholder('-')
@@ -130,8 +130,8 @@ class GroupsTable
                     ->preload(),
                 SelectFilter::make('parent_id')
                     ->label('Induk Grup')
-                    ->relationship('parent', 'groups.name', fn($query) => $query->whereHas('children'))
-                    ->getOptionLabelFromRecordUsing(fn($record) => $record->full_name)
+                    ->relationship('parent', 'groups.name', fn ($query) => $query->whereHas('children'))
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
                     ->searchable()
                     ->preload(),
                 TernaryFilter::make('status')
@@ -140,8 +140,8 @@ class GroupsTable
                     ->trueLabel('Aktif')
                     ->falseLabel('Kurang Aktif')
                     ->queries(
-                        true: fn($query) => $query->where('status', true),
-                        false: fn($query) => $query->where('status', false),
+                        true: fn ($query) => $query->where('status', true),
+                        false: fn ($query) => $query->where('status', false),
                     ),
             ])
             ->actions([
@@ -150,18 +150,18 @@ class GroupsTable
                         ->label('Lihat'),
                     EditAction::make()
                         ->label('Ubah')
-                        ->visible(fn($record) => $record->canBeManagedBy(auth()->user())),
+                        ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
                     DeleteAction::make()
                         ->label('Hapus')
-                        ->visible(fn($record) => $record->canBeManagedBy(auth()->user())),
-                ])
+                        ->visible(fn ($record) => $record->canBeManagedBy(auth()->user())),
+                ]),
             ])
             ->modifyQueryUsing(
-                fn($query) => $query
+                fn ($query) => $query
                     ->addSelect([
                         'level_sort' => Level::select('level_number')
                             ->whereColumn('levels.id', 'groups.level_id')
-                            ->limit(1)
+                            ->limit(1),
                     ])
                     ->orderBy('level_sort', 'desc')
                     ->orderBy('name', 'asc')
@@ -172,9 +172,9 @@ class GroupsTable
                         ->label('Ekspor Terpilih')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->visible(fn() => auth()->user()?->can('export', Group::class) ?? false)
+                        ->visible(fn () => auth()->user()?->can('export', Group::class) ?? false)
                         ->action(function (Collection $records) {
-                            $allowedRecords = $records->filter(fn(Group $record) => auth()->user()->can('export', $record));
+                            $allowedRecords = $records->filter(fn (Group $record) => auth()->user()->can('export', $record));
 
                             if ($allowedRecords->isEmpty()) {
                                 Notification::make()
@@ -182,6 +182,7 @@ class GroupsTable
                                     ->title('Tidak Ada Data yang Diizinkan')
                                     ->body('Seluruh grup yang dipilih berada di luar wilayah wewenang Anda.')
                                     ->send();
+
                                 return;
                             }
 
@@ -194,15 +195,15 @@ class GroupsTable
                                     ->send();
                             }
 
-                            $filename = 'Data_Grup_Terpilih_' . now()->format('Ymd_His') . '.xlsx';
+                            $filename = 'Data_Grup_Terpilih_'.now()->format('Ymd_His').'.xlsx';
 
                             return Excel::download(new GroupsRawExport($allowedRecords->pluck('id')->toArray()), $filename);
                         }),
                     DeleteBulkAction::make()
                         ->label('Hapus Terpilih')
                         ->action(function (Collection $records, DeleteBulkAction $action) {
-                            $allowedRecords = $records->filter(fn(Group $record) => auth()->user()->can('delete', $record));
-                            $allowedRecords->each(fn(Group $record) => $record->delete());
+                            $allowedRecords = $records->filter(fn (Group $record) => auth()->user()->can('delete', $record));
+                            $allowedRecords->each(fn (Group $record) => $record->delete());
 
                             if ($allowedRecords->count() < $records->count()) {
                                 Notification::make()
@@ -217,8 +218,8 @@ class GroupsTable
                     RestoreBulkAction::make()
                         ->label('Pulihkan Terpilih')
                         ->action(function (Collection $records, RestoreBulkAction $action) {
-                            $allowedRecords = $records->filter(fn(Group $record) => auth()->user()->can('restore', $record));
-                            $allowedRecords->each(fn(Group $record) => $record->restore());
+                            $allowedRecords = $records->filter(fn (Group $record) => auth()->user()->can('restore', $record));
+                            $allowedRecords->each(fn (Group $record) => $record->restore());
 
                             if ($allowedRecords->count() < $records->count()) {
                                 Notification::make()
@@ -233,8 +234,8 @@ class GroupsTable
                     ForceDeleteBulkAction::make()
                         ->label('Hapus Permanen Terpilih')
                         ->action(function (Collection $records, ForceDeleteBulkAction $action) {
-                            $allowedRecords = $records->filter(fn(Group $record) => auth()->user()->can('forceDelete', $record));
-                            $allowedRecords->each(fn(Group $record) => $record->forceDelete());
+                            $allowedRecords = $records->filter(fn (Group $record) => auth()->user()->can('forceDelete', $record));
+                            $allowedRecords->each(fn (Group $record) => $record->forceDelete());
 
                             if ($allowedRecords->count() < $records->count()) {
                                 Notification::make()

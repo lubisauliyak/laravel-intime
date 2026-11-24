@@ -4,63 +4,77 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\MemberPosition;
 use App\Models\User;
-use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MemberPositionPolicy
 {
     use HandlesAuthorization;
 
-    private function canManageMemberPosition(AuthUser $authUser, MemberPosition $memberPosition): bool
+    private function getPositionGroupId(MemberPosition $memberPosition): ?int
     {
-        if (! $authUser instanceof User) {
-            return false;
-        }
+        return $memberPosition->group_id ?? $memberPosition->member?->group_id;
+    }
 
-        if ($authUser->isSuperAdmin()) {
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, MemberPosition $memberPosition): bool
+    {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Posisi terikat pada grup posisi
-        if ($memberPosition->group) {
-            return $memberPosition->group->canBeManagedBy($authUser);
+        return $user->canManageGroup($this->getPositionGroupId($memberPosition));
+    }
+
+    public function create(User $user): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
         }
 
-        // Fallback: periksa grup anggota pemilik posisi
-        if ($memberPosition->member && $memberPosition->member->group) {
-            return $memberPosition->member->group->canBeManagedBy($authUser);
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR]);
+    }
+
+    public function update(User $user, MemberPosition $memberPosition): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
         }
 
-        return false;
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($this->getPositionGroupId($memberPosition));
     }
 
-    public function viewAny(AuthUser $authUser): bool
+    public function delete(User $user, MemberPosition $memberPosition): bool
     {
-        return $authUser->can('ViewAny:MemberPosition') || $authUser->can('View:Member');
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($this->getPositionGroupId($memberPosition));
     }
 
-    public function view(AuthUser $authUser, MemberPosition $memberPosition): bool
+    public function restore(User $user, MemberPosition $memberPosition): bool
     {
-        return ($authUser->can('View:MemberPosition') || $authUser->can('View:Member'))
-            && $this->canManageMemberPosition($authUser, $memberPosition);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($this->getPositionGroupId($memberPosition));
     }
 
-    public function create(AuthUser $authUser): bool
+    public function forceDelete(User $user, MemberPosition $memberPosition): bool
     {
-        return $authUser->can('Create:MemberPosition') || $authUser->can('Update:Member');
-    }
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
 
-    public function update(AuthUser $authUser, MemberPosition $memberPosition): bool
-    {
-        return ($authUser->can('Update:MemberPosition') || $authUser->can('Update:Member'))
-            && $this->canManageMemberPosition($authUser, $memberPosition);
-    }
-
-    public function delete(AuthUser $authUser, MemberPosition $memberPosition): bool
-    {
-        return ($authUser->can('Delete:MemberPosition') || $authUser->can('Update:Member'))
-            && $this->canManageMemberPosition($authUser, $memberPosition);
+        return $user->isAdmin() && $user->canManageGroup($this->getPositionGroupId($memberPosition));
     }
 }

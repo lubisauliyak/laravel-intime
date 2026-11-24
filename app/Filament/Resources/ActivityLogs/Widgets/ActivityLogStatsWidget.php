@@ -14,7 +14,7 @@ class ActivityLogStatsWidget extends BaseWidget
     protected function getStats(): array
     {
         $user = auth()->user();
-        $cacheKey = 'activity_log_stats_' . ($user?->id ?? 'guest') . '_' . ($user?->group_id ?? 'all');
+        $cacheKey = 'activity_log_stats_'.($user?->id ?? 'guest').'_'.($user?->group_id ?? 'all');
 
         $data = Cache::remember($cacheKey, 120, function () use ($user) {
             $baseQuery = ActivityLog::query()->forManageableGroups($user);
@@ -40,7 +40,7 @@ class ActivityLogStatsWidget extends BaseWidget
                 ->first();
 
             // Tren harian 7 hari terakhir untuk sparkline
-            $days = collect(range(6, 0))->map(fn($i) => now()->subDays($i)->format('Y-m-d'));
+            $days = collect(range(6, 0))->map(fn ($i) => now()->subDays($i)->format('Y-m-d'));
             $trends = (clone $baseQuery)
                 ->where('created_at', '>=', now()->subDays(6)->startOfDay())
                 ->selectRaw('
@@ -53,9 +53,9 @@ class ActivityLogStatsWidget extends BaseWidget
                 ->get()
                 ->keyBy('log_date');
 
-            $totalChart = $days->map(fn($d) => (int)($trends[$d]->total ?? 0))->values()->toArray();
-            $updateChart = $days->map(fn($d) => (int)($trends[$d]->updated_count ?? 0))->values()->toArray();
-            $deleteChart = $days->map(fn($d) => (int)($trends[$d]->deleted_count ?? 0))->values()->toArray();
+            $totalChart = $days->map(fn ($d) => (int) ($trends[$d]->total ?? 0))->values()->toArray();
+            $updateChart = $days->map(fn ($d) => (int) ($trends[$d]->updated_count ?? 0))->values()->toArray();
+            $deleteChart = $days->map(fn ($d) => (int) ($trends[$d]->deleted_count ?? 0))->values()->toArray();
 
             return [
                 'total' => (int) ($stats->total ?? 0),

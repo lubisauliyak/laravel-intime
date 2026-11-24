@@ -6,7 +6,7 @@ use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
-enum MeetingTargetGender: string implements HasLabel, HasColor, HasIcon
+enum MeetingTargetGender: string implements HasColor, HasIcon, HasLabel
 {
     case ALL = 'all';
     case MALE = 'male';

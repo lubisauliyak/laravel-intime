@@ -2,14 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Member;
-use App\Models\Group;
-use App\Models\AgeGroup;
-use App\Models\Level;
 use App\Enums\Gender;
+use App\Models\AgeGroup;
+use App\Models\Group;
+use App\Models\Level;
+use App\Models\Member;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class UpdateMembersFromCsv extends Command
 {
@@ -30,14 +28,21 @@ class UpdateMembersFromCsv extends Command
     protected $description = 'Update member data from CSV file based on No KTA (member_code). Updates existing members or creates new ones.';
 
     protected int $totalProcessed = 0;
+
     protected int $updatedCount = 0;
+
     protected int $createdCount = 0;
+
     protected int $failedCount = 0;
+
     protected int $unchangedCount = 0;
-    
+
     protected array $failedRows = [];
+
     protected array $groupCache = [];
+
     protected array $ageGroupCache = [];
+
     protected array $levelCache = [];
 
     /**
@@ -57,8 +62,9 @@ class UpdateMembersFromCsv extends Command
         }
 
         // Check if file exists
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $this->error("❌ File not found: {$filePath}");
+
             return self::FAILURE;
         }
 
@@ -80,7 +86,7 @@ class UpdateMembersFromCsv extends Command
                 $this->error("  Row {$failed['row']}: {$failed['reason']}");
             }
             if (count($this->failedRows) > 10) {
-                $this->warn('  ... and ' . (count($this->failedRows) - 10) . ' more. Check logs for details.');
+                $this->warn('  ... and '.(count($this->failedRows) - 10).' more. Check logs for details.');
             }
         }
 
@@ -90,52 +96,53 @@ class UpdateMembersFromCsv extends Command
     protected function loadCaches(): void
     {
         $this->info('📦 Loading caches...');
-        
+
         // Load levels
         Level::all()->each(function ($level) {
             $this->levelCache[$level->level_number] = $level->id;
         });
-        $this->info("   ✓ Loaded " . count($this->levelCache) . " levels");
+        $this->info('   ✓ Loaded '.count($this->levelCache).' levels');
 
         // Load groups
         Group::all()->each(function ($group) {
             $key = strtoupper($group->name);
             $this->groupCache[$key] = $group;
         });
-        $this->info("   ✓ Loaded " . count($this->groupCache) . " groups");
+        $this->info('   ✓ Loaded '.count($this->groupCache).' groups');
 
         // Load age groups
         AgeGroup::all()->each(function ($ageGroup) {
             $this->ageGroupCache[] = $ageGroup;
         });
-        $this->info("   ✓ Loaded " . count($this->ageGroupCache) . " age groups");
-        
+        $this->info('   ✓ Loaded '.count($this->ageGroupCache).' age groups');
+
         $this->newLine();
     }
 
     protected function processCsv(string $filePath, bool $dryRun): void
     {
         $handle = fopen($filePath, 'r');
-        
+
         if ($handle === false) {
             $this->error("❌ Cannot open file: {$filePath}");
+
             return;
         }
 
         // Skip header row
         $header = fgetcsv($handle, 1000, ';');
-        
+
         // Count actual data rows first (skip empty rows)
         $totalRows = 0;
         $filePos = ftell($handle);
         while (($row = fgetcsv($handle, 1000, ';')) !== false) {
-            if (!empty($row[1]) || !empty($row[2])) {
+            if (! empty($row[1]) || ! empty($row[2])) {
                 $totalRows++;
             }
         }
         rewind($handle);
         fgetcsv($handle, 1000, ';'); // Skip header again
-        
+
         $bar = $this->output->createProgressBar($totalRows);
         $bar->start();
         $this->newLine(2);
@@ -154,9 +161,10 @@ class UpdateMembersFromCsv extends Command
             if (count($row) < 6) {
                 $this->failedRows[] = [
                     'row' => $this->totalProcessed + 1,
-                    'reason' => 'Invalid row format (less than 6 columns)'
+                    'reason' => 'Invalid row format (less than 6 columns)',
                 ];
                 $this->failedCount++;
+
                 continue;
             }
 
@@ -171,40 +179,44 @@ class UpdateMembersFromCsv extends Command
             if (empty($noKta)) {
                 $this->failedRows[] = [
                     'row' => $this->totalProcessed + 1,
-                    'reason' => 'No KTA is empty'
+                    'reason' => 'No KTA is empty',
                 ];
                 $this->failedCount++;
+
                 continue;
             }
 
             if (empty($nama)) {
                 $this->failedRows[] = [
                     'row' => $this->totalProcessed + 1,
-                    'reason' => 'Nama is empty'
+                    'reason' => 'Nama is empty',
                 ];
                 $this->failedCount++;
+
                 continue;
             }
 
             // Find group
             $groupId = $this->findGroup($desa, $kelompok);
-            if (!$groupId) {
+            if (! $groupId) {
                 $this->failedRows[] = [
                     'row' => $this->totalProcessed + 1,
-                    'reason' => "Group not found: {$desa} - {$kelompok}"
+                    'reason' => "Group not found: {$desa} - {$kelompok}",
                 ];
                 $this->failedCount++;
+
                 continue;
             }
 
             // Parse gender
             $gender = $this->parseGender($jenisKelamin);
-            if (!$gender) {
+            if (! $gender) {
                 $this->failedRows[] = [
                     'row' => $this->totalProcessed + 1,
-                    'reason' => "Invalid gender: {$jenisKelamin}"
+                    'reason' => "Invalid gender: {$jenisKelamin}",
                 ];
                 $this->failedCount++;
+
                 continue;
             }
 
@@ -213,7 +225,7 @@ class UpdateMembersFromCsv extends Command
             $age = null;
             $ageGroupId = null;
 
-            if (!empty($tanggalLahir)) {
+            if (! empty($tanggalLahir)) {
                 try {
                     $birthDate = $this->parseDate($tanggalLahir);
                     $age = $this->calculateAge($birthDate);
@@ -221,19 +233,20 @@ class UpdateMembersFromCsv extends Command
                 } catch (\Exception $e) {
                     $this->failedRows[] = [
                         'row' => $this->totalProcessed + 1,
-                        'reason' => 'Invalid birth date format: ' . $tanggalLahir
+                        'reason' => 'Invalid birth date format: '.$tanggalLahir,
                     ];
                     $this->failedCount++;
+
                     continue;
                 }
             }
 
             // Find existing member or create new
             $member = Member::where('member_code', $noKta)->first();
-            $isNew = !$member;
+            $isNew = ! $member;
 
             if ($isNew) {
-                $member = new Member();
+                $member = new Member;
                 $member->member_code = $noKta;
             }
 
@@ -261,14 +274,15 @@ class UpdateMembersFromCsv extends Command
                         $hasChanges = true;
                         $changes[$key] = [
                             'old' => $originalValue,
-                            'new' => $value
+                            'new' => $value,
                         ];
                     }
                 }
             }
 
-            if (!$hasChanges) {
+            if (! $hasChanges) {
                 $this->unchangedCount++;
+
                 continue;
             }
 
@@ -284,11 +298,11 @@ class UpdateMembersFromCsv extends Command
                 } else {
                     $this->updatedCount++;
                 }
-                
+
                 // Log changes for dry run
                 if ($this->output->isVerbose()) {
-                    $this->info("  [DRY RUN] " . ($isNew ? 'CREATE' : 'UPDATE') . " member: {$nama} (No KTA: {$noKta})");
-                    if (!$isNew && !empty($changes)) {
+                    $this->info('  [DRY RUN] '.($isNew ? 'CREATE' : 'UPDATE')." member: {$nama} (No KTA: {$noKta})");
+                    if (! $isNew && ! empty($changes)) {
                         foreach ($changes as $field => $change) {
                             $this->info("    {$field}: {$change['old']} → {$change['new']}");
                         }
@@ -305,7 +319,7 @@ class UpdateMembersFromCsv extends Command
                 } catch (\Exception $e) {
                     $this->failedRows[] = [
                         'row' => $this->totalProcessed + 1,
-                        'reason' => $e->getMessage()
+                        'reason' => $e->getMessage(),
                     ];
                     $this->failedCount++;
                 }
@@ -348,12 +362,12 @@ class UpdateMembersFromCsv extends Command
 
         // Fallback: find desa first, then look for banjar under it
         $desaGroup = Group::whereRaw('UPPER(name) = ?', [$desaName])->first();
-        
+
         if ($desaGroup) {
             $banjar = Group::whereRaw('UPPER(name) = ?', [$kelompokName])
                 ->where('parent_id', $desaGroup->id)
                 ->first();
-            
+
             if ($banjar) {
                 return $banjar->id;
             }
@@ -362,7 +376,7 @@ class UpdateMembersFromCsv extends Command
             $banjar = Group::whereRaw('UPPER(name) LIKE ?', ["%{$kelompokName}%"])
                 ->where('parent_id', $desaGroup->id)
                 ->first();
-            
+
             if ($banjar) {
                 return $banjar->id;
             }
@@ -374,11 +388,11 @@ class UpdateMembersFromCsv extends Command
     protected function parseGender(string $jenisKelamin): ?string
     {
         $jenisKelamin = strtoupper(trim($jenisKelamin));
-        
+
         if (in_array($jenisKelamin, ['LAKI-LAKI', 'L', 'MALE'])) {
             return Gender::MALE->value;
         }
-        
+
         if (in_array($jenisKelamin, ['PEREMPUAN', 'P', 'FEMALE'])) {
             return Gender::FEMALE->value;
         }
@@ -390,10 +404,10 @@ class UpdateMembersFromCsv extends Command
     {
         // Handle DD/MM/YYYY or MM/DD/YYYY format
         if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $date, $matches)) {
-            $first = (int)$matches[1];
-            $second = (int)$matches[2];
+            $first = (int) $matches[1];
+            $second = (int) $matches[2];
             $year = $matches[3];
-            
+
             // Determine format: if first > 12, it must be DD/MM/YYYY
             // if second > 12, it must be MM/DD/YYYY
             // if both <= 12, assume DD/MM/YYYY (Indonesian format)
@@ -410,7 +424,7 @@ class UpdateMembersFromCsv extends Command
                 $day = $first;
                 $month = $second;
             }
-            
+
             return sprintf('%04d-%02d-%02d', $year, $month, $day);
         }
 
@@ -429,8 +443,9 @@ class UpdateMembersFromCsv extends Command
     protected function calculateAge(string $birthDate): int
     {
         $birth = new \DateTime($birthDate);
-        $today = new \DateTime();
+        $today = new \DateTime;
         $age = $today->diff($birth);
+
         return $age->y;
     }
 
@@ -441,6 +456,7 @@ class UpdateMembersFromCsv extends Command
                 return $ageGroup->id;
             }
         }
+
         return null;
     }
 
@@ -462,14 +478,14 @@ class UpdateMembersFromCsv extends Command
         $originalValue = $original instanceof \BackingEnum ? $original->value : $original;
         $newValue = $new instanceof \BackingEnum ? $new->value : $new;
 
-        return (string)$originalValue !== (string)$newValue;
+        return (string) $originalValue !== (string) $newValue;
     }
 
     protected function showReport(): void
     {
         $this->info('📊 Import Report:');
         $this->newLine();
-        
+
         $this->table(
             ['Metric', 'Count'],
             [

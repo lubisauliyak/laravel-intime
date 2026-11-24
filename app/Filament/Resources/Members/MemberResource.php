@@ -6,22 +6,21 @@ use App\Filament\Resources\Members\Pages\CreateMember;
 use App\Filament\Resources\Members\Pages\EditMember;
 use App\Filament\Resources\Members\Pages\ImportMembers;
 use App\Filament\Resources\Members\Pages\ListMembers;
-use App\Filament\Resources\Members\Pages\ViewMember;
-use App\Filament\Resources\Members\Pages\MemberMeetingHistory;
 use App\Filament\Resources\Members\Pages\MemberActivityLog;
+use App\Filament\Resources\Members\Pages\MemberMeetingHistory;
+use App\Filament\Resources\Members\Pages\ViewMember;
 use App\Filament\Resources\Members\Schemas\MemberForm;
 use App\Filament\Resources\Members\Schemas\MemberInfolist;
 use App\Filament\Resources\Members\Tables\MembersTable;
 use App\Models\Member;
 use BackedEnum;
-use UnitEnum;
 use Filament\Pages\Enums\SubNavigationPosition;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
+use UnitEnum;
 
 class MemberResource extends Resource
 {
@@ -81,8 +80,8 @@ class MemberResource extends Resource
     {
         $query = parent::getEloquentQuery()
             ->with([
-                'group.level', 
-                'group.parent.level', 
+                'group.level',
+                'group.parent.level',
                 'group.parent.parent.level',
                 'group.parent.parent.parent.level',
                 'group.parent.parent.parent.parent.level',
@@ -92,7 +91,7 @@ class MemberResource extends Resource
             ]);
         $user = auth()->user();
 
-        if ($user && !$user->isSuperAdmin()) {
+        if ($user && ! $user->isSuperAdmin()) {
             if ($user->group_id && $user->group) {
                 $descendantGroupIds = $user->getManageableGroupIds();
                 $query->whereIn('members.group_id', $descendantGroupIds);
@@ -110,7 +109,7 @@ class MemberResource extends Resource
     public static function getMemberCountsAndTrends(): array
     {
         $user = auth()->user();
-        $cacheKey = 'member_counts_trends_' . ($user?->id ?? 'guest') . '_' . ($user?->group_id ?? 'all');
+        $cacheKey = 'member_counts_trends_'.($user?->id ?? 'guest').'_'.($user?->group_id ?? 'all');
 
         return Cache::remember($cacheKey, 60, function () {
             $query = static::getEloquentQuery()

@@ -1,8 +1,8 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -76,13 +76,13 @@ $trashed = Member::create([
 ]);
 $trashed->delete();
 
-$parser = new MemberImportParser();
+$parser = new MemberImportParser;
 
 // -------------------------------------------------------------
 // Skenario 1: Berkas Kosong & Hanya Header
 // -------------------------------------------------------------
 echo "[SKENARIO 1] Uji Berkas Kosong / Hanya Baris Header\n";
-$emptyCsvPath = __DIR__ . '/test_empty.csv';
+$emptyCsvPath = __DIR__.'/test_empty.csv';
 $fp = fopen($emptyCsvPath, 'w');
 fputcsv($fp, ['ID Anggota', 'Kelompok (Wajib)', 'Nama Lengkap (Wajib)', 'Nama Panggilan', 'Tanggal Lahir', 'L/P (Wajib)']);
 fclose($fp);
@@ -92,13 +92,13 @@ unlink($emptyCsvPath);
 
 $pass1 = ($resEmpty['total_rows'] === 0) && ($resEmpty['valid_count'] === 0) && ($resEmpty['invalid_count'] === 0);
 echo "- Total Data: {$resEmpty['total_rows']} (Ekspektasi: 0)\n";
-echo "- Status: " . ($pass1 ? "PASSED" : "FAILED") . "\n\n";
+echo '- Status: '.($pass1 ? 'PASSED' : 'FAILED')."\n\n";
 
 // -------------------------------------------------------------
 // Skenario 2: Dataset Skala Besar (1.000 Baris Data Sintetis)
 // -------------------------------------------------------------
 echo "[SKENARIO 2] Uji Performa & Memori: 1.000 Baris Data\n";
-$largeCsvPath = __DIR__ . '/test_large.csv';
+$largeCsvPath = __DIR__.'/test_large.csv';
 $fp = fopen($largeCsvPath, 'w');
 fputcsv($fp, ['ID Anggota', 'Kelompok (Wajib)', 'Nama Lengkap (Wajib)', 'Nama Panggilan', 'Tanggal Lahir', 'L/P (Wajib)']);
 
@@ -122,13 +122,13 @@ $pass2 = ($resLarge['total_rows'] === 1000) && ($resLarge['valid_count'] === 950
 echo "- Total Data: {$resLarge['total_rows']} | Valid: {$resLarge['valid_count']} | Bermasalah: {$resLarge['invalid_count']}\n";
 echo "- Waktu Eksekusi: {$duration} detik (Ekspektasi: < 5 detik)\n";
 echo "- Tambahan Memori: {$memUsedMb} MB\n";
-echo "- Status: " . ($pass2 ? "PASSED" : "FAILED") . "\n\n";
+echo '- Status: '.($pass2 ? 'PASSED' : 'FAILED')."\n\n";
 
 // -------------------------------------------------------------
 // Skenario 3: Penanganan Spasi Liar & Huruf Besar-Kecil Kelompok
 // -------------------------------------------------------------
 echo "[SKENARIO 3] Uji Spasi Liar (Trim) & Case-Insensitivity Nama Kelompok\n";
-$groupCsvPath = __DIR__ . '/test_group.csv';
+$groupCsvPath = __DIR__.'/test_group.csv';
 $fp = fopen($groupCsvPath, 'w');
 fputcsv($fp, ['ID Anggota', 'Kelompok (Wajib)', 'Nama Lengkap (Wajib)', 'Nama Panggilan', 'Tanggal Lahir', 'L/P (Wajib)']);
 fputcsv($fp, ['', '  KELOMPOK MELATI  ', 'Budi Spasi Awal Akhir', '', '', 'L']);
@@ -141,13 +141,13 @@ unlink($groupCsvPath);
 
 $pass3 = ($resGroup['valid_count'] === 3) && ($resGroup['invalid_count'] === 0);
 echo "- Total: {$resGroup['total_rows']} | Valid: {$resGroup['valid_count']} (Ekspektasi: 3)\n";
-echo "- Status: " . ($pass3 ? "PASSED" : "FAILED") . "\n\n";
+echo '- Status: '.($pass3 ? 'PASSED' : 'FAILED')."\n\n";
 
 // -------------------------------------------------------------
 // Skenario 4: Variasi Format Tanggal Lahir (String & Serial Excel)
 // -------------------------------------------------------------
 echo "[SKENARIO 4] Uji Variasi Format Tanggal Lahir & Tanggal Kosong\n";
-$dateCsvPath = __DIR__ . '/test_dates.csv';
+$dateCsvPath = __DIR__.'/test_dates.csv';
 $fp = fopen($dateCsvPath, 'w');
 fputcsv($fp, ['ID Anggota', 'Kelompok (Wajib)', 'Nama Lengkap (Wajib)', 'Nama Panggilan', 'Tanggal Lahir', 'L/P (Wajib)']);
 fputcsv($fp, ['', 'KELOMPOK MELATI', 'Format DD/MM/YYYY', '', '15/01/1995', 'L']);
@@ -165,13 +165,13 @@ $pass4 = ($resDates['valid_count'] === 4) &&
          ($resDates['valid_rows'][3]['age_group_id'] === $ageGroupPraNikah->id);
 echo "- Valid: {$resDates['valid_count']} | Bermasalah: {$resDates['invalid_count']}\n";
 echo "- Anggota Tanggal Kosong Dialokasikan ke: AgeGroup ID {$resDates['valid_rows'][3]['age_group_id']} (Ekspektasi: {$ageGroupPraNikah->id})\n";
-echo "- Status: " . ($pass4 ? "PASSED" : "FAILED") . "\n\n";
+echo '- Status: '.($pass4 ? 'PASSED' : 'FAILED')."\n\n";
 
 // -------------------------------------------------------------
 // Skenario 5: Proteksi ID Anggota Soft-Delete
 // -------------------------------------------------------------
 echo "[SKENARIO 5] Uji Penolakan ID Anggota Soft-Delete\n";
-$trashCsvPath = __DIR__ . '/test_trash.csv';
+$trashCsvPath = __DIR__.'/test_trash.csv';
 $fp = fopen($trashCsvPath, 'w');
 fputcsv($fp, ['ID Anggota', 'Kelompok (Wajib)', 'Nama Lengkap (Wajib)', 'Nama Panggilan', 'Tanggal Lahir', 'L/P (Wajib)']);
 fputcsv($fp, ['M_TRASHED_099', 'KELOMPOK MELATI', 'Coba Pakai ID Sampah', '', '', 'L']);
@@ -182,8 +182,8 @@ unlink($trashCsvPath);
 
 $pass5 = ($resTrash['invalid_count'] === 1) &&
          str_contains($resTrash['invalid_rows'][0]['error_message'], 'berada di tong sampah');
-echo "- Error Message: " . $resTrash['invalid_rows'][0]['error_message'] . "\n";
-echo "- Status: " . ($pass5 ? "PASSED" : "FAILED") . "\n\n";
+echo '- Error Message: '.$resTrash['invalid_rows'][0]['error_message']."\n";
+echo '- Status: '.($pass5 ? 'PASSED' : 'FAILED')."\n\n";
 
 // -------------------------------------------------------------
 // Skenario 6: Simulasi Loop Perbaikan Nyata (Export -> Fix -> Re-Upload)
@@ -252,7 +252,7 @@ unlink($loopExportPath);
 $pass6 = ($resLoop['total_rows'] === 2) && ($resLoop['valid_count'] === 2) && ($resLoop['invalid_count'] === 0);
 echo "- Sebelum Perbaikan: 2 Error\n";
 echo "- Setelah Diedit & Diunggah Ulang: Total {$resLoop['total_rows']} | Valid: {$resLoop['valid_count']} | Error: {$resLoop['invalid_count']}\n";
-echo "- Status: " . ($pass6 ? "PASSED" : "FAILED") . "\n\n";
+echo '- Status: '.($pass6 ? 'PASSED' : 'FAILED')."\n\n";
 
 // -------------------------------------------------------------
 // Evaluasi Keseluruhan

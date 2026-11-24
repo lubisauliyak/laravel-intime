@@ -18,8 +18,11 @@ use Illuminate\Support\Str;
 class ActivityLogDictionary
 {
     protected static array $groupNameCache = [];
+
     protected static array $levelNameCache = [];
+
     protected static array $ageGroupNameCache = [];
+
     protected static array $cardTemplateNameCache = [];
 
     /**
@@ -101,6 +104,7 @@ class ActivityLogDictionary
                 if ($shortClass === 'Member') {
                     return $boolVal ? 'Aktif' : 'Kurang Aktif';
                 }
+
                 return $boolVal ? 'Aktif' : 'Nonaktif';
             }
 
@@ -111,65 +115,87 @@ class ActivityLogDictionary
 
         // Enum formatting
         if ($field === 'gender') {
-            if ($value instanceof Gender) return $value->getLabel();
+            if ($value instanceof Gender) {
+                return $value->getLabel();
+            }
+
             return Gender::tryFrom((string) $value)?->getLabel() ?? (string) $value;
         }
 
         if ($field === 'membership_type') {
-            if ($value instanceof MembershipType) return $value->getLabel();
+            if ($value instanceof MembershipType) {
+                return $value->getLabel();
+            }
+
             return MembershipType::tryFrom((string) $value)?->getLabel() ?? ucfirst((string) $value);
         }
 
         if ($field === 'target_gender') {
-            if ($value instanceof MeetingTargetGender) return $value->getLabel();
+            if ($value instanceof MeetingTargetGender) {
+                return $value->getLabel();
+            }
+
             return MeetingTargetGender::tryFrom((string) $value)?->getLabel() ?? (string) $value;
         }
 
         if ($field === 'method') {
-            if ($value instanceof AttendanceMethod) return $value->getLabel();
+            if ($value instanceof AttendanceMethod) {
+                return $value->getLabel();
+            }
+
             return AttendanceMethod::tryFrom((string) $value)?->getLabel() ?? ucfirst((string) $value);
         }
 
         if ($field === 'status' && $shortClass === 'Attendance') {
-            if ($value instanceof AttendanceStatus) return $value->getLabel();
+            if ($value instanceof AttendanceStatus) {
+                return $value->getLabel();
+            }
+
             return AttendanceStatus::tryFrom((string) $value)?->getLabel() ?? strtoupper((string) $value);
         }
 
         if ($field === 'role') {
-            if ($value instanceof UserRole) return $value->getLabel();
+            if ($value instanceof UserRole) {
+                return $value->getLabel();
+            }
+
             return UserRole::tryFrom((string) $value)?->getLabel() ?? ucfirst((string) $value);
         }
 
         // Relation lookups
         if (in_array($field, ['group_id', 'parent_id']) && is_numeric($value)) {
             $id = (int) $value;
-            if (!isset(self::$groupNameCache[$id])) {
+            if (! isset(self::$groupNameCache[$id])) {
                 self::$groupNameCache[$id] = Group::find($id)?->name ?? "Kelompok #{$id}";
             }
+
             return self::$groupNameCache[$id];
         }
 
         if ($field === 'level_id' && is_numeric($value)) {
             $id = (int) $value;
-            if (!isset(self::$levelNameCache[$id])) {
+            if (! isset(self::$levelNameCache[$id])) {
                 self::$levelNameCache[$id] = Level::find($id)?->name ?? "Tingkat #{$id}";
             }
+
             return self::$levelNameCache[$id];
         }
 
         if ($field === 'age_group_id' && is_numeric($value)) {
             $id = (int) $value;
-            if (!isset(self::$ageGroupNameCache[$id])) {
+            if (! isset(self::$ageGroupNameCache[$id])) {
                 self::$ageGroupNameCache[$id] = AgeGroup::find($id)?->name ?? "Kelompok Usia #{$id}";
             }
+
             return self::$ageGroupNameCache[$id];
         }
 
         if ($field === 'card_template_id' && is_numeric($value)) {
             $id = (int) $value;
-            if (!isset(self::$cardTemplateNameCache[$id])) {
+            if (! isset(self::$cardTemplateNameCache[$id])) {
                 self::$cardTemplateNameCache[$id] = CardTemplate::find($id)?->name ?? "Template #{$id}";
             }
+
             return self::$cardTemplateNameCache[$id];
         }
 
@@ -210,6 +236,7 @@ class ActivityLogDictionary
         switch ($shortClass) {
             case 'Member':
                 $name = $subject->full_name ?? $subject->name ?? 'Anggota';
+
                 return match ($event) {
                     'created' => "Mendaftarkan anggota baru: {$name}",
                     'updated' => "Memperbarui data anggota: {$name}",
@@ -220,6 +247,7 @@ class ActivityLogDictionary
 
             case 'Meeting':
                 $name = $subject->name ?? 'Pertemuan';
+
                 return match ($event) {
                     'created' => "Membuat jadwal pertemuan baru: {$name}",
                     'updated' => "Memperbarui informasi pertemuan: {$name}",
@@ -233,8 +261,10 @@ class ActivityLogDictionary
                 if ($event === 'updated' && isset($dirty['status'])) {
                     $oldStatus = self::formatValue('Attendance', 'status', $old['status'] ?? null);
                     $newStatus = self::formatValue('Attendance', 'status', $dirty['status']);
+
                     return "Mengubah status kehadiran {$memberName} dari [{$oldStatus}] menjadi [{$newStatus}]";
                 }
+
                 return match ($event) {
                     'created' => "Mencatat kehadiran manual: {$memberName}",
                     'updated' => "Memperbarui catatan kehadiran: {$memberName}",
@@ -244,6 +274,7 @@ class ActivityLogDictionary
 
             case 'Group':
                 $name = $subject->name ?? 'Kelompok';
+
                 return match ($event) {
                     'created' => "Menambahkan kelompok baru: {$name}",
                     'updated' => "Memperbarui data kelompok: {$name}",
@@ -254,6 +285,7 @@ class ActivityLogDictionary
 
             case 'User':
                 $name = $subject->name ?? 'Pengguna';
+
                 return match ($event) {
                     'created' => "Menambahkan akun pengguna baru: {$name}",
                     'updated' => "Memperbarui data akun pengguna: {$name}",
@@ -265,6 +297,7 @@ class ActivityLogDictionary
             default:
                 $label = Str::headline($shortClass);
                 $name = $subject->name ?? $subject->id ?? '';
+
                 return match ($event) {
                     'created' => "Menambahkan {$label}: {$name}",
                     'updated' => "Memperbarui {$label}: {$name}",

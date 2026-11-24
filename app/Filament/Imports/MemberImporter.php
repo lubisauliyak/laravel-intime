@@ -2,28 +2,29 @@
 
 namespace App\Filament\Imports;
 
-use App\Models\Member;
-use App\Models\Group;
-use App\Models\AgeGroup;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\WithBatchInserts;
-use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use App\Enums\Gender;
 use App\Enums\MembershipType;
-use Maatwebsite\Excel\Concerns\SkipsOnError;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Events\AfterImport;
+use App\Models\AgeGroup;
+use App\Models\Group;
+use App\Models\Member;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
+use Maatwebsite\Excel\Concerns\SkipsOnError;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithBatchInserts;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Events\AfterImport;
 
-class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBatchInserts, SkipsEmptyRows, SkipsOnError, WithEvents, WithMultipleSheets
+class MemberImporter implements SkipsEmptyRows, SkipsOnError, ToModel, WithBatchInserts, WithEvents, WithHeadingRow, WithMultipleSheets, WithValidation
 {
     protected $importedCount = 0;
+
     protected $failedRows = [];
-    
+
     /**
      * Group cache for quick lookup (name => id)
      */
@@ -50,7 +51,7 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
     protected function loadGroupCache(): void
     {
         $cacheKey = 'import_group_cache';
-        
+
         $this->groupCache = Cache::remember($cacheKey, 3600, function () {
             return Group::all()->pluck('id', 'name')->toArray();
         });
@@ -67,7 +68,7 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
     protected function findGroup(string $groupName): ?int
     {
         $groupName = strtoupper(trim($groupName));
-        
+
         // Check cache first
         if (isset($this->groupCache[$groupName])) {
             return $this->groupCache[$groupName];
@@ -75,17 +76,19 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
 
         // Try to find in database
         $group = Group::whereRaw('UPPER(name) = ?', [$groupName])->first();
-        
+
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return $group->id;
         }
 
         // Try case-insensitive search as fallback
         $group = Group::whereRaw('LOWER(name) = ?', [strtolower($groupName)])->first();
-        
+
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return $group->id;
         }
 
@@ -98,8 +101,9 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
     protected function calculateAge(string $birthDate): int
     {
         $birth = new \DateTime($birthDate);
-        $today = new \DateTime();
+        $today = new \DateTime;
         $age = $today->diff($birth);
+
         return $age->y;
     }
 
@@ -113,9 +117,10 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
         if ($age === null) {
             $defaultGroup = AgeGroup::whereNull('min_age')->whereNull('max_age')->orderBy('sort_order')->first()
                 ?? AgeGroup::orderBy('sort_order')->first();
+
             return $defaultGroup?->id;
         }
-        
+
         // Check cache first
         foreach ($this->ageGroupCache as $name => $id) {
             $ageGroup = AgeGroup::find($id);
@@ -150,23 +155,25 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
         if (empty($row['nama_lengkap_wajib']) || empty($row['kelompok_wajib']) || empty($row['lp_wajib'])) {
             $this->failedRows[] = [
                 'row' => ($this->importedCount + 2),
-                'reason' => 'Nama lengkap, kelompok, atau jenis kelamin kosong'
+                'reason' => 'Nama lengkap, kelompok, atau jenis kelamin kosong',
             ];
+
             return null;
         }
 
         $groupId = $this->findGroup($row['kelompok_wajib']);
 
-        if (!$groupId) {
+        if (! $groupId) {
             $this->failedRows[] = [
                 'row' => ($this->importedCount + 2),
-                'reason' => "Grup '{$row['kelompok_wajib']}' tidak ditemukan"
+                'reason' => "Grup '{$row['kelompok_wajib']}' tidak ditemukan",
             ];
+
             return null;
         }
 
         // Check if member_code exists (for update)
-        $memberCode = !empty($row['id_anggota']) ? trim($row['id_anggota']) : null;
+        $memberCode = ! empty($row['id_anggota']) ? trim($row['id_anggota']) : null;
         $member = null;
         $isUpdate = false;
 
@@ -179,8 +186,9 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
                 if ($trashedMember) {
                     $this->failedRows[] = [
                         'row' => ($this->importedCount + 2),
-                        'reason' => "ID Anggota '{$memberCode}' berada di tong sampah (Soft Deleted)"
+                        'reason' => "ID Anggota '{$memberCode}' berada di tong sampah (Soft Deleted)",
                     ];
+
                     return null;
                 }
             }
@@ -191,7 +199,7 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
         $ageGroupId = null;
         $birthDate = null;
 
-        if (!empty($row['tanggal_lahir'])) {
+        if (! empty($row['tanggal_lahir'])) {
             try {
                 $birthDate = $this->parseDate($row['tanggal_lahir']);
                 $age = $this->calculateAge($birthDate);
@@ -199,8 +207,9 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
             } catch (\Exception $e) {
                 $this->failedRows[] = [
                     'row' => ($this->importedCount + 2),
-                    'reason' => 'Format tanggal lahir tidak valid'
+                    'reason' => 'Format tanggal lahir tidak valid',
                 ];
+
                 return null;
             }
         } else {
@@ -211,13 +220,13 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
         // Normalize gender
         $genderInput = strtoupper(trim($row['lp_wajib']));
         $gender = ($genderInput === 'P') ? Gender::FEMALE->value : Gender::MALE->value;
-        
+
         $membershipType = MembershipType::ANGGOTA->value;
 
         // Map data
         $memberData = [
             'full_name' => strtoupper(trim($row['nama_lengkap_wajib'])),
-            'nick_name' => !empty($row['nama_panggilan']) ? strtoupper(trim($row['nama_panggilan'])) : null,
+            'nick_name' => ! empty($row['nama_panggilan']) ? strtoupper(trim($row['nama_panggilan'])) : null,
             'group_id' => $groupId,
             'birth_date' => $birthDate,
             'age' => $age,
@@ -231,12 +240,13 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
             // Update existing member
             $member->update($memberData);
             $this->importedCount++;
+
             return null;
         }
 
         // Biarkan kosong jika tidak diisi di Excel
         $memberData['member_code'] = $memberCode;
-        
+
         $member = new Member($memberData);
         $this->importedCount++;
 
@@ -304,14 +314,14 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
     {
         $this->failedRows[] = [
             'row' => ($this->importedCount + 2),
-            'reason' => $exception->getMessage()
+            'reason' => $exception->getMessage(),
         ];
     }
 
     public function registerEvents(): array
     {
         return [
-            AfterImport::class => function(AfterImport $event) {
+            AfterImport::class => function (AfterImport $event) {
                 $this->afterImport($event);
             },
         ];
@@ -327,7 +337,7 @@ class MemberImporter implements ToModel, WithHeadingRow, WithValidation, WithBat
         \Log::info('Member import completed', [
             'imported' => $this->importedCount,
             'failed_rows' => count($this->failedRows),
-            'failed_details' => $this->failedRows
+            'failed_details' => $this->failedRows,
         ]);
     }
 

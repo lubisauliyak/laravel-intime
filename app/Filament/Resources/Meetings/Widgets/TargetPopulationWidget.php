@@ -2,21 +2,23 @@
 
 namespace App\Filament\Resources\Meetings\Widgets;
 
-use Livewire\Attributes\On;
-
-use App\Models\Member;
-use App\Models\Meeting;
-use App\Models\Group;
 use App\Models\AgeGroup;
+use App\Models\Group;
+use App\Models\Meeting;
+use App\Models\Member;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 
 class TargetPopulationWidget extends ChartWidget
 {
     public $filters = [];
+
     protected ?string $heading = 'Populasi Anggota Berdasarkan Usia';
+
     protected static bool $isLazy = true;
+
     protected int|string|array $columnSpan = ['md' => 1, 'xl' => 1];
+
     protected ?string $maxHeight = '300px';
 
     public function getExtraAttributes(): array
@@ -50,13 +52,14 @@ class TargetPopulationWidget extends ChartWidget
             return 'Belum ada data target';
         }
         $total = array_sum($data['datasets'][0]['data']);
+
         return "Total : {$total} Anggota";
     }
 
     protected function getData(): array
     {
         $user = auth()->user();
-        $cacheKey = 'meeting_pop_age_' . ($user->id) . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'meeting_pop_age_'.($user->id).'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, 300, function () use ($user) {
             $filterMeetingId = $this->filters['meeting_id'] ?? null;
@@ -69,17 +72,19 @@ class TargetPopulationWidget extends ChartWidget
             if ($filterGroupId) {
                 $query->whereIn('group_id', Group::find($filterGroupId)->getAllDescendantIds());
             } elseif ($filterLevelId) {
-                $query->whereHas('group', fn($q) => $q->where('level_id', $filterLevelId));
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
+                $query->whereHas('group', fn ($q) => $q->where('level_id', $filterLevelId));
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
                 $query->whereIn('group_id', $user->group->getAllDescendantIds());
             }
 
             if ($meeting) {
-                if ($meeting->target_gender !== \App\Enums\MeetingTargetGender::ALL) $query->where('gender', $meeting->target_gender->value);
-                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => AgeGroup::count());
+                if ($meeting->target_gender !== \App\Enums\MeetingTargetGender::ALL) {
+                    $query->where('gender', $meeting->target_gender->value);
+                }
+                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn () => AgeGroup::count());
                 $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
                 if ($selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount) {
-                    $query->whereHas('ageGroup', fn($q) => $q->whereIn('name', (array) $meeting->target_age_groups));
+                    $query->whereHas('ageGroup', fn ($q) => $q->whereIn('name', (array) $meeting->target_age_groups));
                 }
             }
 
@@ -95,5 +100,8 @@ class TargetPopulationWidget extends ChartWidget
         });
     }
 
-    protected function getType(): string { return 'pie'; }
+    protected function getType(): string
+    {
+        return 'pie';
+    }
 }

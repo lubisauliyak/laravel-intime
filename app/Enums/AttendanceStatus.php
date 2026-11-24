@@ -6,7 +6,7 @@ use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
-enum AttendanceStatus: string implements HasLabel, HasColor, HasIcon
+enum AttendanceStatus: string implements HasColor, HasIcon, HasLabel
 {
     case HADIR = 'hadir';
     case IZIN = 'izin';

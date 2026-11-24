@@ -6,8 +6,8 @@ use App\Enums\AttendanceMethod;
 use App\Enums\AttendanceStatus;
 use App\Models\Attendance;
 use BackedEnum;
-use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Actions\Action;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -87,7 +87,7 @@ class SelfAttendancesRelationManager extends RelationManager
                             ->modalHeading('Foto Selfie')
                             ->modalWidth('md')
                             ->modalContent(fn (Attendance $record) => $record->evidence_path
-                                ? new HtmlString('<div class="aspect-[3/4] w-full"><img src="' . Storage::url($record->evidence_path) . '" class="w-full h-full object-cover rounded-lg" /></div>')
+                                ? new HtmlString('<div class="aspect-[3/4] w-full"><img src="'.Storage::url($record->evidence_path).'" class="w-full h-full object-cover rounded-lg" /></div>')
                                 : null
                             )
                             ->modalSubmitAction(false)

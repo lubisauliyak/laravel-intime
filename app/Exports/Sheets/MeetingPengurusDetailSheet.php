@@ -2,27 +2,28 @@
 
 namespace App\Exports\Sheets;
 
-use App\Models\Meeting;
-use App\Models\Attendance;
 use App\Enums\AttendanceStatus;
 use App\Enums\MembershipType;
+use App\Models\Meeting;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Events\BeforeSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents
+class MeetingPengurusDetailSheet implements FromCollection, WithColumnWidths, WithEvents, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected $meeting;
+
     protected $memberIds;
+
     protected $rowCount = 0;
 
     public function __construct(Meeting $meeting, $memberIds = null)
@@ -41,11 +42,11 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
         return $this->meeting->attendances()
             ->whereIn('status', [AttendanceStatus::HADIR, AttendanceStatus::IZIN, AttendanceStatus::SAKIT])
             ->whereHas('member', function ($q) {
-                $q->where(function($q) {
+                $q->where(function ($q) {
                     $q->where('membership_type', MembershipType::PENGURUS)
-                      ->orWhereHas('positions');
+                        ->orWhereHas('positions');
                 });
-                
+
                 if ($this->memberIds !== null) {
                     $q->whereIn('id', $this->memberIds);
                 }
@@ -54,6 +55,7 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
             ->get()
             ->sortBy(function ($attendance) {
                 $primary = $attendance->member->getPrimaryPosition();
+
                 return [
                     -($primary?->group?->level?->level_number ?? 0), // Level Tertinggi (Desc)
                     $primary?->category?->sort_order ?? 99,        // Kategori Pengurus
@@ -97,6 +99,7 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
                     $pos->group?->level?->name ?? '-',
                     $pos->group?->name ?? '-',
                 ]);
+
                 return implode(' ', $parts);
             })
             ->implode("\n");
@@ -170,7 +173,7 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
     public function registerEvents(): array
     {
         return [
-            BeforeSheet::class => function(BeforeSheet $event) {
+            BeforeSheet::class => function (BeforeSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
                 // $sheet->mergeCells('A1:H1');
@@ -182,12 +185,12 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
                 // $sheet->mergeCells('A3:H3');
                 $startTime = $this->meeting->start_time?->format('H:i') ?? '-';
                 $endTime = $this->meeting->end_time?->format('H:i') ?? '-';
-                $sheet->setCellValue('A3', "Tanggal/Waktu : " . $this->meeting->meeting_date->translatedFormat('d F Y') . " ({$startTime} s.d {$endTime})");
+                $sheet->setCellValue('A3', 'Tanggal/Waktu : '.$this->meeting->meeting_date->translatedFormat('d F Y')." ({$startTime} s.d {$endTime})");
 
                 // $sheet->mergeCells('A4:H4'); // Spacer
-                $sheet->setCellValue('A4', "");
+                $sheet->setCellValue('A4', '');
             },
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
                 $lastRow = $this->rowCount + 5;
 
@@ -198,8 +201,8 @@ class MeetingPengurusDetailSheet implements FromCollection, WithTitle, WithHeadi
 
                 // Minimal height 18.75, but auto-expand if multi-line Pengurus
                 for ($i = 6; $i <= $lastRow; $i++) {
-                    $pengurusValue = $sheet->getCell('D' . $i)->getValue();
-                    if (strpos((string)$pengurusValue, "\n") !== false) {
+                    $pengurusValue = $sheet->getCell('D'.$i)->getValue();
+                    if (strpos((string) $pengurusValue, "\n") !== false) {
                         $sheet->getRowDimension($i)->setRowHeight(-1);
                     } else {
                         $sheet->getRowDimension($i)->setRowHeight(18.75);

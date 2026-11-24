@@ -2,22 +2,23 @@
 
 namespace App\Filament\Resources\Groups\Pages;
 
-use App\Filament\Resources\Groups\GroupResource;
-use App\Exports\GroupMemberActivityExport;
 use App\Enums\AttendanceStatus;
 use App\Enums\Gender;
 use App\Enums\MeetingTargetGender;
+use App\Exports\GroupMemberActivityExport;
+use App\Filament\Resources\Groups\GroupResource;
 use App\Models\AgeGroup;
+use App\Models\Group;
 use App\Models\Level;
-use App\Models\Member;
 use App\Models\Meeting;
+use App\Models\Member;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
-use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Filament\Resources\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -27,8 +28,8 @@ use Illuminate\Support\Collection;
 
 class GroupMemberActivity extends Page implements HasTable
 {
-    use InteractsWithTable;
     use InteractsWithRecord;
+    use InteractsWithTable;
 
     protected static string $resource = GroupResource::class;
 
@@ -37,9 +38,15 @@ class GroupMemberActivity extends Page implements HasTable
     public static function canAccess(array $parameters = []): bool
     {
         $record = $parameters['record'] ?? null;
-        return $record
-            ? auth()->user()->can('viewMemberActivity', $record)
-            : auth()->user()->can('ViewMemberActivity:Group');
+        if (is_string($record) || is_int($record)) {
+            $record = Group::where('uid', $record)->orWhere('id', $record)->first();
+        }
+
+        if ($record instanceof Group) {
+            return auth()->user()?->can('viewMemberActivity', $record) ?? false;
+        }
+
+        return auth()->user()?->can('viewAny', Group::class) ?? false;
     }
 
     public function mount(int|string $record): void
@@ -61,7 +68,7 @@ class GroupMemberActivity extends Page implements HasTable
                 ->outlined()
                 ->color('success')
                 ->tooltip('Ekspor Rekapitulasi Kehadiran (Excel)')
-                ->visible(fn() => auth()->user()?->can('export', $this->getRecord()) ?? false)
+                ->visible(fn () => auth()->user()?->can('export', $this->getRecord()) ?? false)
                 ->action(function () {
                     $memberIds = $this->getFilteredTableQuery()->pluck('members.id')->toArray();
 
@@ -71,6 +78,7 @@ class GroupMemberActivity extends Page implements HasTable
                             ->title('Tidak Ada Data')
                             ->body('Tidak ditemukan data anggota yang dapat diekspor.')
                             ->send();
+
                         return;
                     }
 
@@ -80,7 +88,7 @@ class GroupMemberActivity extends Page implements HasTable
                         ->body('File rekapitulasi kehadiran sedang dipersiapkan dan akan segera diunduh.')
                         ->send();
 
-                    $rawFilename = 'Aktivitas-Anggota-' . $this->getRecord()->name . '-' . now()->format('Y-m-d') . '.xlsx';
+                    $rawFilename = 'Aktivitas-Anggota-'.$this->getRecord()->name.'-'.now()->format('Y-m-d').'.xlsx';
                     $filename = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '-', $rawFilename);
                     $filename = preg_replace('/-+/', '-', $filename);
 
@@ -112,6 +120,7 @@ class GroupMemberActivity extends Page implements HasTable
     {
         $resource = static::getResource();
         $group = $this->getRecord();
+
         return [
             $resource::getUrl() => $resource::getNavigationLabel(),
             $resource::getUrl('view', ['record' => $group]) => $group->name,
@@ -127,13 +136,13 @@ class GroupMemberActivity extends Page implements HasTable
             ->filters([
                 SelectFilter::make('level')
                     ->label('Tingkat Pertemuan')
-                    ->options(fn() => Level::orderBy('level_number', 'desc')->pluck('name', 'id'))
-                    ->query(fn($query) => $query),
+                    ->options(fn () => Level::orderBy('level_number', 'desc')->pluck('name', 'id'))
+                    ->query(fn ($query) => $query),
                 SelectFilter::make('age_group')
                     ->label('Kategori Usia')
                     ->multiple()
-                    ->options(fn() => AgeGroup::orderBy('name')->pluck('name', 'id'))
-                    ->query(fn($query, $state) => $query->when($state['values'] ?? null, fn($q) => $q->whereIn('age_group_id', $state['values']))),
+                    ->options(fn () => AgeGroup::orderBy('name')->pluck('name', 'id'))
+                    ->query(fn ($query, $state) => $query->when($state['values'] ?? null, fn ($q) => $q->whereIn('age_group_id', $state['values']))),
                 Filter::make('date_range')
                     ->form([
                         DatePicker::make('date_from')
@@ -158,13 +167,15 @@ class GroupMemberActivity extends Page implements HasTable
                             $dateTo = data_get($filters, 'date_range.date_to');
 
                             $query = [];
-                            if ($dateFrom)
+                            if ($dateFrom) {
                                 $query['date_from'] = $dateFrom;
-                            if ($dateTo)
+                            }
+                            if ($dateTo) {
                                 $query['date_to'] = $dateTo;
+                            }
 
-                            if (!empty($query)) {
-                                $url .= '?' . urldecode(http_build_query($query));
+                            if (! empty($query)) {
+                                $url .= '?'.urldecode(http_build_query($query));
                             }
 
                             return $url;
@@ -179,8 +190,11 @@ class GroupMemberActivity extends Page implements HasTable
     }
 
     protected array $statsCache = [];
+
     protected ?Collection $cachedMeetings = null;
+
     protected ?string $cachedMeetingsFilterKey = null;
+
     protected ?int $allAgeGroupsCount = null;
 
     protected function getAgeGroupsCount(): int
@@ -217,9 +231,9 @@ class GroupMemberActivity extends Page implements HasTable
         $this->cachedMeetings = Meeting::query()
             ->with('group')
             ->whereIn('group_id', $relevantGroupIds)
-            ->when($levelId, fn($q) => $q->whereHas('group', fn($g) => $g->where('level_id', $levelId)))
-            ->when($from, fn($q) => $q->whereDate('meeting_date', '>=', $from))
-            ->when($until, fn($q) => $q->whereDate('meeting_date', '<=', $until))
+            ->when($levelId, fn ($q) => $q->whereHas('group', fn ($g) => $g->where('level_id', $levelId)))
+            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
+            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until))
             ->orderBy('meeting_date', 'asc')
             ->get();
 
@@ -230,13 +244,13 @@ class GroupMemberActivity extends Page implements HasTable
 
     protected function isMemberTargetForMeeting(Member $member, Meeting $meeting): bool
     {
-        if (!$member->status) {
+        if (! $member->status) {
             return false;
         }
 
         // 1. Group check: Meeting's group must be the member's group or one of its ancestors
         $memberGroupAncestors = array_merge([$member->group_id], $member->group->getAllAncestorIds());
-        if (!in_array($meeting->group_id, $memberGroupAncestors)) {
+        if (! in_array($meeting->group_id, $memberGroupAncestors)) {
             return false;
         }
 
@@ -254,11 +268,11 @@ class GroupMemberActivity extends Page implements HasTable
 
         // 4. Age Group check
         $targetAgeGroups = $meeting->target_age_groups;
-        if (!empty($targetAgeGroups)) {
+        if (! empty($targetAgeGroups)) {
             $targetAgeArray = (array) $targetAgeGroups;
             $allCount = $this->getAgeGroupsCount();
             if (count($targetAgeArray) < $allCount) {
-                if (!$member->ageGroup || !in_array($member->ageGroup->name, $targetAgeArray, true)) {
+                if (! $member->ageGroup || ! in_array($member->ageGroup->name, $targetAgeArray, true)) {
                     return false;
                 }
             }
@@ -277,7 +291,7 @@ class GroupMemberActivity extends Page implements HasTable
 
         // 1. Calculate targeted meetings in-memory
         $targetedMeetings = $record->status
-            ? $relevantMeetings->filter(fn($meeting) => $this->isMemberTargetForMeeting($record, $meeting))
+            ? $relevantMeetings->filter(fn ($meeting) => $this->isMemberTargetForMeeting($record, $meeting))
             : collect();
 
         $targetedTotal = $targetedMeetings->count();
@@ -297,7 +311,7 @@ class GroupMemberActivity extends Page implements HasTable
         foreach ($attendances as $attendance) {
             if ($attendance->status === AttendanceStatus::HADIR) {
                 $hadir++;
-                if ($attendance->meeting && $attendance->checkin_time > Carbon::parse($attendance->meeting->meeting_date)->format('Y-m-d') . ' ' . Carbon::parse($attendance->meeting->start_time)->format('H:i:s')) {
+                if ($attendance->meeting && $attendance->checkin_time > Carbon::parse($attendance->meeting->meeting_date)->format('Y-m-d').' '.Carbon::parse($attendance->meeting->start_time)->format('H:i:s')) {
                     $telat++;
                 }
             } elseif ($attendance->status === AttendanceStatus::IZIN) {
@@ -315,11 +329,11 @@ class GroupMemberActivity extends Page implements HasTable
 
         foreach ($lastFiveMeetings as $m) {
             $att = $attendances->firstWhere('meeting_id', $m->id);
-            if (!$att) {
+            if (! $att) {
                 $lastFive[] = 'A';
             } else {
                 if ($att->status === AttendanceStatus::HADIR) {
-                    if ($att->checkin_time > Carbon::parse($m->meeting_date)->format('Y-m-d') . ' ' . Carbon::parse($m->start_time)->format('H:i:s')) {
+                    if ($att->checkin_time > Carbon::parse($m->meeting_date)->format('Y-m-d').' '.Carbon::parse($m->start_time)->format('H:i:s')) {
                         $lastFive[] = 'T';
                     } else {
                         $lastFive[] = 'H';
@@ -379,9 +393,9 @@ class GroupMemberActivity extends Page implements HasTable
                 'ageGroup',
                 'attendances' => function ($q) use ($levelId, $from, $until) {
                     $q->with('meeting.group')
-                        ->when($levelId, fn($mq) => $mq->whereHas('meeting.group', fn($g) => $g->where('level_id', $levelId)))
-                        ->when($from, fn($mq) => $mq->whereDate('checkin_time', '>=', $from))
-                        ->when($until, fn($mq) => $mq->whereDate('checkin_time', '<=', $until));
+                        ->when($levelId, fn ($mq) => $mq->whereHas('meeting.group', fn ($g) => $g->where('level_id', $levelId)))
+                        ->when($from, fn ($mq) => $mq->whereDate('checkin_time', '>=', $from))
+                        ->when($until, fn ($mq) => $mq->whereDate('checkin_time', '<=', $until));
                 },
             ]);
     }
@@ -396,53 +410,53 @@ class GroupMemberActivity extends Page implements HasTable
             TextColumn::make('full_name')
                 ->label('Nama Anggota')
                 ->searchable()
-                ->color(fn(Member $record): ?string => $record->getMemberColor())
-                ->tooltip(fn(Member $record): ?string => $record->getMemberColorTooltip()),
+                ->color(fn (Member $record): ?string => $record->getMemberColor())
+                ->tooltip(fn (Member $record): ?string => $record->getMemberColorTooltip()),
             TextColumn::make('total_targeted')
                 ->label('Pertemuan')
-                ->state(fn(Member $record): int => $this->getMemberStats($record)['total'])
+                ->state(fn (Member $record): int => $this->getMemberStats($record)['total'])
                 ->badge()
                 ->color('gray')
                 ->alignCenter(),
             TextColumn::make('hadir_count')
                 ->label('Hadir')
-                ->state(fn(Member $record): int => $this->getMemberStats($record)['hadir'])
+                ->state(fn (Member $record): int => $this->getMemberStats($record)['hadir'])
                 ->badge()
                 ->color('success')
                 ->alignCenter(),
             TextColumn::make('telat_count')
                 ->label('Telat')
-                ->state(fn(Member $record): int => $this->getMemberStats($record)['telat'])
+                ->state(fn (Member $record): int => $this->getMemberStats($record)['telat'])
                 ->badge()
                 ->color('warning')
                 ->alignCenter(),
             TextColumn::make('izin_count')
                 ->label('Izin')
-                ->state(fn(Member $record): int => $this->getMemberStats($record)['izin'])
+                ->state(fn (Member $record): int => $this->getMemberStats($record)['izin'])
                 ->badge()
                 ->color('warning')
                 ->alignCenter(),
             TextColumn::make('sakit_count')
                 ->label('Sakit')
-                ->state(fn(Member $record): int => $this->getMemberStats($record)['sakit'])
+                ->state(fn (Member $record): int => $this->getMemberStats($record)['sakit'])
                 ->badge()
                 ->color('danger')
                 ->alignCenter(),
             TextColumn::make('alfa_count')
                 ->label('Tidak Hadir')
-                ->state(fn(Member $record): int => $this->getMemberStats($record)['alfa'])
+                ->state(fn (Member $record): int => $this->getMemberStats($record)['alfa'])
                 ->badge()
-                ->color(fn($state) => $state > 0 ? 'danger' : 'gray')
+                ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
                 ->alignCenter(),
             TextColumn::make('attendance_percentage')
                 ->label('% Kehadiran')
-                ->state(fn(Member $record): string => $this->getMemberStats($record)['percentage'] . '%')
+                ->state(fn (Member $record): string => $this->getMemberStats($record)['percentage'].'%')
                 ->badge()
-                ->color(fn($state) => $state >= 75 ? 'success' : ($state >= 50 ? 'warning' : 'danger'))
+                ->color(fn ($state) => $state >= 75 ? 'success' : ($state >= 50 ? 'warning' : 'danger'))
                 ->alignCenter(),
             TextColumn::make('last_five')
                 ->label('Kehadiran Terakhir')
-                ->state(fn(Member $record): string => $this->getMemberStats($record)['last_five'])
+                ->state(fn (Member $record): string => $this->getMemberStats($record)['last_five'])
                 ->badge()
                 ->color('gray')
                 ->alignCenter(),

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use BaconQrCode\Encoder\Encoder;
 use BaconQrCode\Common\ErrorCorrectionLevel;
+use BaconQrCode\Encoder\Encoder;
 
 class QrGenerator
 {
@@ -13,23 +13,23 @@ class QrGenerator
         $qrCode = Encoder::encode($data, ErrorCorrectionLevel::H());
         $matrix = $qrCode->getMatrix();
         $matrixSize = $matrix->getWidth();
-        
+
         // 2. Calculate scale
         // Total cells including margin
         $totalMatrixSize = $matrixSize + ($margin * 2);
         $cellSize = (int) floor($size / $totalMatrixSize);
-        
+
         // Final image size might be slightly smaller than $size due to floor()
         $finalSize = $cellSize * $totalMatrixSize;
-        
+
         // 3. Create GD Image
         $image = imagecreatetruecolor($finalSize, $finalSize);
         $white = imagecolorallocate($image, 255, 255, 255);
         $black = imagecolorallocate($image, 0, 0, 0);
-        
+
         // Fill white background
         imagefill($image, 0, 0, $white);
-        
+
         // 4. Draw cells
         for ($y = 0; $y < $matrixSize; $y++) {
             for ($x = 0; $x < $matrixSize; $x++) {
@@ -42,15 +42,15 @@ class QrGenerator
                 }
             }
         }
-        
+
         // 5. Capture PNG output
         ob_start();
         imagepng($image);
         $result = ob_get_clean();
-        
+
         // Cleanup
         imagedestroy($image);
-        
+
         return $result;
     }
 }

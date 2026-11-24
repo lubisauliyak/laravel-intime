@@ -4,23 +4,25 @@ namespace App\Filament\Imports;
 
 use App\Models\Group;
 use App\Models\Level;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\WithBatchInserts;
+use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\SkipsOnError;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Events\AfterImport;
-use Illuminate\Support\Facades\Cache;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Events\AfterImport;
 
-class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatchInserts, SkipsEmptyRows, SkipsOnError, WithEvents, WithMultipleSheets
+class GroupImporter implements SkipsEmptyRows, SkipsOnError, ToModel, WithBatchInserts, WithEvents, WithHeadingRow, WithMultipleSheets, WithValidation
 {
     protected $importedCount = 0;
+
     protected $failedRows = [];
-    
+
     protected array $levelCache = [];
+
     protected array $groupCache = [];
 
     public function __construct()
@@ -40,7 +42,7 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
         $this->levelCache = Cache::remember('import_level_cache', 3600, function () {
             return Level::all()->pluck('id', 'name')->toArray();
         });
-        
+
         $this->groupCache = Cache::remember('import_group_cache', 3600, function () {
             return Group::all()->pluck('id', 'name')->toArray();
         });
@@ -49,7 +51,7 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
     protected function findLevel(string $levelName): ?int
     {
         $levelName = strtoupper(trim($levelName));
-        
+
         if (isset($this->levelCache[$levelName])) {
             return $this->levelCache[$levelName];
         }
@@ -57,6 +59,7 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
         $level = Level::whereRaw('UPPER(name) = ?', [$levelName])->first();
         if ($level) {
             $this->levelCache[$levelName] = $level->id;
+
             return $level->id;
         }
 
@@ -66,7 +69,7 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
     protected function findGroup(string $groupName): ?int
     {
         $groupName = strtoupper(trim($groupName));
-        
+
         if (isset($this->groupCache[$groupName])) {
             return $this->groupCache[$groupName];
         }
@@ -74,12 +77,14 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
         $group = Group::whereRaw('UPPER(name) = ?', [$groupName])->first();
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return $group->id;
         }
 
         $group = Group::whereRaw('LOWER(name) = ?', [strtolower($groupName)])->first();
         if ($group) {
             $this->groupCache[$groupName] = $group->id;
+
             return $group->id;
         }
 
@@ -91,29 +96,32 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
         if (empty($row['nama_grup_wajib']) || empty($row['tingkat_grup_wajib'])) {
             $this->failedRows[] = [
                 'row' => ($this->importedCount + 2),
-                'reason' => 'Nama grup atau tingkat grup kosong'
+                'reason' => 'Nama grup atau tingkat grup kosong',
             ];
+
             return null;
         }
 
         $levelId = $this->findLevel($row['tingkat_grup_wajib']);
-        
-        if (!$levelId) {
+
+        if (! $levelId) {
             $this->failedRows[] = [
                 'row' => ($this->importedCount + 2),
-                'reason' => "Tingkat Grup '{$row['tingkat_grup_wajib']}' tidak ditemukan"
+                'reason' => "Tingkat Grup '{$row['tingkat_grup_wajib']}' tidak ditemukan",
             ];
+
             return null;
         }
 
         $parentId = null;
-        if (!empty($row['induk_grup'])) {
+        if (! empty($row['induk_grup'])) {
             $parentId = $this->findGroup($row['induk_grup']);
-            if (!$parentId) {
+            if (! $parentId) {
                 $this->failedRows[] = [
                     'row' => ($this->importedCount + 2),
-                    'reason' => "Induk Grup '{$row['induk_grup']}' tidak ditemukan"
+                    'reason' => "Induk Grup '{$row['induk_grup']}' tidak ditemukan",
                 ];
+
                 return null;
             }
         }
@@ -136,6 +144,7 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
                 $existingGroup->update(['code' => $groupCode]);
             }
             $this->groupCache[$groupName] = $existingGroup->id;
+
             return null;
         }
 
@@ -149,10 +158,10 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
 
         $group = new Group($groupData);
         $group->save();
-        
+
         // Update cache so subsequent rows (children) can find this new group
         $this->groupCache[$groupName] = $group->id;
-        
+
         $this->importedCount++;
 
         return null; // Return null as we saved it manually
@@ -185,14 +194,14 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
     {
         $this->failedRows[] = [
             'row' => ($this->importedCount + 2),
-            'reason' => $exception->getMessage()
+            'reason' => $exception->getMessage(),
         ];
     }
 
     public function registerEvents(): array
     {
         return [
-            AfterImport::class => function(AfterImport $event) {
+            AfterImport::class => function (AfterImport $event) {
                 $this->afterImport($event);
             },
         ];
@@ -204,11 +213,11 @@ class GroupImporter implements ToModel, WithHeadingRow, WithValidation, WithBatc
         Cache::forget('import_level_cache');
         Cache::forget('import_group_cache_validator');
         Cache::forget('import_level_cache_validator');
-        
+
         \Log::info('Group import completed', [
             'imported' => $this->importedCount,
             'failed_rows' => count($this->failedRows),
-            'failed_details' => $this->failedRows
+            'failed_details' => $this->failedRows,
         ]);
     }
 

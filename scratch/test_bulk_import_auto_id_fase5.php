@@ -1,22 +1,21 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use App\Models\CardTemplate;
 use App\Models\Group;
 use App\Models\Level;
 use App\Models\Member;
 use App\Services\Members\MemberImportParser;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 $passed = 0;
 $failed = 0;
 
-function assert_it(string $name, bool $condition, string $details = '') {
+function assert_it(string $name, bool $condition, string $details = '')
+{
     global $passed, $failed;
     if ($condition) {
         $passed++;
@@ -62,18 +61,18 @@ try {
     ]);
 
     // Create a temporary CSV file for testing MemberImportParser
-    $csvContent = "nama_lengkap_wajib,kelompok_wajib,lp_wajib,id_anggota,tanggal_lahir\n" .
-        "ANTO OTOMATIS,KELOMPOK VALID 44,L,,15/01/1995\n" .
-        "BUDI UPDATE,KELOMPOK VALID 44,L,5544001,16/02/1994\n" .
-        "CITRA MANUAL,KELOMPOK VALID 44,P,MANUAL-888,17/03/1993\n" .
-        "DEDI NOCODE,KELOMPOK KOSONG,L,,18/04/1992\n" .
+    $csvContent = "nama_lengkap_wajib,kelompok_wajib,lp_wajib,id_anggota,tanggal_lahir\n".
+        "ANTO OTOMATIS,KELOMPOK VALID 44,L,,15/01/1995\n".
+        "BUDI UPDATE,KELOMPOK VALID 44,L,5544001,16/02/1994\n".
+        "CITRA MANUAL,KELOMPOK VALID 44,P,MANUAL-888,17/03/1993\n".
+        "DEDI NOCODE,KELOMPOK KOSONG,L,,18/04/1992\n".
         "EKO BROKEN,KELOMPOK BROKEN 07,L,,19/05/1991\n";
 
     $tempCsvPath = storage_path('app/public/test_import_fase5.csv');
     file_put_contents($tempCsvPath, $csvContent);
 
     // Run Parser
-    $parser = new MemberImportParser();
+    $parser = new MemberImportParser;
     $result = $parser->parse($tempCsvPath);
 
     assert_it('Test 1: Total rows parsed is 5', $result['total_rows'] === 5);
@@ -118,7 +117,7 @@ try {
     $newMember1->save();
 
     // Since 5544001 already existed, next increment should be 5544002!
-    assert_it('Test 9: Auto-ID member received next sequence 5544002', $newMember1->member_code === '5544002', 'Got: ' . ($newMember1->member_code ?? 'null'));
+    assert_it('Test 9: Auto-ID member received next sequence 5544002', $newMember1->member_code === '5544002', 'Got: '.($newMember1->member_code ?? 'null'));
     assert_it('Test 10: Member is_permanent is true', $newMember1->is_permanent === true);
 
     // Clean up temporary file

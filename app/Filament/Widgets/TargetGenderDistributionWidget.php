@@ -3,22 +3,20 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\Gender;
-use App\Models\AgeGroup;
 use App\Models\Meeting;
 use App\Models\Member;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Cache;
 
 class TargetGenderDistributionWidget extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
 
     protected static ?int $sort = 4;
+
     protected int|string|array $columnSpan = ['md' => 1, 'xl' => 1];
 
     public function getExtraAttributes(): array
@@ -27,6 +25,7 @@ class TargetGenderDistributionWidget extends ChartWidget
             'style' => 'min-height: 480px',
         ];
     }
+
     protected ?string $maxHeight = '300px';
 
     private function getReferenceMeeting(): ?Meeting
@@ -39,6 +38,7 @@ class TargetGenderDistributionWidget extends ChartWidget
     public function getHeading(): ?string
     {
         $ref = $this->getReferenceMeeting();
+
         return 'Populasi Anggota Berdasarkan Gender';
     }
 
@@ -47,7 +47,7 @@ class TargetGenderDistributionWidget extends ChartWidget
         $user = auth()->user();
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return [
                 Gender::MALE->value => 0,
                 Gender::FEMALE->value => 0,
@@ -57,7 +57,7 @@ class TargetGenderDistributionWidget extends ChartWidget
             ];
         }
 
-        $cacheKey = 'target_gender_dist_' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'target_gender_dist_'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, 300, function () use ($user, $ref) {
             $targetAgeGroups = $ref->target_age_groups ?? [];
@@ -70,15 +70,15 @@ class TargetGenderDistributionWidget extends ChartWidget
             if ($filterGroupId) {
                 $query->whereIn('group_id', \App\Models\Group::find($filterGroupId)->getAllDescendantIds());
             } elseif ($filterLevelId) {
-                $query->whereHas('group', fn($q) => $q->where('level_id', $filterLevelId));
-            } elseif ($user && !$user->isSuperAdmin() && $user->group_id) {
+                $query->whereHas('group', fn ($q) => $q->where('level_id', $filterLevelId));
+            } elseif ($user && ! $user->isSuperAdmin() && $user->group_id) {
                 $allowedGroupIds = $user->group->getAllDescendantIds();
                 $query->whereIn('group_id', $allowedGroupIds);
             }
 
             // Filter by target age groups from meeting
-            if (!empty($targetAgeGroups)) {
-                $query->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups));
+            if (! empty($targetAgeGroups)) {
+                $query->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', $targetAgeGroups));
             }
 
             $data = $query->selectRaw('gender, count(*) as count')
@@ -132,7 +132,7 @@ class TargetGenderDistributionWidget extends ChartWidget
             ],
             'labels' => [
                 "Laki-laki: {$data[Gender::MALE->value]} ({$data['male_percent']}%)",
-                "Perempuan: {$data[Gender::FEMALE->value]} ({$data['female_percent']}%)"
+                "Perempuan: {$data[Gender::FEMALE->value]} ({$data['female_percent']}%)",
             ],
         ];
     }

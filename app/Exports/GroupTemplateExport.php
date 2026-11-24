@@ -3,30 +3,30 @@
 namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class GroupTemplateExport implements WithMultipleSheets
 {
     public function sheets(): array
     {
         return [
-            new GroupTemplateSheet(),
-            new GroupDocumentationSheet(),
+            new GroupTemplateSheet,
+            new GroupDocumentationSheet,
         ];
     }
 }
 
-class GroupTemplateSheet implements FromArray, WithHeadings, WithMapping, WithStyles, WithTitle, WithColumnWidths
+class GroupTemplateSheet implements FromArray, WithColumnWidths, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected array $sampleData;
 
@@ -140,7 +140,7 @@ class GroupTemplateSheet implements FromArray, WithHeadings, WithMapping, WithSt
     }
 }
 
-class GroupDocumentationSheet implements FromArray, WithHeadings, WithStyles, WithTitle, WithColumnWidths
+class GroupDocumentationSheet implements FromArray, WithColumnWidths, WithHeadings, WithStyles, WithTitle
 {
     public function array(): array
     {
@@ -168,7 +168,7 @@ class GroupDocumentationSheet implements FromArray, WithHeadings, WithStyles, Wi
             [
                 'ATURAN PENTING (Hirarki & Urutan Baris)',
                 'Urutan baris sangat krusial jika mengimpor Induk dan Anak sekaligus!',
-                "Sistem memproses baris dari ATAS ke BAWAH. Jika ingin membuat grup Anak dan Induknya secara bersamaan di file yang sama, pastikan baris data INDUK berada DI ATAS/SEBELUM baris data ANAK.\n\nContoh yang BENAR:\nBaris 2: DAERAH SIDOARJO (Induk)\nBaris 3: DESA SRUNI (Anak, Induknya: DAERAH SIDOARJO)\n\nJika terbalik (Anak di atas Induk), sistem akan menolak baris Anak dengan pesan error 'Induk Grup tidak ditemukan'."
+                "Sistem memproses baris dari ATAS ke BAWAH. Jika ingin membuat grup Anak dan Induknya secara bersamaan di file yang sama, pastikan baris data INDUK berada DI ATAS/SEBELUM baris data ANAK.\n\nContoh yang BENAR:\nBaris 2: DAERAH SIDOARJO (Induk)\nBaris 3: DESA SRUNI (Anak, Induknya: DAERAH SIDOARJO)\n\nJika terbalik (Anak di atas Induk), sistem akan menolak baris Anak dengan pesan error 'Induk Grup tidak ditemukan'.",
             ],
         ];
     }
@@ -224,7 +224,7 @@ class GroupDocumentationSheet implements FromArray, WithHeadings, WithStyles, Wi
             ],
             'font' => [
                 'color' => ['rgb' => '991B1B'], // Red-800
-            ]
+            ],
         ]);
 
         // Add borders

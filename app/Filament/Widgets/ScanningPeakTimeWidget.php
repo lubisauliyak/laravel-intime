@@ -2,20 +2,18 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Attendance;
-use App\Models\Meeting;
-use App\Models\Group;
 use App\Models\AgeGroup;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
+use App\Models\Attendance;
+use App\Models\Group;
+use App\Models\Meeting;
+use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ScanningPeakTimeWidget extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
@@ -26,6 +24,7 @@ class ScanningPeakTimeWidget extends ChartWidget
     protected int|string|array $columnSpan = 'full';
 
     protected ?string $pollingInterval = null;
+
     protected ?string $maxHeight = '250px';
 
     private function getReferenceMeeting(): ?Meeting
@@ -44,7 +43,7 @@ class ScanningPeakTimeWidget extends ChartWidget
     {
         $data = $this->getData();
         $total = 0;
-        if (!empty($data['datasets'])) {
+        if (! empty($data['datasets'])) {
             foreach ($data['datasets'] as $dataset) {
                 $total += array_sum($dataset['data']);
             }
@@ -61,7 +60,7 @@ class ScanningPeakTimeWidget extends ChartWidget
     {
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return [
                 'datasets' => [],
                 'labels' => [],
@@ -69,7 +68,7 @@ class ScanningPeakTimeWidget extends ChartWidget
         }
 
         $user = auth()->user();
-        $cacheKey = 'scanning_peak_' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'scanning_peak_'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, 120, function () use ($user, $ref) {
             $targetPoints = 20;
@@ -88,7 +87,7 @@ class ScanningPeakTimeWidget extends ChartWidget
                     $q->where('gender', $ref->target_gender->value);
                 }
 
-                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => AgeGroup::count());
+                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn () => AgeGroup::count());
                 $selectedAgeGroupsCount = empty($ref->target_age_groups) ? 0 : count($ref->target_age_groups);
                 $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
@@ -103,18 +102,18 @@ class ScanningPeakTimeWidget extends ChartWidget
             $filterLevelId = $this->filters['level_id'] ?? null;
 
             if ($filterGroupId) {
-                $baseQuery->whereHas('member', fn($q) => $q->whereIn('group_id', Group::find($filterGroupId)->getAllDescendantIds()));
+                $baseQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', Group::find($filterGroupId)->getAllDescendantIds()));
             } elseif ($filterLevelId) {
-                $baseQuery->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
-                $baseQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
+                $baseQuery->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
+                $baseQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
             }
 
             // Get first and last checkin time
             $firstCheckin = (clone $baseQuery)->orderBy('checkin_time')->value('checkin_time');
             $lastCheckin = (clone $baseQuery)->orderByDesc('checkin_time')->value('checkin_time');
 
-            if (!$firstCheckin || !$lastCheckin) {
+            if (! $firstCheckin || ! $lastCheckin) {
                 return [
                     'datasets' => [],
                     'labels' => [],
@@ -126,8 +125,9 @@ class ScanningPeakTimeWidget extends ChartWidget
 
             // Calculate total duration in minutes
             $totalMinutes = $firstTime->diffInMinutes($lastTime);
-            if ($totalMinutes < 1)
+            if ($totalMinutes < 1) {
                 $totalMinutes = 1;
+            }
 
             // Choose interval: aim for ~20 data points with 5/10/15 min increments
             $rawInterval = $totalMinutes / $targetPoints;
@@ -157,7 +157,7 @@ class ScanningPeakTimeWidget extends ChartWidget
                 ->where('method', \App\Enums\AttendanceMethod::QR_CODE->value)
                 ->select(
                     DB::raw('HOUR(checkin_time) as hour'),
-                    DB::raw('FLOOR(MINUTE(checkin_time) / ' . $intervalMinutes . ') * ' . $intervalMinutes . ' as minute_slot'),
+                    DB::raw('FLOOR(MINUTE(checkin_time) / '.$intervalMinutes.') * '.$intervalMinutes.' as minute_slot'),
                     DB::raw('count(*) as count')
                 )
                 ->groupBy('hour', 'minute_slot')
@@ -165,14 +165,14 @@ class ScanningPeakTimeWidget extends ChartWidget
                 ->orderBy('minute_slot')
                 ->get()
                 ->keyBy(function ($item) {
-                    return $item->hour . '_' . $item->minute_slot;
+                    return $item->hour.'_'.$item->minute_slot;
                 });
 
             $manualData = (clone $baseQuery)
                 ->where('method', \App\Enums\AttendanceMethod::MANUAL->value)
                 ->select(
                     DB::raw('HOUR(checkin_time) as hour'),
-                    DB::raw('FLOOR(MINUTE(checkin_time) / ' . $intervalMinutes . ') * ' . $intervalMinutes . ' as minute_slot'),
+                    DB::raw('FLOOR(MINUTE(checkin_time) / '.$intervalMinutes.') * '.$intervalMinutes.' as minute_slot'),
                     DB::raw('count(*) as count')
                 )
                 ->groupBy('hour', 'minute_slot')
@@ -180,14 +180,14 @@ class ScanningPeakTimeWidget extends ChartWidget
                 ->orderBy('minute_slot')
                 ->get()
                 ->keyBy(function ($item) {
-                    return $item->hour . '_' . $item->minute_slot;
+                    return $item->hour.'_'.$item->minute_slot;
                 });
 
             $selfData = (clone $baseQuery)
                 ->where('method', \App\Enums\AttendanceMethod::SELF->value)
                 ->select(
                     DB::raw('HOUR(checkin_time) as hour'),
-                    DB::raw('FLOOR(MINUTE(checkin_time) / ' . $intervalMinutes . ') * ' . $intervalMinutes . ' as minute_slot'),
+                    DB::raw('FLOOR(MINUTE(checkin_time) / '.$intervalMinutes.') * '.$intervalMinutes.' as minute_slot'),
                     DB::raw('count(*) as count')
                 )
                 ->groupBy('hour', 'minute_slot')
@@ -195,7 +195,7 @@ class ScanningPeakTimeWidget extends ChartWidget
                 ->orderBy('minute_slot')
                 ->get()
                 ->keyBy(function ($item) {
-                    return $item->hour . '_' . $item->minute_slot;
+                    return $item->hour.'_'.$item->minute_slot;
                 });
 
             // Generate labels and values for time slots
@@ -206,7 +206,7 @@ class ScanningPeakTimeWidget extends ChartWidget
             $current = $start->copy();
 
             while ($current->lessThanOrEqualTo($end)) {
-                $key = $current->hour . '_' . $current->minute;
+                $key = $current->hour.'_'.$current->minute;
                 $labels[] = $current->format('H:i');
                 $scanValues[] = $scanData->get($key)?->count ?? 0;
                 $manualValues[] = $manualData->get($key)?->count ?? 0;
@@ -214,8 +214,9 @@ class ScanningPeakTimeWidget extends ChartWidget
                 $current->addMinutes($intervalMinutes);
 
                 // Safety: max 30 points to avoid infinite loop
-                if (count($labels) >= 30)
+                if (count($labels) >= 30) {
                     break;
+                }
             }
 
             $totalScan = array_sum($scanValues);

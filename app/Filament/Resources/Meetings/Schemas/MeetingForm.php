@@ -2,23 +2,19 @@
 
 namespace App\Filament\Resources\Meetings\Schemas;
 
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Components\CheckboxList;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Schema;
-use App\Models\Level;
-use App\Models\Group;
 use App\Models\AgeGroup;
-use Filament\Schemas\Components\Utilities\Get;
+use App\Models\Group;
+use App\Models\Level;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
-use Illuminate\Support\Carbon;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\TimePicker;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 
 class MeetingForm
 {
@@ -47,6 +43,7 @@ class MeetingForm
                             ->label('Kategori Usia')
                             ->options(function () {
                                 $ageGroups = AgeGroup::orderBy('sort_order')->pluck('name', 'name')->toArray();
+
                                 return $ageGroups;
                             })
                             ->columns(3)
@@ -62,31 +59,25 @@ class MeetingForm
                         TimePicker::make('checkin_open_time')
                             ->label('Presensi Dibuka')
                             ->seconds(false)
-                            ->nullable()
-                            ->helperText('Otomatis 30 menit sebelum jam dimulai. Bisa diubah manual. Jika dikosongkan, presensi dibuka saat jam dimulai.')
-                            ->before('start_time'),
+                            ->required()
+                            ->helperText('Waktu dimulainya akses pemindaian presensi scanner.')
+                            ->beforeOrEqual('start_time'),
                         TimePicker::make('start_time')
                             ->label('Jam Dimulai')
                             ->seconds(false)
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                if ($state) {
-                                    $checkinTime = Carbon::parse($state)->subMinutes(30)->format('H:i');
-                                    $set('checkin_open_time', $checkinTime);
-                                }
-                            }),
+                            ->required(),
                         TimePicker::make('end_time')
                             ->label('Jam Berakhir')
                             ->seconds(false)
-                            ->required(),
+                            ->required()
+                            ->after('start_time'),
                         Select::make('level_id')
                             ->label('Tingkat Grup')
                             ->options(function () {
                                 $user = auth()->user();
                                 $query = Level::orderBy('level_number', 'desc');
 
-                                if ($user && $user->group_id && !$user->isSuperAdmin()) {
+                                if ($user && $user->group_id && ! $user->isSuperAdmin()) {
                                     $userLevelNumber = $user->group->level->level_number;
                                     $query->where('level_number', '<=', $userLevelNumber);
                                 }
@@ -101,23 +92,22 @@ class MeetingForm
                                     $component->state($record->group?->level_id);
                                 }
                             })
-                            ->afterStateUpdated(fn(Select $component) => $component->getContainer()->getComponent('group_id')->state(null)),
+                            ->afterStateUpdated(fn (Select $component) => $component->getContainer()->getComponent('group_id')->state(null)),
 
                         Select::make('group_id')
                             ->id('group_id')
                             ->label('Grup Penyelenggara')
                             ->options(
-                                fn(Get $get) =>
-                                Group::query()
-                                    ->when($get('level_id'), fn($query) => $query->where('level_id', $get('level_id')))
-                                    ->when(auth()->user() && auth()->user()->group_id && !auth()->user()->isSuperAdmin(), function ($query) {
+                                fn (Get $get) => Group::query()
+                                    ->when($get('level_id'), fn ($query) => $query->where('level_id', $get('level_id')))
+                                    ->when(auth()->user() && auth()->user()->group_id && ! auth()->user()->isSuperAdmin(), function ($query) {
                                         $groupIds = auth()->user()->group->getAllDescendantIds();
                                         $query->whereIn('id', $groupIds);
                                     })
                                     ->pluck('name', 'id')
                             )
-                            ->disabled(fn(Get $get) => !$get('level_id'))
-                            ->helperText(fn(Get $get) => !$get('level_id') ? 'Pilih Tingkat Grup terlebih dahulu' : null)
+                            ->disabled(fn (Get $get) => ! $get('level_id'))
+                            ->helperText(fn (Get $get) => ! $get('level_id') ? 'Pilih Tingkat Grup terlebih dahulu' : null)
                             ->searchable()
                             ->preload()
                             ->required(),

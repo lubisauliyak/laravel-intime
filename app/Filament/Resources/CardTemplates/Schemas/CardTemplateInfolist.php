@@ -66,6 +66,7 @@ class CardTemplateInfolist
                                         ->placeholder('Belum ada grup penentu')
                                         ->url(function ($state, CardTemplate $record) {
                                             $g = $record->groups->firstWhere('name', $state);
+
                                             return $g ? GroupResource::getUrl('view', ['record' => $g->uid]) : null;
                                         })
                                         ->openUrlInNewTab(),
@@ -86,6 +87,7 @@ class CardTemplateInfolist
                                         ->label('Total Grup Terdampak')
                                         ->state(function (CardTemplate $record) {
                                             $data = static::getUsageData($record);
+
                                             return $data['has_groups']
                                                 ? "{$data['total_groups_count']} Grup"
                                                 : '-';
@@ -98,11 +100,12 @@ class CardTemplateInfolist
                                         ->label('Total Pemegang KTA')
                                         ->state(function (CardTemplate $record) {
                                             $data = static::getUsageData($record);
-                                            if (!$data['has_groups']) {
+                                            if (! $data['has_groups']) {
                                                 return '-';
                                             }
                                             $total = number_format($data['total_members_count'], 0, ',', '.');
                                             $active = number_format($data['active_members_count'], 0, ',', '.');
+
                                             return "{$total} Anggota ({$active} Aktif)";
                                         })
                                         ->badge()
@@ -114,13 +117,14 @@ class CardTemplateInfolist
                                 ->label('Rincian per Tingkat Hierarki')
                                 ->state(function (CardTemplate $record) {
                                     $data = static::getUsageData($record);
-                                    if (!$data['has_groups']) {
+                                    if (! $data['has_groups']) {
                                         return [];
                                     }
                                     $items = [];
                                     foreach ($data['level_breakdown'] as $level => $count) {
                                         $items[] = "{$count} {$level}";
                                     }
+
                                     return $items;
                                 })
                                 ->badge()
@@ -132,6 +136,7 @@ class CardTemplateInfolist
                                 ->label('Wilayah yang Mewarisi (Tingkat Desa / Sub-Induk)')
                                 ->state(function (CardTemplate $record) {
                                     $data = static::getUsageData($record);
+
                                     return $data['sub_regions']->pluck('name')->all();
                                 })
                                 ->badge()
@@ -140,6 +145,7 @@ class CardTemplateInfolist
                                 ->url(function ($state, CardTemplate $record) {
                                     $data = static::getUsageData($record);
                                     $sub = $data['sub_regions']->firstWhere('name', $state);
+
                                     return $sub ? GroupResource::getUrl('view', ['record' => $sub->uid]) : null;
                                 })
                                 ->openUrlInNewTab()

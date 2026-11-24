@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'group_id')) {
+            if (! Schema::hasColumn('users', 'group_id')) {
                 $table->foreignId('group_id')->nullable()->constrained()->nullOnDelete();
             }
-            if (!Schema::hasColumn('users', 'status')) {
+            if (! Schema::hasColumn('users', 'status')) {
                 $table->string('status')->nullable();
             }
-            if (!Schema::hasColumn('users', 'deleted_at')) {
+            if (! Schema::hasColumn('users', 'deleted_at')) {
                 $table->softDeletes();
             }
         });

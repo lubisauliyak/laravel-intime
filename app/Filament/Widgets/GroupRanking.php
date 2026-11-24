@@ -2,24 +2,20 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
 use App\Models\Attendance;
 use App\Models\Group;
 use App\Models\Meeting;
-use App\Models\Member;
-use App\Enums\Gender;
-use App\Enums\AttendanceStatus;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class GroupRanking extends BaseWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static ?int $sort = 12;
@@ -27,13 +23,14 @@ class GroupRanking extends BaseWidget
     protected int|string|array $columnSpan = 'full';
 
     protected ?string $pollingInterval = '30s';
+
     protected static ?string $heading = 'Peringkat Kelompok';
 
     public function table(Table $table): Table
     {
         $filterMeetingId = $this->filters['meeting_id'] ?? null;
 
-        if (!$filterMeetingId) {
+        if (! $filterMeetingId) {
             return $table
                 ->query(Group::whereRaw('1 = 0'))
                 ->columns([
@@ -89,13 +86,15 @@ class GroupRanking extends BaseWidget
                 TextColumn::make('attendance_percentage')
                     ->label('% Hadir')
                     ->getStateUsing(function ($record) {
-                        if ($record->members_count <= 0)
+                        if ($record->members_count <= 0) {
                             return '0%';
+                        }
                         $percentage = ($record->present_count / $record->members_count) * 100;
-                        return number_format($percentage, 1) . '%';
+
+                        return number_format($percentage, 1).'%';
                     })
                     ->badge()
-                    ->color(fn($state) => ((float) $state >= 80) ? 'success' : (((float) $state >= 50) ? 'warning' : 'danger'))
+                    ->color(fn ($state) => ((float) $state >= 80) ? 'success' : (((float) $state >= 50) ? 'warning' : 'danger'))
                     ->alignCenter()
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->orderBy(
@@ -107,7 +106,6 @@ class GroupRanking extends BaseWidget
             ->defaultSort('attendance_percentage', 'desc');
     }
 
-
     private function getRankingQuery($user, ?Meeting $refMeeting, $filterGroupId, $filterLevelId): Builder
     {
         $query = Group::query()->whereHas('members');
@@ -117,36 +115,36 @@ class GroupRanking extends BaseWidget
             $query->whereIn('id', $descendantIds);
         } elseif ($filterLevelId) {
             $query->where('level_id', $filterLevelId);
-        } elseif (!$user->isSuperAdmin() && $user->group_id) {
+        } elseif (! $user->isSuperAdmin() && $user->group_id) {
             $query->whereIn('id', $user->group->getAllDescendantIds());
         }
 
         return $query
-            ->withCount(['members' => fn($q) => $q->where('status', true)])
+            ->withCount(['members' => fn ($q) => $q->where('status', true)])
             ->addSelect([
                 'present_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id'))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id'))
                     ->where('status', AttendanceStatus::HADIR)
-                    ->when($refMeeting, fn($q) => $q->where('meeting_id', $refMeeting->id))
-                    ->when(!$refMeeting, fn($q) => $q->whereRaw('0 = 1')),
+                    ->when($refMeeting, fn ($q) => $q->where('meeting_id', $refMeeting->id))
+                    ->when(! $refMeeting, fn ($q) => $q->whereRaw('0 = 1')),
 
                 'male_present_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::MALE))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::MALE))
                     ->where('status', AttendanceStatus::HADIR)
-                    ->when($refMeeting, fn($q) => $q->where('meeting_id', $refMeeting->id))
-                    ->when(!$refMeeting, fn($q) => $q->whereRaw('0 = 1')),
+                    ->when($refMeeting, fn ($q) => $q->where('meeting_id', $refMeeting->id))
+                    ->when(! $refMeeting, fn ($q) => $q->whereRaw('0 = 1')),
 
                 'female_present_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::FEMALE))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::FEMALE))
                     ->where('status', AttendanceStatus::HADIR)
-                    ->when($refMeeting, fn($q) => $q->where('meeting_id', $refMeeting->id))
-                    ->when(!$refMeeting, fn($q) => $q->whereRaw('0 = 1')),
+                    ->when($refMeeting, fn ($q) => $q->where('meeting_id', $refMeeting->id))
+                    ->when(! $refMeeting, fn ($q) => $q->whereRaw('0 = 1')),
 
                 'excused_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id'))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id'))
                     ->whereIn('status', [AttendanceStatus::IZIN, AttendanceStatus::SAKIT])
-                    ->when($refMeeting, fn($q) => $q->where('meeting_id', $refMeeting->id))
-                    ->when(!$refMeeting, fn($q) => $q->whereRaw('0 = 1')),
+                    ->when($refMeeting, fn ($q) => $q->where('meeting_id', $refMeeting->id))
+                    ->when(! $refMeeting, fn ($q) => $q->whereRaw('0 = 1')),
             ]);
     }
 }

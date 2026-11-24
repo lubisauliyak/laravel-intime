@@ -4,67 +4,61 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\PositionCategory;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class PositionCategoryPolicy
 {
     use HandlesAuthorization;
-    
-    public function viewAny(AuthUser $authUser): bool
+
+    public function viewAny(User $user): bool
     {
-        return $authUser->can('ViewAny:PositionCategory');
+        return true;
     }
 
-    public function view(AuthUser $authUser, PositionCategory $positionCategory): bool
+    public function view(User $user, PositionCategory $positionCategory): bool
     {
-        return $authUser->can('View:PositionCategory');
+        return true;
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(User $user): bool
     {
-        return $authUser->can('Create:PositionCategory');
+        return false;
     }
 
-    public function update(AuthUser $authUser, PositionCategory $positionCategory): bool
+    public function update(User $user, PositionCategory $positionCategory): bool
     {
-        return $authUser->can('Update:PositionCategory');
+        return false;
     }
 
-    public function delete(AuthUser $authUser, PositionCategory $positionCategory): bool
+    public function delete(User $user, PositionCategory $positionCategory): bool
     {
-        return $authUser->can('Delete:PositionCategory');
+        return false;
     }
 
-    public function restore(AuthUser $authUser, PositionCategory $positionCategory): bool
+    public function restore(User $user, PositionCategory $positionCategory): bool
     {
-        return $authUser->can('Restore:PositionCategory');
+        return false;
     }
 
-    public function forceDelete(AuthUser $authUser, PositionCategory $positionCategory): bool
+    public function forceDelete(User $user, PositionCategory $positionCategory): bool
     {
-        return $authUser->can('ForceDelete:PositionCategory');
+        return false;
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $authUser->can('ForceDeleteAny:PositionCategory');
+        return false;
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(User $user): bool
     {
-        return $authUser->can('RestoreAny:PositionCategory');
+        return false;
     }
 
-    public function replicate(AuthUser $authUser, PositionCategory $positionCategory): bool
+    public function replicate(User $user, PositionCategory $positionCategory): bool
     {
-        return $authUser->can('Replicate:PositionCategory');
+        return false;
     }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:PositionCategory');
-    }
-
 }

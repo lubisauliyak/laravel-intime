@@ -2,40 +2,46 @@
 
 namespace App\Exports\Sheets;
 
-use App\Models\Member;
-use App\Models\Meeting;
+use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
+use App\Enums\MeetingTargetGender;
 use App\Models\Group;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use App\Models\Meeting;
+use App\Models\Member;
+use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Events\BeforeSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use Illuminate\Support\Carbon;
-use App\Enums\Gender;
-use App\Enums\AttendanceStatus;
-use App\Enums\MeetingTargetGender;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithEvents, WithCustomStartCell
+class GroupMemberRekapitulasiSheet implements FromCollection, WithColumnWidths, WithCustomStartCell, WithEvents, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     use Exportable;
 
     protected Group $group;
+
     protected $filters;
+
     protected ?array $memberIds;
+
     protected $rowCount = 0;
+
     protected $meetings;
+
     protected $lastCollection;
+
     protected $ageGroupsCount;
 
     // Fixed columns count: No, ID, Nama, L/P, Kelompok, Kategori Usia, Pertemuan, Hadir, Telat, Izin, Sakit, Tidak Hadir, % Kehadiran = 13
@@ -76,10 +82,10 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
             ->with('group')
             ->whereIn('group_id', $groupIds)
             ->when($levelId, function ($q) use ($levelId) {
-                $q->whereHas('group', fn($g) => $g->where('level_id', $levelId));
+                $q->whereHas('group', fn ($g) => $g->where('level_id', $levelId));
             })
-            ->when($from, fn($q) => $q->whereDate('meeting_date', '>=', $from))
-            ->when($until, fn($q) => $q->whereDate('meeting_date', '<=', $until));
+            ->when($from, fn ($q) => $q->whereDate('meeting_date', '>=', $from))
+            ->when($until, fn ($q) => $q->whereDate('meeting_date', '<=', $until));
 
         return $query->orderBy('meeting_date', 'asc')->get();
     }
@@ -106,8 +112,8 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
             ->leftJoin('groups as parents', 'groups.parent_id', '=', 'parents.id')
             ->whereIn('members.group_id', $descendantIds)
             ->where('members.status', true)
-            ->when($this->memberIds !== null, fn($q) => $q->whereIn('members.id', $this->memberIds))
-            ->when($ageGroupIds, fn($q) => $q->whereIn('members.age_group_id', $ageGroupIds))
+            ->when($this->memberIds !== null, fn ($q) => $q->whereIn('members.id', $this->memberIds))
+            ->when($ageGroupIds, fn ($q) => $q->whereIn('members.age_group_id', $ageGroupIds))
             ->with(['group.level', 'group.parent', 'ageGroup', 'attendances.meeting.group'])
             ->orderBy('parents.name', 'asc')
             ->orderBy('groups.name', 'asc')
@@ -135,7 +141,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
         ];
 
         foreach ($this->meetings as $meeting) {
-            $headers[] = $meeting->meeting_date->format('d/m/y') . "\n" . $meeting->name;
+            $headers[] = $meeting->meeting_date->format('d/m/y')."\n".$meeting->name;
         }
 
         return $headers;
@@ -156,7 +162,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
         }
 
         // 1. Calculate Total Sessions (Targeted) from pre-fetched meetings in-memory
-        $totalSessions = $this->meetings->filter(fn($m) => $this->isMemberTargetForMeeting($member, $m))->count();
+        $totalSessions = $this->meetings->filter(fn ($m) => $this->isMemberTargetForMeeting($member, $m))->count();
 
         // 2. Get all attendances from pre-loaded relation in-memory
         $attendances = $member->attendances->filter(function ($att) use ($levelId, $from, $until) {
@@ -169,6 +175,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
             if ($until && Carbon::parse($att->checkin_time)->format('Y-m-d') > $until) {
                 return false;
             }
+
             return true;
         });
 
@@ -183,7 +190,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
         foreach ($attendances as $attendance) {
             if ($attendance->status === AttendanceStatus::HADIR) {
                 $hadir++;
-                if ($attendance->meeting && $attendance->checkin_time > Carbon::parse($attendance->meeting->meeting_date)->format('Y-m-d') . ' ' . Carbon::parse($attendance->meeting->start_time)->format('H:i:s')) {
+                if ($attendance->meeting && $attendance->checkin_time > Carbon::parse($attendance->meeting->meeting_date)->format('Y-m-d').' '.Carbon::parse($attendance->meeting->start_time)->format('H:i:s')) {
                     $telat++;
                 }
             } elseif ($attendance->status === AttendanceStatus::IZIN) {
@@ -194,7 +201,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
         }
 
         $tidakHadir = max(0, $total - $hadir - $izin - $sakit);
-        $rate = $total > 0 ? number_format(($hadir / $total) * 100, 1) . '%' : '0%';
+        $rate = $total > 0 ? number_format(($hadir / $total) * 100, 1).'%' : '0%';
 
         $row = [
             $this->rowCount,
@@ -224,7 +231,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
                     AttendanceStatus::SAKIT => 'S',
                     default => '',
                 };
-            } elseif (!$isTarget) {
+            } elseif (! $isTarget) {
                 $row[] = '-'; // Non-target and no attendance
             } else {
                 $row[] = ''; // Target but no attendance record (Alpa)
@@ -238,7 +245,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
     {
         // 1. Group check
         $memberGroupAncestors = array_merge([$member->group_id], $member->group->getAllAncestorIds());
-        if (!in_array($meeting->group_id, $memberGroupAncestors)) {
+        if (! in_array($meeting->group_id, $memberGroupAncestors)) {
             return false;
         }
 
@@ -255,10 +262,10 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
         }
 
         // 4. Age Group check
-        if (!empty($meeting->target_age_groups)) {
+        if (! empty($meeting->target_age_groups)) {
             if ($member->ageGroup) {
                 if (count((array) $meeting->target_age_groups) < $this->ageGroupsCount) {
-                    if (!in_array($member->ageGroup->name, (array) $meeting->target_age_groups)) {
+                    if (! in_array($member->ageGroup->name, (array) $meeting->target_age_groups)) {
                         return false;
                     }
                 }
@@ -340,7 +347,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
                 $lastColNum = $this->fixedColCount + count($this->meetings);
                 $lastColLetter = Coordinate::stringFromColumnIndex($lastColNum);
 
-                $sheet->setCellValue('A1', 'REKAPITULASI KEHADIRAN ANGGOTA - ' . $this->group->name);
+                $sheet->setCellValue('A1', 'REKAPITULASI KEHADIRAN ANGGOTA - '.$this->group->name);
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
                 $from = data_get($this->filters, 'date_range.date_from');
@@ -348,16 +355,16 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
 
                 $periodeText = 'Semua Waktu';
                 if ($from && $until) {
-                    $periodeText = Carbon::parse($from)->translatedFormat('d F Y') . ' s.d ' . Carbon::parse($until)->translatedFormat('d F Y');
+                    $periodeText = Carbon::parse($from)->translatedFormat('d F Y').' s.d '.Carbon::parse($until)->translatedFormat('d F Y');
                 } elseif ($from) {
-                    $periodeText = 'Mulai ' . Carbon::parse($from)->translatedFormat('d F Y');
+                    $periodeText = 'Mulai '.Carbon::parse($from)->translatedFormat('d F Y');
                 } elseif ($until) {
-                    $periodeText = 'Sampai ' . Carbon::parse($until)->translatedFormat('d F Y');
+                    $periodeText = 'Sampai '.Carbon::parse($until)->translatedFormat('d F Y');
                 }
 
                 $sheet->setCellValue('A2', "Periode: {$periodeText}");
-                $sheet->setCellValue('A3', "Dicetak oleh: " . auth()->user()->name);
-                $sheet->setCellValue('A4', "");
+                $sheet->setCellValue('A3', 'Dicetak oleh: '.auth()->user()->name);
+                $sheet->setCellValue('A4', '');
             },
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
@@ -373,7 +380,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
                     foreach ($this->lastCollection as $member) {
                         $colIdx = $this->fixedColCount + 1;
                         foreach ($this->meetings as $meeting) {
-                            $cell = Coordinate::stringFromColumnIndex($colIdx) . $rowIdx;
+                            $cell = Coordinate::stringFromColumnIndex($colIdx).$rowIdx;
 
                             $val = $sheet->getCell($cell)->getValue();
                             $isTarget = $this->isMemberTargetForMeeting($member, $meeting);
@@ -388,7 +395,7 @@ class GroupMemberRekapitulasiSheet implements FromCollection, WithTitle, WithHea
                             }
 
                             // If not target, apply gray background
-                            if (!$isTarget) {
+                            if (! $isTarget) {
                                 $sheet->getStyle($cell)->getFill()
                                     ->setFillType(Fill::FILL_SOLID)
                                     ->getStartColor()->setARGB('FFBFBFBF');

@@ -2,13 +2,12 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\UserRole;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
-use App\Enums\UserRole;
+use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 
 class UserForm
@@ -43,7 +42,7 @@ class UserForm
                         titleAttribute: 'groups.name',
                         modifyQueryUsing: function (Builder $query) {
                             $user = auth()->user();
-                            
+
                             $query->where('groups.status', true)
                                 ->leftJoin('groups as parents', 'groups.parent_id', '=', 'parents.id')
                                 ->join('levels', 'groups.level_id', '=', 'levels.id')
@@ -51,20 +50,13 @@ class UserForm
                                 ->orderBy('levels.level_number', 'desc')
                                 ->orderBy('parents.name', 'asc')
                                 ->orderBy('groups.name', 'asc');
-                            
+
                             // Super Admin can see all active groups
                             if ($user->isSuperAdmin()) {
                                 return $query;
                             }
-                            
-                            // Admin/Operator can only see their own group or groups below them
-                            if ($user->group_id) {
-                                $descendantIds = $user->group->getAllDescendantIds();
-                                return $query->whereIn('groups.id', $descendantIds);
-                            }
-                            
-                            // If user has no group and not super admin, show no groups
-                            return $query->whereRaw('1 = 0');
+
+                            return $query->whereIn('groups.id', $user->getManageableGroupIds());
                         }
                     )
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->full_name)
@@ -82,11 +74,11 @@ class UserForm
                         $user = auth()->user();
                         $options = collect(UserRole::cases());
 
-                        if (!$user->isSuperAdmin()) {
-                            $options = $options->filter(fn($role) => $role !== UserRole::SUPER_ADMIN);
+                        if (! $user->isSuperAdmin()) {
+                            $options = $options->filter(fn ($role) => $role !== UserRole::SUPER_ADMIN);
                         }
 
-                        return $options->mapWithKeys(fn($role) => [$role->value => $role->getLabel()])->toArray();
+                        return $options->mapWithKeys(fn ($role) => [$role->value => $role->getLabel()])->toArray();
                     })
                     ->disabled(fn () => auth()->user()->isOperator())
                     ->dehydrated()

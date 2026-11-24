@@ -2,24 +2,24 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Attendance;
 use App\Enums\AttendanceStatus;
-use App\Models\Member;
-use App\Models\Meeting;
+use App\Models\Attendance;
 use App\Models\Group;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
+use App\Models\Meeting;
+use App\Models\Member;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Cache;
 
 class AttendanceOverview extends StatsOverviewWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
+
     protected static ?int $sort = 1;
+
     protected int|string|array $columnSpan = 'full';
 
     /**
@@ -30,11 +30,11 @@ class AttendanceOverview extends StatsOverviewWidget
     protected function getPollingInterval(): ?string
     {
         $refMeeting = $this->getMeetingRecord();
-        if (!$refMeeting) {
+        if (! $refMeeting) {
             return null;
         }
 
-        if ($refMeeting->meeting_date?->isToday() && !$refMeeting->isExpired()) {
+        if ($refMeeting->meeting_date?->isToday() && ! $refMeeting->isExpired()) {
             return '15s';
         }
 
@@ -44,7 +44,7 @@ class AttendanceOverview extends StatsOverviewWidget
     protected function getMeetingRecord(): ?Meeting
     {
         $filterMeetingId = $this->filters['meeting_id'] ?? $this->pageFilters['meeting_id'] ?? null;
-        if (!$filterMeetingId) {
+        if (! $filterMeetingId) {
             return null;
         }
 
@@ -56,8 +56,8 @@ class AttendanceOverview extends StatsOverviewWidget
         $heading = 'Ringkasan Kehadiran';
         $meeting = $this->getMeetingRecord();
         if ($meeting) {
-            $heading .= ' - ' . $meeting->name;
-            if ($meeting->meeting_date?->isToday() && !$meeting->isExpired()) {
+            $heading .= ' - '.$meeting->name;
+            if ($meeting->meeting_date?->isToday() && ! $meeting->isExpired()) {
                 $heading .= ' (Live)';
             }
         }
@@ -69,7 +69,7 @@ class AttendanceOverview extends StatsOverviewWidget
     {
         $refMeeting = $this->getMeetingRecord();
 
-        if (!$refMeeting) {
+        if (! $refMeeting) {
             return [
                 Stat::make('Belum Ada Data', '—')
                     ->description('Silakan pilih pertemuan pada filter di atas')
@@ -81,11 +81,11 @@ class AttendanceOverview extends StatsOverviewWidget
         $user = auth()->user();
         $isToday = $refMeeting->meeting_date && $refMeeting->meeting_date->isToday();
         $isExpired = $refMeeting->isExpired();
-        $isActive = $isToday && !$isExpired;
+        $isActive = $isToday && ! $isExpired;
 
         // Multi-tier cache TTL: 15 detik jika aktif berjalan (sinkron dengan polling), 1 jam jika sesi selesai/lampau
         $cacheTtl = $isActive ? 15 : 3600;
-        $cacheKey = 'attendance_overview_' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'attendance_overview_'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, $cacheTtl, function () use ($user, $refMeeting, $isToday, $isExpired, $isActive) {
             $filterGroupId = $this->filters['group_id'] ?? null;
@@ -95,31 +95,31 @@ class AttendanceOverview extends StatsOverviewWidget
             $descendantIds = null;
             if ($filterGroupId) {
                 $descendantIds = Group::find($filterGroupId)?->getAllDescendantIds() ?? [];
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
                 $descendantIds = $user->group->getAllDescendantIds();
             }
 
             // 1. Populasi dasar target (cache 5 menit agar tidak membebani DB berulang kali tiap poll)
-            $popCacheKey = 'attendance_base_pop_' . ($refMeeting->id) . '_' . ($filterGroupId ?? '0') . '_' . ($filterLevelId ?? '0') . '_' . ($user->group_id ?? 'all');
-            $totalBaseMembers = Cache::remember($popCacheKey, 300, function () use ($user, $descendantIds, $filterLevelId, $refMeeting) {
+            $popCacheKey = 'attendance_base_pop_'.($refMeeting->id).'_'.($filterGroupId ?? '0').'_'.($filterLevelId ?? '0').'_'.($user->group_id ?? 'all');
+            $totalBaseMembers = Cache::remember($popCacheKey, 300, function () use ($descendantIds, $filterLevelId, $refMeeting) {
                 $memberQuery = Member::where('status', true);
 
                 if ($descendantIds !== null) {
                     $memberQuery->whereIn('group_id', $descendantIds);
                 } elseif ($filterLevelId) {
-                    $memberQuery->whereHas('group', fn($q) => $q->where('level_id', $filterLevelId));
+                    $memberQuery->whereHas('group', fn ($q) => $q->where('level_id', $filterLevelId));
                 }
 
                 if ($refMeeting->target_gender !== \App\Enums\MeetingTargetGender::ALL) {
                     $memberQuery->where('gender', $refMeeting->target_gender->value);
                 }
 
-                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => \App\Models\AgeGroup::count());
+                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn () => \App\Models\AgeGroup::count());
                 $selectedAgeGroupsCount = empty($refMeeting->target_age_groups) ? 0 : count($refMeeting->target_age_groups);
                 $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
                 if ($shouldFilterByAge) {
-                    $memberQuery->whereHas('ageGroup', fn($q) => $q->whereIn('name', (array) $refMeeting->target_age_groups));
+                    $memberQuery->whereHas('ageGroup', fn ($q) => $q->whereIn('name', (array) $refMeeting->target_age_groups));
                 }
 
                 return $memberQuery->count();
@@ -129,9 +129,9 @@ class AttendanceOverview extends StatsOverviewWidget
             $attendanceQuery = Attendance::query()->where('meeting_id', $refMeeting->id);
 
             if ($descendantIds !== null) {
-                $attendanceQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds));
+                $attendanceQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds));
             } elseif ($filterLevelId) {
-                $attendanceQuery->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
+                $attendanceQuery->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
             }
 
             // Filter target audience
@@ -140,12 +140,12 @@ class AttendanceOverview extends StatsOverviewWidget
                     $q->where('gender', $refMeeting->target_gender->value);
                 }
 
-                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn() => \App\Models\AgeGroup::count());
+                $allAgeGroupsCount = Cache::remember('all_age_groups_count', 3600, fn () => \App\Models\AgeGroup::count());
                 $selectedAgeGroupsCount = empty($refMeeting->target_age_groups) ? 0 : count($refMeeting->target_age_groups);
                 $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
                 if ($shouldFilterByAge) {
-                    $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', (array) $refMeeting->target_age_groups));
+                    $q->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', (array) $refMeeting->target_age_groups));
                 }
             });
 
@@ -154,7 +154,7 @@ class AttendanceOverview extends StatsOverviewWidget
 
             // Non-target yang hadir atau izin/sakit
             $nonTargetAttendedCount = (clone $attendanceQuery)
-                ->whereHas('member', fn($m) => $m->where('status', false))
+                ->whereHas('member', fn ($m) => $m->where('status', false))
                 ->whereIn('status', [AttendanceStatus::HADIR, AttendanceStatus::IZIN, AttendanceStatus::SAKIT])
                 ->count();
 
@@ -162,7 +162,7 @@ class AttendanceOverview extends StatsOverviewWidget
 
             // Target dasar yang hadir atau izin/sakit
             $targetAttendedCount = (clone $attendanceQuery)
-                ->whereHas('member', fn($m) => $m->where('status', true))
+                ->whereHas('member', fn ($m) => $m->where('status', true))
                 ->whereIn('status', [AttendanceStatus::HADIR, AttendanceStatus::IZIN, AttendanceStatus::SAKIT])
                 ->count();
 
@@ -172,9 +172,9 @@ class AttendanceOverview extends StatsOverviewWidget
             // 3. Pengurus Hadir
             $allAttendanceQuery = Attendance::where('meeting_id', $refMeeting->id);
             if ($descendantIds !== null) {
-                $allAttendanceQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds));
+                $allAttendanceQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds));
             } elseif ($filterLevelId) {
-                $allAttendanceQuery->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
+                $allAttendanceQuery->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
             }
 
             $pengurusAttendanceQuery = (clone $allAttendanceQuery)->whereHas('member', function ($q) {
@@ -185,9 +185,9 @@ class AttendanceOverview extends StatsOverviewWidget
             $totalPengurusHadir = $pengurusAttendanceQuery->count();
 
             $pengurusBukanTarget = 0;
-            if (!empty($refMeeting->target_age_groups)) {
+            if (! empty($refMeeting->target_age_groups)) {
                 $pengurusBukanTarget = (clone $pengurusAttendanceQuery)
-                    ->whereHas('member.ageGroup', fn($q) => $q->whereNotIn('name', (array) $refMeeting->target_age_groups))
+                    ->whereHas('member.ageGroup', fn ($q) => $q->whereNotIn('name', (array) $refMeeting->target_age_groups))
                     ->count();
             }
 
@@ -203,7 +203,7 @@ class AttendanceOverview extends StatsOverviewWidget
 
             // Label Logic
             $presensiLabel = AttendanceStatus::HADIR->getLabel();
-            $belumHadirLabel = ($isToday && !$isExpired) ? 'Belum Hadir' : 'Tidak Hadir';
+            $belumHadirLabel = ($isToday && ! $isExpired) ? 'Belum Hadir' : 'Tidak Hadir';
             $terlambatLabel = 'Terlambat';
             $populasiLabel = 'Target Populasi';
             $rasioLabel = 'Rasio Kehadiran';
@@ -218,7 +218,7 @@ class AttendanceOverview extends StatsOverviewWidget
                     ->color('success'),
 
                 Stat::make($belumHadirLabel, number_format($notAttendedCount, 0, ',', '.'))
-                    ->description(($isToday && !$isExpired) ? 'Estimasi yang akan datang' : 'Tidak hadir tanpa keterangan')
+                    ->description(($isToday && ! $isExpired) ? 'Estimasi yang akan datang' : 'Tidak hadir tanpa keterangan')
                     ->descriptionIcon('heroicon-m-user-minus')
                     ->chart($trends['tidak_hadir'])
                     ->color($notAttendedCount > 0 ? ($isExpired ? 'danger' : 'warning') : 'gray'),
@@ -235,7 +235,7 @@ class AttendanceOverview extends StatsOverviewWidget
                     ->chart($trends['populasi'])
                     ->color('primary'),
 
-                Stat::make($rasioLabel, number_format($attendanceRate, 1) . '%')
+                Stat::make($rasioLabel, number_format($attendanceRate, 1).'%')
                     ->description('Persentase tingkat kehadiran')
                     ->descriptionIcon('heroicon-m-presentation-chart-line')
                     ->chart($trends['rasio'])
@@ -296,17 +296,17 @@ class AttendanceOverview extends StatsOverviewWidget
         }
 
         // Cache data historis 30 menit (pertemuan lampau bersifat statis)
-        $historyCacheKey = 'sparkline_hist_' . $groupId . '_' . implode('-', $pastMeetingIds) . '_' . ($descendantIds ? implode(',', $descendantIds) : ($filterLevelId ?? 'all'));
+        $historyCacheKey = 'sparkline_hist_'.$groupId.'_'.implode('-', $pastMeetingIds).'_'.($descendantIds ? implode(',', $descendantIds) : ($filterLevelId ?? 'all'));
 
         $historyData = Cache::remember($historyCacheKey, 1800, function () use ($pastMeetingIds, $descendantIds, $filterLevelId, $user) {
             $baseQuery = Attendance::whereIn('meeting_id', $pastMeetingIds);
 
             if ($descendantIds !== null) {
-                $baseQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds));
+                $baseQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds));
             } elseif ($filterLevelId) {
-                $baseQuery->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
-            } elseif (!$user->isSuperAdmin() && $user->group_id) {
-                $baseQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
+                $baseQuery->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
+            } elseif (! $user->isSuperAdmin() && $user->group_id) {
+                $baseQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', $user->group->getAllDescendantIds()));
             }
 
             // 1 query agregasi cepat untuk hadir dan terlambat

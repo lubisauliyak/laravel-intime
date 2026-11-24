@@ -5,7 +5,7 @@ namespace App\Enums;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
 
-enum MembershipType: string implements HasLabel, HasColor
+enum MembershipType: string implements HasColor, HasLabel
 {
     case ANGGOTA = 'anggota';
     case PENGURUS = 'pengurus';

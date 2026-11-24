@@ -2,26 +2,25 @@
 
 namespace App\Filament\Resources\Groups;
 
-use App\Filament\Resources\Groups\Pages\ManageGroups;
-use App\Filament\Resources\Groups\Pages\ImportGroups;
-use App\Filament\Resources\Groups\Pages\ViewGroup;
-use App\Filament\Resources\Groups\Pages\GroupMemberActivity;
 use App\Filament\Resources\Groups\Pages\GroupMeetingHistory;
+use App\Filament\Resources\Groups\Pages\GroupMemberActivity;
+use App\Filament\Resources\Groups\Pages\ImportGroups;
+use App\Filament\Resources\Groups\Pages\ManageGroups;
+use App\Filament\Resources\Groups\Pages\ViewGroup;
 use App\Filament\Resources\Groups\Schemas\GroupForm;
 use App\Filament\Resources\Groups\Schemas\GroupInfolist;
 use App\Filament\Resources\Groups\Tables\GroupsTable;
 use App\Models\Group;
 use App\Models\Level;
 use BackedEnum;
-use UnitEnum;
-use Filament\Resources\Resource;
 use Filament\Pages\Enums\SubNavigationPosition;
+use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use UnitEnum;
 
 class GroupResource extends Resource
 {
@@ -43,8 +42,6 @@ class GroupResource extends Resource
 
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
-
-
     public static function form(Schema $schema): Schema
     {
         return GroupForm::configure($schema);
@@ -58,22 +55,22 @@ class GroupResource extends Resource
     public static function canCreate(): bool
     {
         $user = auth()->user();
-        
+
         // Super Admin can always create
         if ($user->isSuperAdmin()) {
             return true;
         }
-        
+
         // Check if user has a group with a level
         $userLevelNumber = $user->group?->level?->level_number;
-        
-        if (!$userLevelNumber) {
+
+        if (! $userLevelNumber) {
             return false;
         }
-        
+
         // Check if there are any levels below the user's level
         $lowestLevelNumber = Level::min('level_number');
-        
+
         // If user is at the lowest level, they cannot create groups
         return $userLevelNumber > $lowestLevelNumber;
     }
@@ -100,19 +97,19 @@ class GroupResource extends Resource
         ]);
         $user = auth()->user();
 
-        if ($user && !$user->isSuperAdmin()) {
+        if ($user && ! $user->isSuperAdmin()) {
             if ($user->group_id && $user->group) {
                 $descendantIds = $user->group->getAllDescendantIds();
                 $ancestorIds = $user->group->getAllAncestorIds();
-                
+
                 $query->where(function ($q) use ($descendantIds, $ancestorIds) {
                     // Show all descendants (including potential inactive ones the admin might need to fix)
                     $q->whereIn('id', $descendantIds)
                       // But only show active ancestors
-                      ->orWhere(function ($sq) use ($ancestorIds) {
-                          $sq->whereIn('id', $ancestorIds)
-                             ->where('status', true);
-                      });
+                        ->orWhere(function ($sq) use ($ancestorIds) {
+                            $sq->whereIn('id', $ancestorIds)
+                                ->where('status', true);
+                        });
                 });
             } else {
                 $query->whereRaw('1 = 0');
@@ -148,7 +145,7 @@ class GroupResource extends Resource
     public static function getGroupStats(): array
     {
         $user = auth()->user();
-        $cacheKey = 'group_stats_' . ($user?->id ?? 'guest') . '_' . ($user?->group_id ?? 'all');
+        $cacheKey = 'group_stats_'.($user?->id ?? 'guest').'_'.($user?->group_id ?? 'all');
 
         return Cache::remember($cacheKey, 60, function () use ($user) {
             $thirtyDaysAgo = now()->subDays(30)->toDateTimeString();
@@ -184,7 +181,7 @@ class GroupResource extends Resource
                 ->whereNull('meetings.deleted_at')
                 ->where('meetings.meeting_date', '>=', $sixtyDaysAgo);
 
-            if ($user && !$user->isSuperAdmin()) {
+            if ($user && ! $user->isSuperAdmin()) {
                 if ($user->group_id && $user->group) {
                     $descendantIds = $user->group->getAllDescendantIds();
                     $ancestorIds = $user->group->getAllAncestorIds();
@@ -219,7 +216,7 @@ class GroupResource extends Resource
                 max(1, (int) round($total * 0.85)),
                 max(1, (int) round($total * 0.92)),
                 max(1, (int) round($total * 0.97)),
-                $total
+                $total,
             ];
 
             $activeChart = [
@@ -228,7 +225,7 @@ class GroupResource extends Resource
                 max(1, (int) round($activeCount * 0.9)),
                 max(1, (int) round($activeCount * 0.85)),
                 max(1, (int) round($activeCount * 0.95)),
-                $activeCount
+                $activeCount,
             ];
 
             $inactiveChart = [
@@ -237,7 +234,7 @@ class GroupResource extends Resource
                 (int) round($inactiveCount * 1.0),
                 (int) round($inactiveCount * 0.98),
                 (int) round($inactiveCount * 1.02),
-                $inactiveCount
+                $inactiveCount,
             ];
 
             return [

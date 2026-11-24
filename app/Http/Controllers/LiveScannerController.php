@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Meeting;
-use App\Models\Member;
-use App\Models\Attendance;
+use App\Enums\AttendanceMethod;
+use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
 use App\Enums\MeetingTargetGender;
 use App\Enums\MembershipType;
-use App\Enums\AttendanceStatus;
-use App\Enums\AttendanceMethod;
-use App\Enums\Gender;
+use App\Models\Attendance;
+use App\Models\Meeting;
+use App\Models\Member;
 use Illuminate\Http\Request;
 
 class LiveScannerController extends Controller
@@ -38,16 +38,17 @@ class LiveScannerController extends Controller
         $code = $request->code;
         $member = Member::where('member_code', $code)->first();
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Kode QR '$code' tidak terdaftar."
+                'message' => "Kode QR '$code' tidak terdaftar.",
             ]);
         }
 
         $validation = $this->checkMemberEligibility($meeting, $member);
-        if ($validation)
+        if ($validation) {
             return $validation;
+        }
 
         $existing = Attendance::where('meeting_id', $meeting->id)
             ->where('member_id', $member->id)
@@ -56,7 +57,7 @@ class LiveScannerController extends Controller
         if ($existing) {
             return response()->json([
                 'status' => 'warning',
-                'message' => "{$member->full_name} sudah diabsen jam " . ($existing->checkin_time?->format('H:i') ?? '-')
+                'message' => "{$member->full_name} sudah diabsen jam ".($existing->checkin_time?->format('H:i') ?? '-'),
             ]);
         }
 
@@ -72,13 +73,13 @@ class LiveScannerController extends Controller
         $allAgeGroupsCount = \App\Models\AgeGroup::count();
         $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
         $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
-        $isTargetAge = !$shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
+        $isTargetAge = ! $shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
 
         $isDirectTarget = $isTargetGroup && $isTargetGender && $isTargetAge;
 
         // Supervisor who is NOT a direct target gets the badge and bypasses late status
-        $isSupervisorNotDirectTarget = $isSupervisor && !$isDirectTarget;
-        $notes = ($isLate && !$isSupervisorNotDirectTarget) ? 'TERLAMBAT' : null;
+        $isSupervisorNotDirectTarget = $isSupervisor && ! $isDirectTarget;
+        $notes = ($isLate && ! $isSupervisorNotDirectTarget) ? 'TERLAMBAT' : null;
 
         try {
             Attendance::create([
@@ -100,10 +101,10 @@ class LiveScannerController extends Controller
             throw $e;
         }
 
-        $label = $isSupervisorNotDirectTarget ? " [PENGURUS]" : "";
+        $label = $isSupervisorNotDirectTarget ? ' [PENGURUS]' : '';
         $message = "Hadir: {$member->full_name}{$label}";
-        if ($isLate && !$isSupervisorNotDirectTarget) {
-            $message .= " (TERLAMBAT)";
+        if ($isLate && ! $isSupervisorNotDirectTarget) {
+            $message .= ' (TERLAMBAT)';
         }
 
         return response()->json([
@@ -112,18 +113,19 @@ class LiveScannerController extends Controller
             'name' => $member->full_name,
             'time' => now()->format('H:i'),
             'is_late' => $isLate,
-            'is_supervisor_badge' => $isSupervisorNotDirectTarget
+            'is_supervisor_badge' => $isSupervisorNotDirectTarget,
         ]);
     }
 
     private function checkMemberEligibility(Meeting $meeting, Member $member)
     {
         // 1. Validation: Meeting date must be today
-        if (!$meeting->meeting_date->isToday()) {
+        if (! $meeting->meeting_date->isToday()) {
             $dateLabel = $meeting->meeting_date->translatedFormat('l, d F Y');
+
             return response()->json([
                 'status' => 'error',
-                'message' => "Pertemuan ini dijadwalkan pada {$dateLabel}."
+                'message' => "Pertemuan ini dijadwalkan pada {$dateLabel}.",
             ]);
         }
 
@@ -134,7 +136,7 @@ class LiveScannerController extends Controller
             if (now()->isBefore($openDateTime)) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Presensi belum dibuka. Presensi dibuka mulai jam {$openTime->format('H:i')}."
+                    'message' => "Presensi belum dibuka. Presensi dibuka mulai jam {$openTime->format('H:i')}.",
                 ]);
             }
         }
@@ -143,7 +145,7 @@ class LiveScannerController extends Controller
         if ($meeting->meeting_date->copy()->setTimeFrom($meeting->end_time)->isPast()) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Sesi presensi untuk pertemuan ini sudah berakhir."
+                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.',
             ]);
         }
 
@@ -151,7 +153,7 @@ class LiveScannerController extends Controller
         if ($member->trashed()) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Anggota {$member->full_name} sudah tidak aktif (dihapus)."
+                'message' => "Anggota {$member->full_name} sudah tidak aktif (dihapus).",
             ]);
         }
 
@@ -160,37 +162,38 @@ class LiveScannerController extends Controller
         $canBypassFilters = $isSupervisor;
 
         // 6. Validation: Group Hierarchy (Bypassed by Supervisors)
-        if (!$canBypassFilters) {
+        if (! $canBypassFilters) {
             $allowedGroupIds = $meeting->group->getAllDescendantIds();
-            if (!in_array($member->group_id, $allowedGroupIds)) {
+            if (! in_array($member->group_id, $allowedGroupIds)) {
                 return response()->json([
                     'status' => 'warning',
-                    'message' => "{$member->full_name} bukan anggota {$meeting->group->name} atau turunannya."
+                    'message' => "{$member->full_name} bukan anggota {$meeting->group->name} atau turunannya.",
                 ]);
             }
         }
 
         // 7. Validation: Target Gender (Bypassed by Pengurus)
-        if (!$canBypassFilters && $meeting->target_gender !== MeetingTargetGender::ALL && $member->gender !== $meeting->target_gender) {
+        if (! $canBypassFilters && $meeting->target_gender !== MeetingTargetGender::ALL && $member->gender !== $meeting->target_gender) {
             $targetLabel = $meeting->target_gender->getLabel();
+
             return response()->json([
                 'status' => 'warning',
-                'message' => "Pertemuan ini hanya untuk $targetLabel."
+                'message' => "Pertemuan ini hanya untuk $targetLabel.",
             ]);
         }
 
         // 8. Validation: Target Age Groups (Bypassed by Pengurus)
-        if (!$canBypassFilters && !empty($meeting->target_age_groups)) {
+        if (! $canBypassFilters && ! empty($meeting->target_age_groups)) {
             $allAgeGroupsCount = \App\Models\AgeGroup::count();
             $selectedAgeGroupsCount = count($meeting->target_age_groups);
             $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
             if ($shouldFilterByAge) {
                 $memberAgeGroupName = $member->ageGroup?->name;
-                if (!in_array($memberAgeGroupName, (array) $meeting->target_age_groups)) {
+                if (! in_array($memberAgeGroupName, (array) $meeting->target_age_groups)) {
                     return response()->json([
                         'status' => 'warning',
-                        'message' => "Kategori usia ({$memberAgeGroupName}) tidak sesuai target pertemuan."
+                        'message' => "Kategori usia ({$memberAgeGroupName}) tidak sesuai target pertemuan.",
                     ]);
                 }
             }
@@ -198,7 +201,6 @@ class LiveScannerController extends Controller
 
         return null; // OK
     }
-
 
     public function search(Request $request, Meeting $meeting)
     {
@@ -251,10 +253,10 @@ class LiveScannerController extends Controller
                     })
                         // Option B: Supervisors (Authority in meeting group or ancestors)
                         ->orWhere(function ($pq) use ($supervisorGroupIds, $supervisorMemberIds) {
-                        $pq->where('membership_type', MembershipType::PENGURUS->value)
-                            ->whereIn('group_id', $supervisorGroupIds)
-                            ->orWhereIn('id', $supervisorMemberIds);
-                    });
+                            $pq->where('membership_type', MembershipType::PENGURUS->value)
+                                ->whereIn('group_id', $supervisorGroupIds)
+                                ->orWhereIn('id', $supervisorMemberIds);
+                        });
                 })
                 ->when(empty($groupIdFilter), function ($q) {
                     $q->limit(10);
@@ -274,7 +276,7 @@ class LiveScannerController extends Controller
                     // In-memory evaluation without N+1 query or hierarchy recursion
                     $isSupervisor = ($m->membership_type === MembershipType::PENGURUS && in_array($m->group_id, $supervisorGroupIds))
                         || in_array($m->id, $supervisorMemberIds);
-                    $label = (!$isDirectTarget && $isSupervisor) ? MembershipType::PENGURUS->getLabel() : '';
+                    $label = (! $isDirectTarget && $isSupervisor) ? MembershipType::PENGURUS->getLabel() : '';
 
                     $groupName = $m->group?->name ?? '-';
 
@@ -289,7 +291,8 @@ class LiveScannerController extends Controller
 
             return response()->json($members);
         } catch (\Exception $e) {
-            \Log::error('Search error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            \Log::error('Search error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -308,20 +311,21 @@ class LiveScannerController extends Controller
         $memberId = $request->member_id;
         $member = Member::find($memberId);
 
-        if (!$member) {
+        if (! $member) {
             return response()->json(['status' => 'error', 'message' => 'Anggota tidak ditemukan.']);
         }
 
         $validation = $this->checkMemberEligibility($meeting, $member);
-        if ($validation)
+        if ($validation) {
             return $validation;
+        }
 
         $status = $request->status ?? AttendanceStatus::HADIR->value;
 
-        if (in_array($status, [AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]) && !auth()->user()->can('SetExcusedAttendance')) {
+        if (in_array($status, [AttendanceStatus::IZIN->value, AttendanceStatus::SAKIT->value]) && ! auth()->user()->can('SetExcusedAttendance')) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Anda tidak memiliki hak akses untuk menginput status ' . strtoupper($status) . '.'
+                'message' => 'Anda tidak memiliki hak akses untuk menginput status '.strtoupper($status).'.',
             ], 403);
         }
 
@@ -339,7 +343,7 @@ class LiveScannerController extends Controller
             if ($existing->status?->value === $status) {
                 return response()->json([
                     'status' => 'warning',
-                    'message' => "{$member->full_name} sudah tercatat " . strtoupper($existing->status?->value ?? $status) . "."
+                    'message' => "{$member->full_name} sudah tercatat ".strtoupper($existing->status?->value ?? $status).'.',
                 ]);
             }
 
@@ -352,9 +356,10 @@ class LiveScannerController extends Controller
             ]);
 
             $newStatus = strtoupper($status);
+
             return response()->json([
                 'status' => 'success',
-                'message' => "{$member->full_name} diubah dari {$oldStatus} → {$newStatus}."
+                'message' => "{$member->full_name} diubah dari {$oldStatus} → {$newStatus}.",
             ]);
         }
 
@@ -374,13 +379,13 @@ class LiveScannerController extends Controller
         $allAgeGroupsCount = \App\Models\AgeGroup::count();
         $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
         $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
-        $isTargetAge = !$shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
+        $isTargetAge = ! $shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
 
         $isDirectTarget = $isTargetGroup && $isTargetGender && $isTargetAge;
 
         // Supervisor who is NOT a direct target gets the badge and bypasses late status
-        $isSupervisorNotDirectTarget = $isSupervisor && !$isDirectTarget;
-        $finalNotes = $request->notes ?? (($isLate && !$isSupervisorNotDirectTarget) ? 'TERLAMBAT' : null);
+        $isSupervisorNotDirectTarget = $isSupervisor && ! $isDirectTarget;
+        $finalNotes = $request->notes ?? (($isLate && ! $isSupervisorNotDirectTarget) ? 'TERLAMBAT' : null);
 
         try {
             Attendance::create([
@@ -403,12 +408,13 @@ class LiveScannerController extends Controller
             throw $e;
         }
 
-        $label = $isSupervisorNotDirectTarget ? " [PENGURUS]" : "";
+        $label = $isSupervisorNotDirectTarget ? ' [PENGURUS]' : '';
 
         $statusLabel = ucfirst(strtolower($status));
         $message = "{$statusLabel}: {$member->full_name}{$label}";
-        if ($isLate && !$isSupervisorNotDirectTarget)
-            $message .= " (TERLAMBAT)";
+        if ($isLate && ! $isSupervisorNotDirectTarget) {
+            $message .= ' (TERLAMBAT)';
+        }
 
         return response()->json([
             'status' => 'success',
@@ -417,7 +423,7 @@ class LiveScannerController extends Controller
             'code' => $member->member_code ?? '-',
             'time' => now()->format('H:i'),
             'is_late' => $isLate,
-            'is_supervisor_badge' => $isSupervisorNotDirectTarget
+            'is_supervisor_badge' => $isSupervisorNotDirectTarget,
         ]);
     }
 
@@ -428,7 +434,7 @@ class LiveScannerController extends Controller
         if ($meeting->meeting_date->copy()->setTimeFrom($meeting->end_time)->isPast()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.'
+                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.',
             ], 422);
         }
 
@@ -442,10 +448,10 @@ class LiveScannerController extends Controller
         ]);
 
         $allowedGroupIds = $meeting->group->getAllDescendantIds();
-        if (!in_array($request->group_id, $allowedGroupIds)) {
+        if (! in_array($request->group_id, $allowedGroupIds)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Kelompok yang dipilih tidak termasuk dalam cakupan pertemuan ini.'
+                'message' => 'Kelompok yang dipilih tidak termasuk dalam cakupan pertemuan ini.',
             ], 422);
         }
 
@@ -473,28 +479,28 @@ class LiveScannerController extends Controller
             'member' => [
                 'id' => $member->id,
                 'full_name' => $member->full_name,
-            ]
+            ],
         ]);
     }
 
     /**
      * Validate that the authenticated user has group hierarchy access to the given meeting.
-     * 
-     * @param string $mode 'view' for seeing, 'manage' for scanning/updating
+     *
+     * @param  string  $mode  'view' for seeing, 'manage' for scanning/updating
      */
     private function authorizeGroupAccess(Meeting $meeting, string $mode = 'view'): void
     {
         $user = auth()->user();
 
-        if (!$user || $user->isSuperAdmin()) {
+        if (! $user || $user->isSuperAdmin()) {
             return;
         }
 
-        if (!$user->can('openScanner', $meeting)) {
+        if (! $user->can('openScanner', $meeting)) {
             abort(403, 'Role Anda tidak diizinkan untuk mengakses fitur scanner.');
         }
 
-        if (!$user->group_id) {
+        if (! $user->group_id) {
             abort(403, 'Akun Anda belum ditempatkan di grup manapun.');
         }
 

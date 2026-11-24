@@ -100,7 +100,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                 ->hiddenLabel()
                 ->outlined()
                 ->tooltip('Mulai Ulang Pemeriksaan File')
-                ->visible(fn () => !empty($this->parsedData))
+                ->visible(fn () => ! empty($this->parsedData))
                 ->action(function () {
                     $this->resetImportState();
                     Notification::make()
@@ -157,8 +157,9 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         ->color('info')
                                         ->outlined()
                                         ->action(function (): BinaryFileResponse {
-                                            $fileName = 'Template_Import_Grup_' . now()->format('Ymd_His') . '.xlsx';
-                                            return Excel::download(new GroupTemplateExport(), $fileName);
+                                            $fileName = 'Template_Import_Grup_'.now()->format('Ymd_His').'.xlsx';
+
+                                            return Excel::download(new GroupTemplateExport, $fileName);
                                         }),
                                 ])
                                 ->schema([
@@ -172,7 +173,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         Html::make(new HtmlString('<strong>Kolom Kode Grup (Opsional):</strong> Maksimal 10 karakter alfanumerik. Kode harus unik di bawah Induk Grup yang sama.')),
                                         Html::make(new HtmlString('<strong>Kriteria Validasi:</strong> Hanya baris dengan data valid yang akan disimpan ke dalam database.')),
                                     ])
-                                    ->columns(['default' => 1, 'sm' => 1, 'lg' => 1]),
+                                        ->columns(['default' => 1, 'sm' => 1, 'lg' => 1]),
                                 ])
                                 ->collapsed(),
 
@@ -207,7 +208,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                     ->warning()
                                     ->send();
 
-                                throw new \Filament\Support\Exceptions\Halt();
+                                throw new \Filament\Support\Exceptions\Halt;
                             }
                         }),
 
@@ -226,7 +227,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         Section::make('Total Data Dibaca')
                                             ->icon('heroicon-o-document-text')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['total_rows'] ?? 0) . ' Baris')
+                                                Text::make(fn () => ($this->parsedData['total_rows'] ?? 0).' Baris')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('gray'),
@@ -235,7 +236,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         Section::make('Siap Diimpor')
                                             ->icon('heroicon-o-check-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0) . ' Data Valid')
+                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0).' Data Valid')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('success'),
@@ -244,7 +245,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         Section::make('Perlu Perbaikan')
                                             ->icon('heroicon-o-x-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0) . ' Data Bermasalah')
+                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0).' Data Bermasalah')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('danger'),
@@ -254,10 +255,10 @@ class ImportGroups extends Page implements HasForms, HasTable
 
                             // Section 4: Tindakan Data Bermasalah
                             Section::make('Tindakan Data Bermasalah')
-                                ->description(fn () => 'Ditemukan ' . ($this->parsedData['invalid_count'] ?? 0) . ' baris data yang belum memenuhi kriteria validasi. Baris ini dilewati pada sesi saat ini dan dapat diperbaiki secara terpisah.')
+                                ->description(fn () => 'Ditemukan '.($this->parsedData['invalid_count'] ?? 0).' baris data yang belum memenuhi kriteria validasi. Baris ini dilewati pada sesi saat ini dan dapat diperbaiki secara terpisah.')
                                 ->icon('heroicon-m-exclamation-triangle')
                                 ->iconColor('danger')
-                                ->visible(fn () => !empty($this->parsedData) && ($this->parsedData['invalid_count'] ?? 0) > 0)
+                                ->visible(fn () => ! empty($this->parsedData) && ($this->parsedData['invalid_count'] ?? 0) > 0)
                                 ->schema([
                                     FormActions::make([
                                         Action::make('download_errors')
@@ -275,7 +276,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                                         ->send();
                                                 }
 
-                                                $fileName = 'Data_Bermasalah_Import_Grup_' . now()->format('Ymd_His') . '.csv';
+                                                $fileName = 'Data_Bermasalah_Import_Grup_'.now()->format('Ymd_His').'.csv';
 
                                                 return Excel::download(
                                                     new GroupImportErrorsExport($invalidRows),
@@ -289,9 +290,9 @@ class ImportGroups extends Page implements HasForms, HasTable
                             ToggleButtons::make('filter_tab')
                                 ->label('Filter Tampilan Pratinjau Data')
                                 ->options(fn () => [
-                                    'all' => 'Semua Data (' . ($this->parsedData['total_rows'] ?? 0) . ')',
-                                    'valid' => 'Siap Diimpor (' . ($this->parsedData['valid_count'] ?? 0) . ')',
-                                    'invalid' => 'Perlu Perbaikan (' . ($this->parsedData['invalid_count'] ?? 0) . ')',
+                                    'all' => 'Semua Data ('.($this->parsedData['total_rows'] ?? 0).')',
+                                    'valid' => 'Siap Diimpor ('.($this->parsedData['valid_count'] ?? 0).')',
+                                    'invalid' => 'Perlu Perbaikan ('.($this->parsedData['invalid_count'] ?? 0).')',
                                 ])
                                 ->colors([
                                     'all' => 'gray',
@@ -322,7 +323,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                     ->danger()
                                     ->send();
 
-                                throw new \Filament\Support\Exceptions\Halt();
+                                throw new \Filament\Support\Exceptions\Halt;
                             }
                         }),
 
@@ -341,7 +342,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         Section::make('Grup Siap Diproses')
                                             ->icon('heroicon-o-check-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0) . ' Grup Siap Disimpan')
+                                                Text::make(fn () => ($this->parsedData['valid_count'] ?? 0).' Grup Siap Disimpan')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color('success'),
@@ -353,7 +354,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                                         Section::make('Data Dilewati')
                                             ->icon('heroicon-o-x-circle')
                                             ->schema([
-                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0) . ' Baris Dilewati')
+                                                Text::make(fn () => ($this->parsedData['invalid_count'] ?? 0).' Baris Dilewati')
                                                     ->size(TextSize::Large)
                                                     ->weight(FontWeight::Bold)
                                                     ->color(fn () => ($this->parsedData['invalid_count'] ?? 0) > 0 ? 'danger' : 'gray'),
@@ -380,19 +381,19 @@ class ImportGroups extends Page implements HasForms, HasTable
                                 ]),
                         ]),
                 ])
-                ->skippable(false)
-                ->nextAction(fn (Action $action) => $action->label('Lanjut'))
-                ->previousAction(fn (Action $action) => $action->label('Kembali'))
-                ->submitAction(
-                    Action::make('saveImport')
-                        ->label('Mulai Impor')
-                        ->color('primary')
-                        ->icon('heroicon-m-check')
-                        ->extraAttributes([
-                            'wire:confirm' => 'Apakah Anda yakin ingin mulai mengimpor data?',
-                        ])
-                        ->action('saveImport')
-                ),
+                    ->skippable(false)
+                    ->nextAction(fn (Action $action) => $action->label('Lanjut'))
+                    ->previousAction(fn (Action $action) => $action->label('Kembali'))
+                    ->submitAction(
+                        Action::make('saveImport')
+                            ->label('Mulai Impor')
+                            ->color('primary')
+                            ->icon('heroicon-m-check')
+                            ->extraAttributes([
+                                'wire:confirm' => 'Apakah Anda yakin ingin mulai mengimpor data?',
+                            ])
+                            ->action('saveImport')
+                    ),
             ]);
     }
 
@@ -404,22 +405,23 @@ class ImportGroups extends Page implements HasForms, HasTable
         if (empty($state)) {
             $this->parsedData = [];
             $this->resetTable();
+
             return;
         }
 
         try {
             $filePath = null;
             if (is_string($state)) {
-                $filePath = storage_path('app/public/' . $state);
+                $filePath = storage_path('app/public/'.$state);
             } elseif (is_object($state) && method_exists($state, 'getRealPath')) {
                 $filePath = $state->getRealPath();
             }
 
-            if (!$filePath || !file_exists($filePath)) {
+            if (! $filePath || ! file_exists($filePath)) {
                 $filePath = Storage::disk('public')->path($state);
             }
 
-            if (!file_exists($filePath)) {
+            if (! file_exists($filePath)) {
                 throw new \Exception("Berkas spreadsheet tidak ditemukan di penyimpanan: {$filePath}");
             }
 
@@ -464,7 +466,7 @@ class ImportGroups extends Page implements HasForms, HasTable
             $this->parsedData = [];
             Notification::make()
                 ->title('Gagal Membaca File')
-                ->body('Terjadi kesalahan saat memproses berkas: ' . $e->getMessage())
+                ->body('Terjadi kesalahan saat memproses berkas: '.$e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -505,7 +507,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                     ->visible(fn () => ($this->parsedData['invalid_count'] ?? 0) > 0)
                     ->action(function (): BinaryFileResponse {
                         $invalidRows = $this->parsedData['invalid_rows'] ?? [];
-                        $fileName = 'Data_Bermasalah_Import_Grup_' . now()->format('Ymd_His') . '.csv';
+                        $fileName = 'Data_Bermasalah_Import_Grup_'.now()->format('Ymd_His').'.csv';
 
                         return Excel::download(
                             new GroupImportErrorsExport($invalidRows),
@@ -573,6 +575,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                 ->body('Tidak ada baris data valid yang dapat disimpan.')
                 ->danger()
                 ->send();
+
             return;
         }
 
@@ -596,7 +599,7 @@ class ImportGroups extends Page implements HasForms, HasTable
 
             // Cache lokal untuk nama grup eksisting -> id (hanya dalam scope user)
             $groupQuery = Group::query();
-            if (!$isSuperAdmin) {
+            if (! $isSuperAdmin) {
                 $groupQuery->whereIn('id', $manageableIds);
             }
             $groupMap = $groupQuery->pluck('id', 'name')->mapWithKeys(function ($id, $name) {
@@ -606,11 +609,11 @@ class ImportGroups extends Page implements HasForms, HasTable
             foreach ($validRows as $row) {
                 $groupName = strtoupper(trim($row['nama_grup']));
                 $tingkatName = strtoupper(trim($row['tingkat_grup']));
-                $indukName = !empty($row['induk_grup']) ? strtoupper(trim($row['induk_grup'])) : null;
-                $groupCode = !empty($row['kode_grup']) ? strtoupper(trim((string) $row['kode_grup'])) : null;
+                $indukName = ! empty($row['induk_grup']) ? strtoupper(trim($row['induk_grup'])) : null;
+                $groupCode = ! empty($row['kode_grup']) ? strtoupper(trim((string) $row['kode_grup'])) : null;
 
                 $levelId = $row['level_id'] ?? ($levelMap[$tingkatName] ?? null);
-                if (!$levelId) {
+                if (! $levelId) {
                     $level = Level::whereRaw('UPPER(name) = ?', [$tingkatName])->first();
                     $levelId = $level?->id;
                     if ($levelId) {
@@ -621,9 +624,9 @@ class ImportGroups extends Page implements HasForms, HasTable
                 $parentId = null;
                 if ($indukName) {
                     $parentId = $createdGroupIds[$indukName] ?? ($row['parent_id'] ?? ($groupMap[$indukName] ?? null));
-                    if (!$parentId) {
+                    if (! $parentId) {
                         $parentGroupQuery = Group::whereRaw('UPPER(name) = ?', [$indukName]);
-                        if (!$isSuperAdmin) {
+                        if (! $isSuperAdmin) {
                             $parentGroupQuery->whereIn('id', $manageableIds);
                         }
                         $parentGroup = $parentGroupQuery->first();
@@ -633,7 +636,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                         }
                     }
 
-                    if (!$parentId && !$isSuperAdmin) {
+                    if (! $parentId && ! $isSuperAdmin) {
                         throw new \Exception("Induk grup '{$indukName}' tidak ditemukan dalam wilayah wewenang Anda.");
                     }
                 }
@@ -654,6 +657,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                     }
                     $createdGroupIds[$groupName] = $existingGroup->id;
                     $groupMap[$groupName] = $existingGroup->id;
+
                     continue;
                 }
 
@@ -662,7 +666,7 @@ class ImportGroups extends Page implements HasForms, HasTable
                     ->where('level_id', $levelId)
                     ->where('parent_id', '!=', $parentId);
 
-                if (!$isSuperAdmin) {
+                if (! $isSuperAdmin) {
                     $conflictGroupQuery->whereIn('id', $manageableIds);
                 }
 
@@ -715,12 +719,12 @@ class ImportGroups extends Page implements HasForms, HasTable
                 $summary[] = "{$updatedCount} kode grup diperbarui";
             }
             if ($insertedCount === 0 && $updatedCount === 0) {
-                $summary[] = "Seluruh grup sudah terdaftar sebelumnya";
+                $summary[] = 'Seluruh grup sudah terdaftar sebelumnya';
             }
 
             Notification::make()
                 ->title('Impor Grup Berhasil')
-                ->body(implode(', ', $summary) . '.')
+                ->body(implode(', ', $summary).'.')
                 ->success()
                 ->send();
 
@@ -730,7 +734,7 @@ class ImportGroups extends Page implements HasForms, HasTable
 
             Notification::make()
                 ->title('Gagal Menyimpan Data')
-                ->body('Terjadi kesalahan database saat menyimpan grup: ' . $e->getMessage())
+                ->body('Terjadi kesalahan database saat menyimpan grup: '.$e->getMessage())
                 ->danger()
                 ->send();
         }

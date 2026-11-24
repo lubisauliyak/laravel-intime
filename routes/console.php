@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\ActivityLog;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
-use App\Models\ActivityLog;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

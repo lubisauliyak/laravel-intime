@@ -4,72 +4,61 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\CardTemplate;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class CardTemplatePolicy
 {
     use HandlesAuthorization;
-    
-    public function viewAny(AuthUser $authUser): bool
+
+    public function viewAny(User $user): bool
     {
-        return $authUser->can('ViewAny:CardTemplate');
+        return true;
     }
 
-    public function view(AuthUser $authUser, CardTemplate $cardTemplate): bool
+    public function view(User $user, CardTemplate $cardTemplate): bool
     {
-        return $authUser->can('View:CardTemplate');
+        return true;
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(User $user): bool
     {
-        return $authUser->can('Create:CardTemplate');
+        return false;
     }
 
-    public function update(AuthUser $authUser, CardTemplate $cardTemplate): bool
+    public function update(User $user, CardTemplate $cardTemplate): bool
     {
-        return $authUser->can('Update:CardTemplate');
+        return false;
     }
 
-    public function delete(AuthUser $authUser, CardTemplate $cardTemplate): bool
+    public function delete(User $user, CardTemplate $cardTemplate): bool
     {
-        return $authUser->can('Delete:CardTemplate');
+        return false;
     }
 
-    public function restore(AuthUser $authUser, CardTemplate $cardTemplate): bool
+    public function restore(User $user, CardTemplate $cardTemplate): bool
     {
-        return $authUser->can('Restore:CardTemplate');
+        return false;
     }
 
-    public function forceDelete(AuthUser $authUser, CardTemplate $cardTemplate): bool
+    public function forceDelete(User $user, CardTemplate $cardTemplate): bool
     {
-        return $authUser->can('ForceDelete:CardTemplate');
+        return false;
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $authUser->can('ForceDeleteAny:CardTemplate');
+        return false;
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(User $user): bool
     {
-        return $authUser->can('RestoreAny:CardTemplate');
+        return false;
     }
 
-    public function replicate(AuthUser $authUser, CardTemplate $cardTemplate): bool
+    public function replicate(User $user, CardTemplate $cardTemplate): bool
     {
-        return $authUser->can('Replicate:CardTemplate');
+        return false;
     }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:CardTemplate');
-    }
-
-    public function openEditor(AuthUser $authUser, CardTemplate $cardTemplate): bool
-    {
-        return $authUser->can('OpenEditor:CardTemplate');
-    }
-
 }

@@ -3,13 +3,14 @@
 namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
+use App\Models\Meeting;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Toggle;
+use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -21,9 +22,15 @@ class EditSelfService extends EditRecord
     public static function canAccess(array $parameters = []): bool
     {
         $record = $parameters['record'] ?? null;
-        return $record
-            ? auth()->user()->can('editSelfService', $record)
-            : auth()->user()->can('EditSelfService:Meeting');
+        if (is_string($record) || is_int($record)) {
+            $record = Meeting::where('uid', $record)->orWhere('id', $record)->first();
+        }
+
+        if ($record instanceof Meeting) {
+            return auth()->user()?->can('editSelfService', $record) ?? false;
+        }
+
+        return auth()->user()?->can('create', Meeting::class) ?? false;
     }
 
     public function getTitle(): string
@@ -97,7 +104,7 @@ class EditSelfService extends EditRecord
                             ->helperText('Pernyataan penutup sebelum tombol kirim.')
                             ->columnSpanFull(),
                     ])
-                    ->visible(fn(Get $get) => $get('is_permission_template_active'))
+                    ->visible(fn (Get $get) => $get('is_permission_template_active'))
                     ->columnSpanFull(),
             ]);
     }

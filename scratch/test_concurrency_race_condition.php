@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 $passed = 0;
 $failed = 0;
 
-function assert_it(string $name, bool $condition, string $details = '') {
+function assert_it(string $name, bool $condition, string $details = '')
+{
     global $passed, $failed;
     if ($condition) {
         $passed++;
@@ -56,13 +57,13 @@ try {
 
     assert_it('Test 1: Exactly 20 codes generated', count($generatedCodes) === 20);
     assert_it('Test 2: All 20 codes are 100% unique', count(array_unique($generatedCodes)) === 20);
-    assert_it('Test 3: First code is 4433001', $generatedCodes[0] === '4433001', 'Got: ' . ($generatedCodes[0] ?? 'null'));
-    assert_it('Test 4: Last code is 4433020', $generatedCodes[19] === '4433020', 'Got: ' . ($generatedCodes[19] ?? 'null'));
+    assert_it('Test 3: First code is 4433001', $generatedCodes[0] === '4433001', 'Got: '.($generatedCodes[0] ?? 'null'));
+    assert_it('Test 4: Last code is 4433020', $generatedCodes[19] === '4433020', 'Got: '.($generatedCodes[19] ?? 'null'));
 
     // Check sequence continuity
     $isSequential = true;
     for ($i = 0; $i < 20; $i++) {
-        $expected = '4433' . str_pad((string)($i + 1), 3, '0', STR_PAD_LEFT);
+        $expected = '4433'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT);
         if ($generatedCodes[$i] !== $expected) {
             $isSequential = false;
             break;
@@ -84,7 +85,7 @@ try {
     ]);
     $nextMember->save();
 
-    assert_it('Test 6: Next code after soft delete is 4433021', $nextMember->member_code === '4433021', 'Got: ' . ($nextMember->member_code ?? 'null'));
+    assert_it('Test 6: Next code after soft delete is 4433021', $nextMember->member_code === '4433021', 'Got: '.($nextMember->member_code ?? 'null'));
 
 } finally {
     DB::rollBack();

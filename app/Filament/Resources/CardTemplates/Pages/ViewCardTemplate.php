@@ -18,7 +18,7 @@ class ViewCardTemplate extends ViewRecord
                 ->label('Buka Editor')
                 ->icon('heroicon-o-paint-brush')
                 ->color('info')
-                ->url(fn ($record) => url('/card-editor/' . $record->id))
+                ->url(fn ($record) => url('/card-editor/'.$record->id))
                 ->openUrlInNewTab()
                 ->visible(fn ($record) => auth()->user()?->can('openEditor', $record)),
             EditAction::make(),

@@ -22,13 +22,13 @@ class MeetingReportController extends Controller
                 $query->whereIn('member_id', $memberIds);
             }
         }, 'attendances.member.group', 'group', 'creator']);
-        
-        $rawFilename = "Laporan-Kehadiran {$meeting->name}-{$meeting->group->name}-" . $meeting->meeting_date->format('Y-m-d') . ".pdf";
+
+        $rawFilename = "Laporan-Kehadiran {$meeting->name}-{$meeting->group->name}-".$meeting->meeting_date->format('Y-m-d').'.pdf';
         $filename = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '-', $rawFilename);
         $filename = preg_replace('/-+/', '-', $filename);
-        
+
         $pdf = Pdf::loadView('reports.meeting-pdf', compact('meeting'));
-        
+
         return $pdf->stream($filename);
     }
 
@@ -36,11 +36,11 @@ class MeetingReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user || $user->isSuperAdmin()) {
+        if (! $user || $user->isSuperAdmin()) {
             return;
         }
 
-        if (!$user->group_id) {
+        if (! $user->group_id) {
             abort(403, 'Akun Anda belum ditempatkan di grup manapun.');
         }
 
@@ -48,7 +48,7 @@ class MeetingReportController extends Controller
         $ancestorIds = $user->group->getAllAncestorIds();
         $allowedGroupIds = array_unique(array_merge($descendantIds, $ancestorIds));
 
-        if (!in_array($meeting->group_id, $allowedGroupIds)) {
+        if (! in_array($meeting->group_id, $allowedGroupIds)) {
             abort(403, 'Anda tidak memiliki akses ke laporan pertemuan ini.');
         }
     }

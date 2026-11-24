@@ -1,11 +1,12 @@
 <?php
+
 namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
-use Filament\Actions\EditAction;
-use Filament\Actions\Action;
-use Filament\Resources\Pages\ViewRecord;
 use App\Filament\Resources\Meetings\Widgets\MeetingStatsTable;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Resources\Pages\ViewRecord;
 
 class ViewMeeting extends ViewRecord
 {
@@ -17,10 +18,26 @@ class ViewMeeting extends ViewRecord
             Action::make('open_scanner')
                 ->label('Buka Scanner')
                 ->icon('heroicon-o-qr-code')
-                ->color('info')
-                ->url(fn($record) => route('scanner.live', $record))
-                ->openUrlInNewTab()
-                ->visible(fn($record) => !$record->isExpired() && auth()->user()->can('openScanner', $record)),
+                ->color(fn ($record) => $record->isCheckinOpen() ? 'success' : 'gray')
+                ->url(fn ($record) => $record->isCheckinOpen() ? route('scanner.live', $record) : null)
+                ->openUrlInNewTab(fn ($record) => $record->isCheckinOpen())
+                ->disabled(fn ($record) => ! $record->isCheckinOpen())
+                ->tooltip(function ($record) {
+                    if (! $record->meeting_date?->isToday()) {
+                        return 'Presensi hanya dapat dibuka pada hari pertemuan ('.($record->meeting_date?->format('d/m/Y') ?? '-').')';
+                    }
+                    if ($record->isExpired()) {
+                        return 'Pertemuan telah selesai';
+                    }
+                    if (! $record->isCheckinOpen()) {
+                        $openTime = $record->checkin_open_time?->format('H:i') ?? $record->start_time?->format('H:i') ?? '-';
+
+                        return "Presensi baru dibuka pukul {$openTime}";
+                    }
+
+                    return 'Buka scanner QR presensi';
+                })
+                ->visible(fn ($record) => ! $record->isExpired() && auth()->user()->can('openScanner', $record)),
             EditAction::make(),
         ];
     }

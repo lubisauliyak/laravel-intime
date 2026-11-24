@@ -17,7 +17,7 @@ class SelfPresenceController extends Controller
     public function index(Meeting $meeting)
     {
         $meeting->load('group.level');
-        $isExpired = $meeting->isExpired() || !$meeting->is_presence_enabled;
+        $isExpired = $meeting->isExpired() || ! $meeting->is_presence_enabled;
 
         $descendantIds = $meeting->group->getAllDescendantIds();
         $lineageIds = array_unique(array_merge([$meeting->group_id], $meeting->group->getAllAncestorIds()));
@@ -27,8 +27,8 @@ class SelfPresenceController extends Controller
             ->whereIn('id', $allowedGroupIds)
             ->where(function ($query) use ($meeting) {
                 $query->doesntHave('children')
-                      ->orWhere('id', $meeting->group_id)
-                      ->orWhereHas('members');
+                    ->orWhere('id', $meeting->group_id)
+                    ->orWhereHas('members');
             })
             ->orderBy('name')
             ->get();
@@ -47,21 +47,27 @@ class SelfPresenceController extends Controller
             $member = Member::where('member_code', $code)->first();
         }
 
-        if (!$member) {
+        if (! $member) {
             return response()->json([
                 'status' => 'error',
-                'message' => $request->has('member_id') ? "Data anggota tidak ditemukan." : "Kode KTA '$code' tidak terdaftar."
+                'message' => $request->has('member_id') ? 'Data anggota tidak ditemukan.' : "Kode KTA '$code' tidak terdaftar.",
             ]);
         }
 
         $validation = $this->checkMemberEligibility($meeting, $member);
-        if ($validation) return $validation;
+        if ($validation) {
+            return $validation;
+        }
 
         $missingFields = [];
-        if (empty($member->nick_name)) $missingFields[] = 'nick_name';
-        if (empty($member->birth_date)) $missingFields[] = 'birth_date';
+        if (empty($member->nick_name)) {
+            $missingFields[] = 'nick_name';
+        }
+        if (empty($member->birth_date)) {
+            $missingFields[] = 'birth_date';
+        }
 
-        if (!empty($missingFields)) {
+        if (! empty($missingFields)) {
             return response()->json([
                 'status' => 'incomplete_biodata',
                 'message' => 'Biodata Anda belum lengkap. Silakan lengkapi terlebih dahulu.',
@@ -71,8 +77,8 @@ class SelfPresenceController extends Controller
                     'full_name' => $member->full_name,
                     'nick_name' => $member->nick_name,
                     'birth_date' => $member->birth_date ? (is_string($member->birth_date) ? $member->birth_date : $member->birth_date->format('Y-m-d')) : null,
-                    'has_nick_name' => !empty($member->nick_name),
-                    'has_birth_date' => !empty($member->birth_date),
+                    'has_nick_name' => ! empty($member->nick_name),
+                    'has_birth_date' => ! empty($member->birth_date),
                 ],
             ]);
         }
@@ -84,7 +90,7 @@ class SelfPresenceController extends Controller
         if ($existing) {
             return response()->json([
                 'status' => 'warning',
-                'message' => "Anda sudah melakukan presensi (" . strtoupper($existing->status?->value ?? '') . ") pada " . ($existing->created_at ? $existing->created_at->format('H:i') : '-') . ".",
+                'message' => 'Anda sudah melakukan presensi ('.strtoupper($existing->status?->value ?? '').') pada '.($existing->created_at ? $existing->created_at->format('H:i') : '-').'.',
                 'member' => [
                     'id' => $member->id,
                     'full_name' => $member->full_name,
@@ -119,7 +125,9 @@ class SelfPresenceController extends Controller
         $member = Member::find($request->member_id);
 
         $validation = $this->checkMemberEligibility($meeting, $member);
-        if ($validation) return $validation;
+        if ($validation) {
+            return $validation;
+        }
 
         $existing = Attendance::where('meeting_id', $meeting->id)
             ->where('member_id', $member->id)
@@ -128,7 +136,7 @@ class SelfPresenceController extends Controller
         if ($existing) {
             return response()->json([
                 'status' => 'warning',
-                'message' => "Anda sudah melakukan presensi (" . strtoupper($existing->status?->value ?? '') . ")."
+                'message' => 'Anda sudah melakukan presensi ('.strtoupper($existing->status?->value ?? '').').',
             ]);
         }
 
@@ -140,25 +148,25 @@ class SelfPresenceController extends Controller
             if ($imageData === false || strlen($imageData) < 10) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Format foto selfie tidak valid.'
+                    'message' => 'Format foto selfie tidak valid.',
                 ], 422);
             }
 
             // Microsecond magic-bytes check (JPEG, PNG, WEBP)
             $isJpeg = (substr($imageData, 0, 3) === "\xFF\xD8\xFF");
-            $isPng  = (substr($imageData, 0, 4) === "\x89PNG");
-            $isWebp = (substr($imageData, 0, 4) === "RIFF" && substr($imageData, 8, 4) === "WEBP");
+            $isPng = (substr($imageData, 0, 4) === "\x89PNG");
+            $isWebp = (substr($imageData, 0, 4) === 'RIFF' && substr($imageData, 8, 4) === 'WEBP');
 
-            if (!$isJpeg && !$isPng && !$isWebp) {
+            if (! $isJpeg && ! $isPng && ! $isWebp) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Format file foto tidak didukung. Harap gunakan foto JPG, PNG, atau WEBP.'
+                    'message' => 'Format file foto tidak didukung. Harap gunakan foto JPG, PNG, atau WEBP.',
                 ], 422);
             }
 
             $ext = $isPng ? 'png' : ($isWebp ? 'webp' : 'jpg');
-            $filename = 'selfie_' . $meeting->uid . '_' . $member->id . '_' . \Illuminate\Support\Str::random(10) . '.' . $ext;
-            $relativePath = 'attendance-selfie/' . $filename;
+            $filename = 'selfie_'.$meeting->uid.'_'.$member->id.'_'.\Illuminate\Support\Str::random(10).'.'.$ext;
+            $relativePath = 'attendance-selfie/'.$filename;
             \Illuminate\Support\Facades\Storage::disk('public')->put($relativePath, $imageData);
             $selfiePath = $relativePath;
         }
@@ -190,7 +198,7 @@ class SelfPresenceController extends Controller
             if ($e->getCode() == 23000 || (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062)) {
                 return response()->json([
                     'status' => 'warning',
-                    'message' => "Anda sudah melakukan presensi sebelumnya.",
+                    'message' => 'Anda sudah melakukan presensi sebelumnya.',
                     'name' => $member->full_name,
                 ]);
             }
@@ -224,7 +232,7 @@ class SelfPresenceController extends Controller
             $updateData['birth_date'] = $request->birth_date;
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $member->update($updateData);
         }
 
@@ -271,25 +279,25 @@ class SelfPresenceController extends Controller
                             });
                         });
                 })
-                ->orWhere(function ($pq) use ($meetingLineageIds) {
-                    $pq->where(function ($spq) use ($meetingLineageIds) {
-                        $spq->where('membership_type', MembershipType::PENGURUS->value)
-                            ->whereIn('group_id', $meetingLineageIds);
-                    })
-                    ->orWhereHas('positions', function ($posQ) use ($meetingLineageIds) {
-                        $posQ->whereIn('group_id', $meetingLineageIds);
+                    ->orWhere(function ($pq) use ($meetingLineageIds) {
+                        $pq->where(function ($spq) use ($meetingLineageIds) {
+                            $spq->where('membership_type', MembershipType::PENGURUS->value)
+                                ->whereIn('group_id', $meetingLineageIds);
+                        })
+                            ->orWhereHas('positions', function ($posQ) use ($meetingLineageIds) {
+                                $posQ->whereIn('group_id', $meetingLineageIds);
+                            });
                     });
-                });
             })
             ->orderBy('full_name')
             ->get()
             ->map(function ($m) use ($meeting, $targetGroupIds, $shouldFilterByAge) {
                 $isTargetGender = ($meeting->target_gender === MeetingTargetGender::ALL || $m->gender === $meeting->target_gender->value);
-                $isTargetAge = !$shouldFilterByAge || ($m->ageGroup && in_array($m->ageGroup->name, (array) $meeting->target_age_groups));
+                $isTargetAge = ! $shouldFilterByAge || ($m->ageGroup && in_array($m->ageGroup->name, (array) $meeting->target_age_groups));
                 $isDirectTarget = in_array($m->group_id, $targetGroupIds) && $isTargetGender && $isTargetAge;
 
                 $isSupervisor = $m->hasPositionIn($meeting->group);
-                $badge = (!$isDirectTarget && $isSupervisor) ? MembershipType::PENGURUS->getLabel() : '';
+                $badge = (! $isDirectTarget && $isSupervisor) ? MembershipType::PENGURUS->getLabel() : '';
 
                 return [
                     'id' => $m->id,
@@ -311,21 +319,21 @@ class SelfPresenceController extends Controller
         if ($meeting->isExpired()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.'
+                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.',
             ], 422);
         }
 
-        if (!$meeting->is_presence_enabled) {
+        if (! $meeting->is_presence_enabled) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Presensi untuk pertemuan ini sedang ditutup.'
+                'message' => 'Presensi untuk pertemuan ini sedang ditutup.',
             ], 422);
         }
 
-        if (!$meeting->isCheckinOpen()) {
+        if (! $meeting->isCheckinOpen()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Jam presensi belum dibuka.'
+                'message' => 'Jam presensi belum dibuka.',
             ], 422);
         }
 
@@ -338,10 +346,10 @@ class SelfPresenceController extends Controller
         ]);
 
         $allowedGroupIds = $meeting->group->getAllDescendantIds();
-        if (!in_array($request->group_id, $allowedGroupIds)) {
+        if (! in_array($request->group_id, $allowedGroupIds)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Kelompok yang dipilih tidak termasuk dalam cakupan pertemuan ini.'
+                'message' => 'Kelompok yang dipilih tidak termasuk dalam cakupan pertemuan ini.',
             ], 422);
         }
 
@@ -366,7 +374,7 @@ class SelfPresenceController extends Controller
                 'member_code' => $member->member_code,
                 'group' => $member->group?->name,
                 'photo_url' => null,
-            ]
+            ],
         ]);
     }
 
@@ -375,63 +383,64 @@ class SelfPresenceController extends Controller
         if ($meeting->isExpired()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.'
+                'message' => 'Sesi presensi untuk pertemuan ini sudah berakhir.',
             ]);
         }
 
-        if (!$meeting->is_presence_enabled) {
+        if (! $meeting->is_presence_enabled) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Presensi untuk pertemuan ini sedang ditutup.'
+                'message' => 'Presensi untuk pertemuan ini sedang ditutup.',
             ]);
         }
 
-        if (!$meeting->isCheckinOpen()) {
+        if (! $meeting->isCheckinOpen()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Jam presensi belum dibuka.'
+                'message' => 'Jam presensi belum dibuka.',
             ]);
         }
 
         if ($member->trashed()) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Anggota {$member->full_name} sudah tidak aktif (dihapus)."
+                'message' => "Anggota {$member->full_name} sudah tidak aktif (dihapus).",
             ]);
         }
 
         $isSupervisor = $member->hasPositionIn($meeting->group);
         $canBypassFilters = $isSupervisor;
 
-        if (!$canBypassFilters) {
+        if (! $canBypassFilters) {
             $allowedGroupIds = $meeting->group->getAllDescendantIds();
-            if (!in_array($member->group_id, $allowedGroupIds)) {
+            if (! in_array($member->group_id, $allowedGroupIds)) {
                 return response()->json([
                     'status' => 'warning',
-                    'message' => "{$member->full_name} bukan anggota {$meeting->group->name} atau turunannya."
+                    'message' => "{$member->full_name} bukan anggota {$meeting->group->name} atau turunannya.",
                 ]);
             }
         }
 
-        if (!$canBypassFilters && $meeting->target_gender !== MeetingTargetGender::ALL && $member->gender !== $meeting->target_gender) {
+        if (! $canBypassFilters && $meeting->target_gender !== MeetingTargetGender::ALL && $member->gender !== $meeting->target_gender) {
             $targetLabel = $meeting->target_gender->getLabel();
+
             return response()->json([
                 'status' => 'warning',
-                'message' => "Pertemuan ini hanya untuk $targetLabel."
+                'message' => "Pertemuan ini hanya untuk $targetLabel.",
             ]);
         }
 
-        if (!$canBypassFilters && !empty($meeting->target_age_groups)) {
+        if (! $canBypassFilters && ! empty($meeting->target_age_groups)) {
             $allAgeGroupsCount = \App\Models\AgeGroup::count();
             $selectedAgeGroupsCount = count($meeting->target_age_groups);
             $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
 
             if ($shouldFilterByAge) {
                 $memberAgeGroupName = $member->ageGroup?->name;
-                if (!in_array($memberAgeGroupName, (array) $meeting->target_age_groups)) {
+                if (! in_array($memberAgeGroupName, (array) $meeting->target_age_groups)) {
                     return response()->json([
                         'status' => 'warning',
-                        'message' => "Kategori usia ({$memberAgeGroupName}) tidak sesuai target pertemuan."
+                        'message' => "Kategori usia ({$memberAgeGroupName}) tidak sesuai target pertemuan.",
                     ]);
                 }
             }

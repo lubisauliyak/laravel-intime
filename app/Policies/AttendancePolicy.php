@@ -4,69 +4,86 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Attendance;
 use App\Models\User;
-use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AttendancePolicy
 {
     use HandlesAuthorization;
 
-    private function canManageAttendance(AuthUser $authUser, Attendance $attendance): bool
+    private function getAttendanceGroupId(Attendance $attendance): ?int
     {
-        if (! $authUser instanceof User) {
-            return false;
-        }
+        return $attendance->meeting?->group_id ?? $attendance->member?->group_id;
+    }
 
-        if ($authUser->isSuperAdmin()) {
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    public function view(User $user, Attendance $attendance): bool
+    {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Attendance terikat pada Meeting dan Group
-        if ($attendance->meeting && $attendance->meeting->group) {
-            return $attendance->meeting->group->canBeManagedBy($authUser);
+        return $user->canAccessGroupScope($this->getAttendanceGroupId($attendance));
+    }
+
+    public function create(User $user): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
         }
 
-        // Fallback bila meeting belum loaded, periksa member group
-        if ($attendance->member && $attendance->member->group) {
-            return $attendance->member->group->canBeManagedBy($authUser);
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR]);
+    }
+
+    public function update(User $user, Attendance $attendance): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
         }
 
-        return false;
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($this->getAttendanceGroupId($attendance));
     }
 
-    public function viewAny(AuthUser $authUser): bool
+    public function delete(User $user, Attendance $attendance): bool
     {
-        return $authUser->can('ViewAny:Attendance') || $authUser->can('ViewAttendanceDetails:Meeting');
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($this->getAttendanceGroupId($attendance));
     }
 
-    public function view(AuthUser $authUser, Attendance $attendance): bool
+    public function restore(User $user, Attendance $attendance): bool
     {
-        return ($authUser->can('View:Attendance') || $authUser->can('ViewAttendanceDetails:Meeting'))
-            && $this->canManageAttendance($authUser, $attendance);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($this->getAttendanceGroupId($attendance));
     }
 
-    public function create(AuthUser $authUser): bool
+    public function forceDelete(User $user, Attendance $attendance): bool
     {
-        return $authUser->can('Create:Attendance') || $authUser->can('Update:Meeting');
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($this->getAttendanceGroupId($attendance));
     }
 
-    public function update(AuthUser $authUser, Attendance $attendance): bool
+    public function scanAttendance(User $user): bool
     {
-        return ($authUser->can('Update:Attendance') || $authUser->can('Update:Meeting'))
-            && $this->canManageAttendance($authUser, $attendance);
-    }
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
 
-    public function delete(AuthUser $authUser, Attendance $attendance): bool
-    {
-        return ($authUser->can('Delete:Attendance') || $authUser->can('Update:Meeting'))
-            && $this->canManageAttendance($authUser, $attendance);
-    }
-
-    public function setExcusedAttendance(AuthUser $authUser, Attendance $attendance): bool
-    {
-        return ($authUser->can('SetExcusedAttendance') || $authUser->can('Update:Attendance'))
-            && $this->canManageAttendance($authUser, $attendance);
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR]);
     }
 }

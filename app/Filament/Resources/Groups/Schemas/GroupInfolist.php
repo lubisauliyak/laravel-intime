@@ -3,20 +3,20 @@
 namespace App\Filament\Resources\Groups\Schemas;
 
 use App\Enums\Gender;
+use App\Filament\Resources\Members\MemberResource;
 use App\Models\AgeGroup;
 use App\Models\Group;
 use App\Models\Member;
+use App\Models\MemberPosition;
 use App\Models\PositionCategory;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\RepeatableEntry\TableColumn;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
-use App\Filament\Resources\Members\MemberResource;
-use App\Models\MemberPosition;
 
 class GroupInfolist
 {
@@ -38,7 +38,7 @@ class GroupInfolist
                                 TextEntry::make('level.name')
                                     ->label('Tingkat Hirarki')
                                     ->badge()
-                                    ->color(fn(Group $record): string => $record->level?->getColor() ?? 'gray'),
+                                    ->color(fn (Group $record): string => $record->level?->getColor() ?? 'gray'),
                                 TextEntry::make('parent.full_name')
                                     ->label('Induk Grup')
                                     ->placeholder('-')
@@ -50,17 +50,18 @@ class GroupInfolist
                                     ->placeholder('Tidak Ada'),
                                 TextEntry::make('calculated_prefix')
                                     ->label('Prefix ID Terhitung')
-                                    ->state(fn($record) => app(\App\Services\Groups\GroupHierarchyService::class)->getCalculatedPrefix($record) ?? 'Tanpa ID')
+                                    ->state(fn ($record) => app(\App\Services\Groups\GroupHierarchyService::class)->getCalculatedPrefix($record) ?? 'Tanpa ID')
                                     ->badge()
-                                    ->color(fn($state) => $state !== 'Tanpa ID' ? 'success' : 'gray'),
+                                    ->color(fn ($state) => $state !== 'Tanpa ID' ? 'success' : 'gray'),
                                 TextEntry::make('effective_template')
                                     ->label('Template KTA')
                                     ->state(function ($record) {
                                         $res = app(\App\Services\Groups\GroupHierarchyService::class)->getEffectiveCardTemplate($record);
-                                        if (!$res['template']) {
+                                        if (! $res['template']) {
                                             return 'Belum ditentukan';
                                         }
                                         $name = $res['template']->name;
+
                                         return $res['is_locked']
                                             ? "{$name} (🔒{$res['inherited_from']?->name} )"
                                             : "{$name}";
@@ -83,37 +84,37 @@ class GroupInfolist
                             ->schema([
                                 TextEntry::make('members_count')
                                     ->label('Total Anggota')
-                                    ->state(fn(Group $record) => Member::whereIn('group_id', $record->getAllDescendantIds())->count())
+                                    ->state(fn (Group $record) => Member::whereIn('group_id', $record->getAllDescendantIds())->count())
                                     ->badge()
                                     ->color('primary')
                                     ->icon('heroicon-o-user-group'),
                                 TextEntry::make('children_count')
                                     ->label('Sub Grup')
-                                    ->state(fn(Group $record) => $record->children()->count())
+                                    ->state(fn (Group $record) => $record->children()->count())
                                     ->badge()
                                     ->color('info')
                                     ->icon('heroicon-o-squares-2x2'),
                                 TextEntry::make('users_count')
                                     ->label('Admin / Pengguna')
-                                    ->state(fn(Group $record) => $record->users()->count())
+                                    ->state(fn (Group $record) => $record->users()->count())
                                     ->badge()
                                     ->color('warning')
                                     ->icon('heroicon-o-shield-check'),
                                 TextEntry::make('meetings_created_count')
                                     ->label('Pertemuan Dibuat')
-                                    ->state(fn(Group $record) => $record->meetings()->count())
+                                    ->state(fn (Group $record) => $record->meetings()->count())
                                     ->badge()
                                     ->color('gray')
                                     ->icon('heroicon-o-calendar-days'),
                                 TextEntry::make('meetings_active_count')
                                     ->label('Pertemuan Aktif')
-                                    ->state(fn(Group $record) => $record->meetings()->where('meeting_date', '>=', now())->count())
+                                    ->state(fn (Group $record) => $record->meetings()->where('meeting_date', '>=', now())->count())
                                     ->badge()
                                     ->color('success')
                                     ->icon('heroicon-o-calendar'),
                                 TextEntry::make('meetings_attended_count')
                                     ->label('Pertemuan Diikuti')
-                                    ->state(fn(Group $record) => \App\Models\Attendance::whereHas('member', function ($q) use ($record) {
+                                    ->state(fn (Group $record) => \App\Models\Attendance::whereHas('member', function ($q) use ($record) {
                                         $q->whereIn('group_id', $record->getAllDescendantIds());
                                     })->distinct('meeting_id')->count('meeting_id'))
                                     ->badge()
@@ -132,19 +133,19 @@ class GroupInfolist
                                     ->schema([
                                         TextEntry::make('male_count_comp')
                                             ->label('Laki-laki')
-                                            ->state(fn(Group $record) => static::computeGenderWithPct($record, Gender::MALE))
+                                            ->state(fn (Group $record) => static::computeGenderWithPct($record, Gender::MALE))
                                             ->badge()
                                             ->color('info')
                                             ->icon('heroicon-o-user'),
                                         TextEntry::make('female_count_comp')
                                             ->label('Perempuan')
-                                            ->state(fn(Group $record) => static::computeGenderWithPct($record, Gender::FEMALE))
+                                            ->state(fn (Group $record) => static::computeGenderWithPct($record, Gender::FEMALE))
                                             ->badge()
                                             ->color('danger')
                                             ->icon('heroicon-o-user'),
                                         TextEntry::make('total_member_comp')
                                             ->label('Total Anggota')
-                                            ->state(fn(Group $record) => Member::whereIn('group_id', $record->getAllDescendantIds())->count())
+                                            ->state(fn (Group $record) => Member::whereIn('group_id', $record->getAllDescendantIds())->count())
                                             ->badge()
                                             ->color('primary')
                                             ->icon('heroicon-o-user-group'),
@@ -163,6 +164,7 @@ class GroupInfolist
                             ->schema(
                                 AgeGroup::orderBy('sort_order')->get()->map(function (AgeGroup $ag) {
                                     $agId = $ag->id;
+
                                     return Grid::make(['default' => 1, 'sm' => 4])
                                         ->schema([
                                             TextEntry::make("ct_name_{$agId}")
@@ -173,19 +175,19 @@ class GroupInfolist
                                                 ->color($ag->getColor()),
                                             TextEntry::make("ct_male_{$agId}")
                                                 ->label('L')
-                                                ->state(fn(Group $record) => static::computeGenderInAgeGroup($record, $agId, Gender::MALE))
+                                                ->state(fn (Group $record) => static::computeGenderInAgeGroup($record, $agId, Gender::MALE))
                                                 ->badge()
                                                 ->icon('heroicon-o-user')
                                                 ->color('info'),
                                             TextEntry::make("ct_female_{$agId}")
                                                 ->label('P')
-                                                ->state(fn(Group $record) => static::computeGenderInAgeGroup($record, $agId, Gender::FEMALE))
+                                                ->state(fn (Group $record) => static::computeGenderInAgeGroup($record, $agId, Gender::FEMALE))
                                                 ->badge()
                                                 ->icon('heroicon-o-user')
                                                 ->color('danger'),
                                             TextEntry::make("ct_total_{$agId}")
                                                 ->label('Total')
-                                                ->state(fn(Group $record) => static::computeAgeGroupOverallPct($record, $agId))
+                                                ->state(fn (Group $record) => static::computeAgeGroupOverallPct($record, $agId))
                                                 ->badge()
                                                 ->icon('heroicon-o-user-group')
                                                 ->color('gray'),
@@ -200,25 +202,25 @@ class GroupInfolist
                                     ->schema([
                                         TextEntry::make('target_wajib_count')
                                             ->label('Anggota Aktif')
-                                            ->state(fn(Group $record) => static::computeStatusPct($record, true))
+                                            ->state(fn (Group $record) => static::computeStatusPct($record, true))
                                             ->badge()
                                             ->color('info')
                                             ->icon('heroicon-o-clipboard-document-check'),
                                         TextEntry::make('permanent_count')
                                             ->label('Terverifikasi')
-                                            ->state(fn(Group $record) => static::computeIsPermanentPct($record, true))
+                                            ->state(fn (Group $record) => static::computeIsPermanentPct($record, true))
                                             ->badge()
                                             ->color('success')
                                             ->icon('heroicon-o-check-badge'),
                                         TextEntry::make('non_permanent_count')
                                             ->label('Menunggu Verifikasi')
-                                            ->state(fn(Group $record) => static::computeIsPermanentPct($record, false))
+                                            ->state(fn (Group $record) => static::computeIsPermanentPct($record, false))
                                             ->badge()
                                             ->color('warning')
                                             ->icon('heroicon-o-clock'),
                                         TextEntry::make('non_target_count')
                                             ->label('Kurang Aktif')
-                                            ->state(fn(Group $record) => static::computeStatusPct($record, false))
+                                            ->state(fn (Group $record) => static::computeStatusPct($record, false))
                                             ->badge()
                                             ->color('gray')
                                             ->icon('heroicon-o-user-minus'),
@@ -237,6 +239,7 @@ class GroupInfolist
                                     ->label('Pengurus Tingkat Ini')
                                     ->state(function (Group $record) {
                                         $record->loadMissing(['positions.member.group', 'positions.category']);
+
                                         return $record->positions->count();
                                     })
                                     ->badge()
@@ -245,7 +248,7 @@ class GroupInfolist
 
                                 TextEntry::make('pengurus_hierarchy_count')
                                     ->label('Total Pengurus Hierarki')
-                                    ->state(fn(Group $record) => static::computeMembershipTypeCount($record, \App\Enums\MembershipType::PENGURUS))
+                                    ->state(fn (Group $record) => static::computeMembershipTypeCount($record, \App\Enums\MembershipType::PENGURUS))
                                     ->badge()
                                     ->color('info')
                                     ->icon('heroicon-o-user-group'),
@@ -255,10 +258,11 @@ class GroupInfolist
                                     ->state(function (Group $record) {
                                         $record->loadMissing(['positions.member.group', 'positions.category']);
                                         $categories = $record->positions->pluck('category.name')->filter()->unique()->values()->all();
-                                        return !empty($categories) ? $categories : ['-'];
+
+                                        return ! empty($categories) ? $categories : ['-'];
                                     })
                                     ->badge()
-                                    ->color(fn($state): string => PositionCategory::getColorMapping()[(string) $state] ?? 'primary'),
+                                    ->color(fn ($state): string => PositionCategory::getColorMapping()[(string) $state] ?? 'primary'),
                             ]),
 
                         RepeatableEntry::make('positions')
@@ -272,9 +276,9 @@ class GroupInfolist
                             ->schema([
                                 TextEntry::make('member.full_name')
                                     ->weight(FontWeight::Bold)
-                                    ->color(fn(?MemberPosition $record): ?string => $record?->member?->getMemberColor())
-                                    ->tooltip(fn(?MemberPosition $record): ?string => $record?->member?->getMemberColorTooltip())
-                                    ->url(fn(?MemberPosition $record) => $record?->member ? MemberResource::getUrl('view', ['record' => $record->member->uid]) : null)
+                                    ->color(fn (?MemberPosition $record): ?string => $record?->member?->getMemberColor())
+                                    ->tooltip(fn (?MemberPosition $record): ?string => $record?->member?->getMemberColorTooltip())
+                                    ->url(fn (?MemberPosition $record) => $record?->member ? MemberResource::getUrl('view', ['record' => $record->member->uid]) : null)
                                     ->openUrlInNewTab(),
 
                                 TextEntry::make('position_name'),
@@ -301,9 +305,11 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $total = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('gender', $gender)->count();
-        if ($total === 0)
+        if ($total === 0) {
             return (string) $count;
+        }
         $pct = round($count / $total * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 
@@ -318,6 +324,7 @@ class GroupInfolist
         }
         $malePct = round($male / $total * 100);
         $femalePct = 100 - $malePct;
+
         return "{$malePct}% : {$femalePct}%";
     }
 
@@ -325,13 +332,13 @@ class GroupInfolist
     {
         return AgeGroup::orderBy('sort_order')->get()->map(function (AgeGroup $ag) {
             $agId = $ag->id;
+
             return TextEntry::make("ag_{$agId}")
                 ->label($ag->name)
-                ->state(fn(Group $record) => static::computeAgeGroupState($record, $agId))
+                ->state(fn (Group $record) => static::computeAgeGroupState($record, $agId))
                 ->badge()
                 ->icon('heroicon-o-user')
-                ->color($ag->getColor())
-            ;
+                ->color($ag->getColor());
         })->toArray();
     }
 
@@ -340,9 +347,11 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $total = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('age_group_id', $agId)->count();
-        if ($total === 0)
+        if ($total === 0) {
             return (string) $count;
+        }
         $pct = round($count / $total * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 
@@ -351,9 +360,11 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $totalAll = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('age_group_id', $agId)->where('gender', $gender)->count();
-        if ($totalAll === 0)
+        if ($totalAll === 0) {
             return (string) $count;
+        }
         $pct = round($count / $totalAll * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 
@@ -362,9 +373,11 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $total = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('age_group_id', $agId)->count();
-        if ($total === 0)
+        if ($total === 0) {
             return '0';
+        }
         $pct = round($count / $total * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 
@@ -373,15 +386,18 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $total = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('status', $status)->count();
-        if ($total === 0)
+        if ($total === 0) {
             return (string) $count;
+        }
         $pct = round($count / $total * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 
     private static function computeMembershipTypeCount(Group $record, \App\Enums\MembershipType $type): int
     {
         $ids = $record->getAllDescendantIds();
+
         return Member::whereIn('group_id', $ids)->where('membership_type', $type)->count();
     }
 
@@ -390,9 +406,11 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $total = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('membership_type', $type)->count();
-        if ($total === 0)
+        if ($total === 0) {
             return (string) $count;
+        }
         $pct = round($count / $total * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 
@@ -401,9 +419,11 @@ class GroupInfolist
         $ids = $record->getAllDescendantIds();
         $total = static::totalActiveMembers($record);
         $count = Member::whereIn('group_id', $ids)->where('is_permanent', $permanent)->count();
-        if ($total === 0)
+        if ($total === 0) {
             return (string) $count;
+        }
         $pct = round($count / $total * 100, 1);
+
         return "{$count} ({$pct}%)";
     }
 }

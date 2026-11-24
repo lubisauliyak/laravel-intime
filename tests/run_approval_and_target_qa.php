@@ -172,7 +172,9 @@ use Illuminate\Support\Facades\DB;
 class ApprovalAndTargetQATester
 {
     private int $passed = 0;
+
     private int $failed = 0;
+
     private array $errors = [];
 
     public function runAll(): void
@@ -195,7 +197,7 @@ class ApprovalAndTargetQATester
         if ($this->failed > 0) {
             echo "\nRincian Kegagalan:\n";
             foreach ($this->errors as $err) {
-                echo " - " . $err . "\n";
+                echo ' - '.$err."\n";
             }
             exit(1);
         } else {
@@ -207,21 +209,27 @@ class ApprovalAndTargetQATester
     private function assert(bool $condition, string $description): void
     {
         if ($condition) {
-            echo "  [PASS] " . $description . "\n";
+            echo '  [PASS] '.$description."\n";
             $this->passed++;
         } else {
-            echo "  [FAIL] " . $description . "\n";
+            echo '  [FAIL] '.$description."\n";
             $this->failed++;
             $this->errors[] = $description;
         }
     }
 
     private Group $rootGroup;
+
     private AgeGroup $ageRemaja;
+
     private AgeGroup $ageDewasa;
+
     private User $adminUser;
+
     private ?Member $newMember1 = null;
+
     private ?Member $newMember2 = null;
+
     private ?Member $absentNonTarget = null;
 
     private function seedInitialData(): void
@@ -287,12 +295,12 @@ class ApprovalAndTargetQATester
             'membership_type' => MembershipType::ANGGOTA,
         ]);
 
-        $this->assert($newMember->is_permanent === false, "Pendaftar mandiri baru berstatus is_permanent = false (menunggu persetujuan)");
-        $this->assert($newMember->status === false, "Pendaftar mandiri baru berstatus status = false (Non-Target Wajib)");
+        $this->assert($newMember->is_permanent === false, 'Pendaftar mandiri baru berstatus is_permanent = false (menunggu persetujuan)');
+        $this->assert($newMember->status === false, 'Pendaftar mandiri baru berstatus status = false (Non-Target Wajib)');
 
         // 2. Uji eligibility: status = false dan is_permanent = false tetap eligible untuk check-in
-        $isEligible = !$newMember->trashed() && in_array($newMember->group_id, $this->rootGroup->getAllDescendantIds());
-        $this->assert($isEligible, "Anggota non-target belum permanen TETAP BERHAK melakukan presensi");
+        $isEligible = ! $newMember->trashed() && in_array($newMember->group_id, $this->rootGroup->getAllDescendantIds());
+        $this->assert($isEligible, 'Anggota non-target belum permanen TETAP BERHAK melakukan presensi');
 
         // Uji soft delete: anggota yang dihapus ditolak
         $deletedMember = Member::create([
@@ -303,7 +311,7 @@ class ApprovalAndTargetQATester
             'is_permanent' => true,
         ]);
         $deletedMember->delete();
-        $this->assert($deletedMember->trashed() === true, "Soft deleted member teridentifikasi trashed() = true");
+        $this->assert($deletedMember->trashed() === true, 'Soft deleted member teridentifikasi trashed() = true');
 
         // 3. Buat 5 anggota target dasar (status = true, is_permanent = true)
         $baseTargetMembers = [];
@@ -330,10 +338,10 @@ class ApprovalAndTargetQATester
 
         // Hitung statistik awal (sebelum ada yang hadir)
         $statsInitial = $this->calculateMeetingStats($meeting, $this->rootGroup);
-        $this->assert($statsInitial['base_target'] === 5, "Target dasar awal adalah 5 anggota (status = true)");
-        $this->assert($statsInitial['total_target'] === 5, "Total target dinamis awal sama dengan target dasar (5)");
-        $this->assert($statsInitial['hadir'] === 0, "Jumlah hadir awal adalah 0");
-        $this->assert($statsInitial['alpa'] === 5, "Jumlah alpa awal adalah 5 (seluruh target dasar belum hadir)");
+        $this->assert($statsInitial['base_target'] === 5, 'Target dasar awal adalah 5 anggota (status = true)');
+        $this->assert($statsInitial['total_target'] === 5, 'Total target dinamis awal sama dengan target dasar (5)');
+        $this->assert($statsInitial['hadir'] === 0, 'Jumlah hadir awal adalah 0');
+        $this->assert($statsInitial['alpa'] === 5, 'Jumlah alpa awal adalah 5 (seluruh target dasar belum hadir)');
 
         // 5. Pendaftar mandiri (non-target) melakukan checkin HADIR
         Attendance::create([
@@ -348,9 +356,9 @@ class ApprovalAndTargetQATester
 
         // Hitung ulang statistik setelah pendaftar mandiri hadir
         $statsAfterNonTargetCheckin = $this->calculateMeetingStats($meeting, $this->rootGroup);
-        $this->assert($statsAfterNonTargetCheckin['total_target'] === 6, "Total target dinamis bertambah menjadi 6 (5 target dasar + 1 non-target hadir)");
-        $this->assert($statsAfterNonTargetCheckin['hadir'] === 1, "Jumlah hadir bertambah menjadi 1");
-        $this->assert($statsAfterNonTargetCheckin['alpa'] === 5, "Jumlah alpa TETAP 5 (kehadiran non-target TIDAK menambah alpa)");
+        $this->assert($statsAfterNonTargetCheckin['total_target'] === 6, 'Total target dinamis bertambah menjadi 6 (5 target dasar + 1 non-target hadir)');
+        $this->assert($statsAfterNonTargetCheckin['hadir'] === 1, 'Jumlah hadir bertambah menjadi 1');
+        $this->assert($statsAfterNonTargetCheckin['alpa'] === 5, 'Jumlah alpa TETAP 5 (kehadiran non-target TIDAK menambah alpa)');
 
         // 6. Anggota non-target kedua mengajukan IZIN
         $newMember2 = Member::create([
@@ -375,10 +383,10 @@ class ApprovalAndTargetQATester
 
         // Hitung ulang statistik setelah non-target kedua izin
         $statsAfterPermission = $this->calculateMeetingStats($meeting, $this->rootGroup);
-        $this->assert($statsAfterPermission['total_target'] === 7, "Total target dinamis bertambah menjadi 7 (5 base + 2 non-target aktif)");
-        $this->assert($statsAfterPermission['hadir'] === 1, "Jumlah hadir tetap 1");
-        $this->assert($statsAfterPermission['izin_sakit'] === 1, "Jumlah izin/sakit bertambah menjadi 1");
-        $this->assert($statsAfterPermission['alpa'] === 5, "Jumlah alpa TETAP 5");
+        $this->assert($statsAfterPermission['total_target'] === 7, 'Total target dinamis bertambah menjadi 7 (5 base + 2 non-target aktif)');
+        $this->assert($statsAfterPermission['hadir'] === 1, 'Jumlah hadir tetap 1');
+        $this->assert($statsAfterPermission['izin_sakit'] === 1, 'Jumlah izin/sakit bertambah menjadi 1');
+        $this->assert($statsAfterPermission['alpa'] === 5, 'Jumlah alpa TETAP 5');
 
         // 7. Konsistensi matematika formula: Hadir + Izin/Sakit + Alpa === Total Target Dinamis
         $sum = $statsAfterPermission['hadir'] + $statsAfterPermission['izin_sakit'] + $statsAfterPermission['alpa'];
@@ -409,8 +417,8 @@ class ApprovalAndTargetQATester
 
         // 1. Verifikasi statistik agregat: Anggota non-target yang tidak hadir TIDAK menambah target & TIDAK menambah alpa
         $stats = $this->calculateMeetingStats($meeting, $this->rootGroup);
-        $this->assert($stats['total_target'] === 7, "Total target dinamis tetap 7 (non-target tidak hadir TIDAK dihitung target)");
-        $this->assert($stats['alpa'] === 5, "Alpa tetap 5 (non-target tidak hadir TIDAK dijatuhi alpa fiktif)");
+        $this->assert($stats['total_target'] === 7, 'Total target dinamis tetap 7 (non-target tidak hadir TIDAK dihitung target)');
+        $this->assert($stats['alpa'] === 5, 'Alpa tetap 5 (non-target tidak hadir TIDAK dijatuhi alpa fiktif)');
 
         // 2. Verifikasi Query Tabel Presensi (getTableQuery logic):
         // Query harus mengembalikan target wajib (status = true) ATAU yang memiliki status absensi
@@ -418,14 +426,14 @@ class ApprovalAndTargetQATester
 
         $memberIdsInTable = $tableQueryResults->pluck('id')->toArray();
 
-        $this->assert(!in_array($absentNonTarget->id, $memberIdsInTable), "Anggota non-target yang TIDAK hadir TIDAK MUNCUL di daftar tabel presensi");
-        $this->assert(in_array($this->newMember1->id, $memberIdsInTable), "Anggota non-target yang HADIR muncul di daftar tabel presensi");
-        $this->assert(in_array($this->newMember2->id, $memberIdsInTable), "Anggota non-target yang IZIN muncul di daftar tabel presensi");
+        $this->assert(! in_array($absentNonTarget->id, $memberIdsInTable), 'Anggota non-target yang TIDAK hadir TIDAK MUNCUL di daftar tabel presensi');
+        $this->assert(in_array($this->newMember1->id, $memberIdsInTable), 'Anggota non-target yang HADIR muncul di daftar tabel presensi');
+        $this->assert(in_array($this->newMember2->id, $memberIdsInTable), 'Anggota non-target yang IZIN muncul di daftar tabel presensi');
 
         // 5 anggota target wajib (meskipun belum hadir) harus tetap muncul di tabel untuk dicatat alpa
         $baseTargets = Member::where('status', true)->pluck('id')->toArray();
         $allBaseTargetsPresentInTable = empty(array_diff($baseTargets, $memberIdsInTable));
-        $this->assert($allBaseTargetsPresentInTable, "Seluruh anggota target wajib (5 orang) tetap muncul di tabel presensi");
+        $this->assert($allBaseTargetsPresentInTable, 'Seluruh anggota target wajib (5 orang) tetap muncul di tabel presensi');
 
         echo "\n";
     }
@@ -447,8 +455,8 @@ class ApprovalAndTargetQATester
             'status' => false,
         ]);
         $memberToApproveWithoutTarget->refresh();
-        $this->assert($memberToApproveWithoutTarget->is_permanent === true, "Aksi Approval A: is_permanent berubah menjadi true (Terverifikasi)");
-        $this->assert($memberToApproveWithoutTarget->status === false, "Aksi Approval A: status tetap false (Tetap Anggota Mengambang/Non-Target)");
+        $this->assert($memberToApproveWithoutTarget->is_permanent === true, 'Aksi Approval A: is_permanent berubah menjadi true (Terverifikasi)');
+        $this->assert($memberToApproveWithoutTarget->status === false, 'Aksi Approval A: status tetap false (Tetap Anggota Mengambang/Non-Target)');
 
         // Kasus B: Admin menyetujui pendaftar mandiri DENGAN toggle set_as_target = true
         // Meniru aksi Filament: $record->update(['is_permanent' => true, 'status' => true])
@@ -457,8 +465,8 @@ class ApprovalAndTargetQATester
             'status' => true,
         ]);
         $memberToApproveWithTarget->refresh();
-        $this->assert($memberToApproveWithTarget->is_permanent === true, "Aksi Approval B: is_permanent berubah menjadi true (Terverifikasi)");
-        $this->assert($memberToApproveWithTarget->status === true, "Aksi Approval B: status berubah menjadi true (Naik Menjadi Target Wajib)");
+        $this->assert($memberToApproveWithTarget->is_permanent === true, 'Aksi Approval B: is_permanent berubah menjadi true (Terverifikasi)');
+        $this->assert($memberToApproveWithTarget->status === true, 'Aksi Approval B: status berubah menjadi true (Naik Menjadi Target Wajib)');
 
         // Buat pertemuan BARU untuk memvalidasi dampak perubahan status ke target kehadiran
         $newMeeting = Meeting::create([
@@ -474,15 +482,15 @@ class ApprovalAndTargetQATester
         $newStats = $this->calculateMeetingStats($newMeeting, $this->rootGroup);
 
         // Target dasar sebelumnya adalah 5. Sekarang Member B sudah menjadi status=true, sehingga target dasar menjadi 6!
-        $this->assert($newStats['base_target'] === 6, "Target dasar pertemuan baru naik menjadi 6 (5 target lama + 1 anggota yang baru diapprove)");
-        $this->assert($newStats['alpa'] === 6, "Alpa pertemuan baru adalah 6 (termasuk anggota yang baru naik menjadi target wajib)");
+        $this->assert($newStats['base_target'] === 6, 'Target dasar pertemuan baru naik menjadi 6 (5 target lama + 1 anggota yang baru diapprove)');
+        $this->assert($newStats['alpa'] === 6, 'Alpa pertemuan baru adalah 6 (termasuk anggota yang baru naik menjadi target wajib)');
 
         // Verifikasi pada query tabel presensi pertemuan baru:
         $newTableResults = $this->executeTableQuery($newMeeting, $this->rootGroup);
         $newMemberIdsInTable = $newTableResults->pluck('id')->toArray();
 
-        $this->assert(in_array($memberToApproveWithTarget->id, $newMemberIdsInTable), "Anggota yang baru diapprove sebagai target wajib otomatis muncul di tabel presensi");
-        $this->assert(!in_array($memberToApproveWithoutTarget->id, $newMemberIdsInTable), "Anggota yang diapprove tanpa target tetap tersembunyi jika tidak hadir");
+        $this->assert(in_array($memberToApproveWithTarget->id, $newMemberIdsInTable), 'Anggota yang baru diapprove sebagai target wajib otomatis muncul di tabel presensi');
+        $this->assert(! in_array($memberToApproveWithoutTarget->id, $newMemberIdsInTable), 'Anggota yang diapprove tanpa target tetap tersembunyi jika tidak hadir');
 
         echo "\n";
     }
@@ -588,7 +596,7 @@ class ApprovalAndTargetQATester
 
         $attendances = Attendance::with('member.ageGroup')
             ->where('meeting_id', $meeting->id)
-            ->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds))
+            ->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds))
             ->whereIn('status', [
                 AttendanceStatus::HADIR->value,
                 AttendanceStatus::IZIN->value,
@@ -596,7 +604,7 @@ class ApprovalAndTargetQATester
             ])
             ->get();
 
-        $nonTargetAttendances = $attendances->reject(fn($att) => in_array($att->member_id, $baseTargetMemberIds));
+        $nonTargetAttendances = $attendances->reject(fn ($att) => in_array($att->member_id, $baseTargetMemberIds));
 
         $totalTarget = $baseTargetCount + $nonTargetAttendances->count();
 
@@ -661,7 +669,7 @@ class ApprovalAndTargetQATester
                             });
                         });
                 })
-                ->orWhereNotNull('attendances.status');
+                    ->orWhereNotNull('attendances.status');
             })
             ->with(['ageGroup', 'group.parent', 'positions.group.level'])
             ->orderByRaw('attendances.checkin_time IS NULL ASC')
@@ -671,5 +679,5 @@ class ApprovalAndTargetQATester
 }
 
 // Eksekusi Test Runner
-$tester = new ApprovalAndTargetQATester();
+$tester = new ApprovalAndTargetQATester;
 $tester->runAll();

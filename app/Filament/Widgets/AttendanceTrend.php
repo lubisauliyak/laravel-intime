@@ -2,25 +2,26 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Attendance;
-use App\Models\Meeting;
-use App\Models\Group;
 use App\Enums\AttendanceStatus;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
+use App\Models\Attendance;
+use App\Models\Group;
+use App\Models\Meeting;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Cache;
 
 class AttendanceTrend extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     public ?string $filter = 'month';
 
     protected static ?int $sort = 1;
+
     protected int|string|array $columnSpan = 'full';
+
     protected ?string $heading = 'Statistik Tren Kehadiran';
+
     protected ?string $maxHeight = '300px';
 
     protected string $view = 'filament.widgets.attendance-trend-chart';
@@ -38,11 +39,11 @@ class AttendanceTrend extends ChartWidget
     protected function getPollingInterval(): ?string
     {
         $refMeeting = $this->getMeetingRecord();
-        if (!$refMeeting) {
+        if (! $refMeeting) {
             return null;
         }
 
-        if ($refMeeting->meeting_date?->isToday() && !$refMeeting->isExpired()) {
+        if ($refMeeting->meeting_date?->isToday() && ! $refMeeting->isExpired()) {
             return '30s';
         }
 
@@ -52,7 +53,7 @@ class AttendanceTrend extends ChartWidget
     protected function getMeetingRecord(): ?Meeting
     {
         $filterMeetingId = $this->filters['meeting_id'] ?? $this->pageFilters['meeting_id'] ?? null;
-        if (!$filterMeetingId) {
+        if (! $filterMeetingId) {
             return null;
         }
 
@@ -62,20 +63,20 @@ class AttendanceTrend extends ChartWidget
     protected function getData(): array
     {
         $currentMeeting = $this->getMeetingRecord();
-        if (!$currentMeeting || !$currentMeeting->meeting_date) {
+        if (! $currentMeeting || ! $currentMeeting->meeting_date) {
             return ['datasets' => [], 'labels' => []];
         }
 
         $user = auth()->user();
         $isToday = $currentMeeting->meeting_date && $currentMeeting->meeting_date->isToday();
         $isExpired = $currentMeeting->isExpired();
-        $isActive = $isToday && !$isExpired;
+        $isActive = $isToday && ! $isExpired;
 
         $selectedFilter = $this->filter ?? 'month';
 
         // Cache TTL: 30 detik saat ada pertemuan aktif, 30 menit jika data lampau
         $cacheTtl = $isActive ? 30 : 1800;
-        $cacheKey = 'attendance_trend_' . ($user->group_id ?? 'all') . '_' . $selectedFilter . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'attendance_trend_'.($user->group_id ?? 'all').'_'.$selectedFilter.'_'.md5(json_encode($this->filters));
 
         return Cache::remember($cacheKey, $cacheTtl, function () use ($currentMeeting, $user, $selectedFilter) {
             $filterGroupId = $this->filters['group_id'] ?? null;
@@ -96,13 +97,13 @@ class AttendanceTrend extends ChartWidget
             // Hierarki cakupan pertemuan:
             // - Superadmin: melihat semua pertemuan (atau sesuai filter eksplisit)
             // - Admin dengan grup (Kelompok, Desa, Daerah): melihat grup sendiri + parent/ancestors, tanpa anak (children)
-            if ($user && !$user->isSuperAdmin() && $user->group_id && $user->group) {
+            if ($user && ! $user->isSuperAdmin() && $user->group_id && $user->group) {
                 $allowedGroupIds = array_merge([$user->group_id], $user->group->getAllAncestorIds());
                 $meetingQuery->whereIn('group_id', $allowedGroupIds);
             } elseif ($filterGroupId) {
                 $meetingQuery->where('group_id', $filterGroupId);
             } elseif ($filterLevelId) {
-                $meetingQuery->whereHas('group', fn($q) => $q->where('level_id', $filterLevelId));
+                $meetingQuery->whereHas('group', fn ($q) => $q->where('level_id', $filterLevelId));
             }
 
             $limit = $selectedFilter === 'month' ? 10 : 15;
@@ -128,7 +129,7 @@ class AttendanceTrend extends ChartWidget
             $descendantIds = null;
             if ($filterGroupId) {
                 $descendantIds = Group::find($filterGroupId)?->getAllDescendantIds() ?? [];
-            } elseif ($user && !$user->isSuperAdmin() && $user->group_id && $user->group) {
+            } elseif ($user && ! $user->isSuperAdmin() && $user->group_id && $user->group) {
                 $descendantIds = $user->group->getAllDescendantIds();
             }
 
@@ -136,9 +137,9 @@ class AttendanceTrend extends ChartWidget
                 ->where('status', AttendanceStatus::HADIR);
 
             if ($descendantIds !== null) {
-                $attendanceQuery->whereHas('member', fn($q) => $q->whereIn('group_id', $descendantIds));
+                $attendanceQuery->whereHas('member', fn ($q) => $q->whereIn('group_id', $descendantIds));
             } elseif ($filterLevelId) {
-                $attendanceQuery->whereHas('member.group', fn($q) => $q->where('level_id', $filterLevelId));
+                $attendanceQuery->whereHas('member.group', fn ($q) => $q->where('level_id', $filterLevelId));
             }
 
             // Single query agregasi terindeks (bebas N+1)
@@ -155,7 +156,7 @@ class AttendanceTrend extends ChartWidget
                 // Gunakan kode singkat tingkat grup: DRH, DES, KEL, KAB
                 $levelCode = $meeting->group?->level?->code;
                 $dateFormatted = $meeting->meeting_date->format('d/m');
-                $labels[] = $levelCode ? (strtoupper($levelCode) . ' ' . $dateFormatted) : $dateFormatted;
+                $labels[] = $levelCode ? (strtoupper($levelCode).' '.$dateFormatted) : $dateFormatted;
                 $values[] = (int) ($attendanceCounts[$meeting->id] ?? 0);
             }
 

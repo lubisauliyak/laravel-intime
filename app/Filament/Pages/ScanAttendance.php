@@ -2,14 +2,12 @@
 
 namespace App\Filament\Pages;
 
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
-use Filament\Pages\Page;
+use App\Models\Attendance;
 use BackedEnum;
+use Filament\Pages\Page;
 
 class ScanAttendance extends Page
 {
-    use HasPageShield;
-
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-qr-code';
 
     protected static ?string $title = 'Buka Scanner';
@@ -17,4 +15,9 @@ class ScanAttendance extends Page
     protected static bool $shouldRegisterNavigation = false;
 
     protected string $view = 'scanner.live';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('scanAttendance', Attendance::class) ?? false;
+    }
 }

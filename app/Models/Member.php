@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use App\Traits\LogsActivity;
 
 /**
  * @property string $member_code
@@ -18,7 +18,8 @@ use App\Traits\LogsActivity;
  */
 class Member extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
+
     protected $fillable = [
         'uid',
         'member_code',
@@ -101,7 +102,7 @@ class Member extends Model
             return 'danger';
         }
 
-        if (!$this->is_permanent || !$this->status) {
+        if (! $this->is_permanent || ! $this->status) {
             return 'warning';
         }
 
@@ -129,6 +130,7 @@ class Member extends Model
                         $pos->category?->name,
                         $pos->group?->name,
                     ]);
+
                     return Str::title(strtolower(implode(' ', $parts)));
                 })->filter()->unique()->implode(', ');
 
@@ -141,15 +143,15 @@ class Member extends Model
             }
         }
 
-        if (!$this->status) {
+        if (! $this->status) {
             $details[] = 'Kurang Aktif';
         }
 
-        if (!$this->is_permanent) {
+        if (! $this->is_permanent) {
             $details[] = 'Menunggu Verifikasi';
         }
 
-        return !empty($details) ? implode(' • ', $details) : null;
+        return ! empty($details) ? implode(' • ', $details) : null;
     }
 
     /**
@@ -157,8 +159,9 @@ class Member extends Model
      */
     public function hasPositionIn(Group $group): bool
     {
-        if (!$this->isPengurus())
+        if (! $this->isPengurus()) {
             return false;
+        }
 
         $lineageIds = array_unique(array_merge(
             [$group->id],
@@ -185,7 +188,7 @@ class Member extends Model
         return $this->positions()
             ->with(['category', 'group.level'])
             ->get()
-            ->sortBy(fn($pos) => [
+            ->sortBy(fn ($pos) => [
                 $pos->category?->sort_order ?? 999,
                 -($pos->group?->level?->level_number ?? 0),
                 $pos->sort_order ?? 0,

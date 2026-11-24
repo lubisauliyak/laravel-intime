@@ -2,20 +2,21 @@
 
 namespace App\Filament\Resources\Groups\Pages;
 
+use App\Enums\AttendanceStatus;
 use App\Filament\Resources\Groups\GroupResource;
 use App\Filament\Resources\Meetings\MeetingResource;
+use App\Models\Group;
 use App\Models\Level;
 use App\Models\Meeting;
 use App\Models\Member;
-use App\Enums\AttendanceStatus;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\DatePicker;
-use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Filament\Resources\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -23,8 +24,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class GroupMeetingHistory extends Page implements HasTable
 {
-    use InteractsWithTable;
     use InteractsWithRecord;
+    use InteractsWithTable;
 
     protected static string $resource = GroupResource::class;
 
@@ -33,9 +34,15 @@ class GroupMeetingHistory extends Page implements HasTable
     public static function canAccess(array $parameters = []): bool
     {
         $record = $parameters['record'] ?? null;
-        return $record
-            ? auth()->user()->can('viewMeetingHistory', $record)
-            : auth()->user()->can('ViewMeetingHistory:Group');
+        if (is_string($record) || is_int($record)) {
+            $record = Group::where('uid', $record)->orWhere('id', $record)->first();
+        }
+
+        if ($record instanceof Group) {
+            return auth()->user()?->can('viewMeetingHistory', $record) ?? false;
+        }
+
+        return auth()->user()?->can('viewAny', Group::class) ?? false;
     }
 
     public function mount(int|string $record): void
@@ -62,6 +69,7 @@ class GroupMeetingHistory extends Page implements HasTable
     {
         $resource = static::getResource();
         $group = $this->getRecord();
+
         return [
             $resource::getUrl() => $resource::getNavigationLabel(),
             $resource::getUrl('view', ['record' => $group]) => $group->name,
@@ -77,11 +85,12 @@ class GroupMeetingHistory extends Page implements HasTable
             ->filters([
                 SelectFilter::make('level')
                     ->label('Tingkat Pertemuan')
-                    ->options(fn() => Level::orderBy('level_number', 'desc')->pluck('name', 'id'))
+                    ->options(fn () => Level::orderBy('level_number', 'desc')->pluck('name', 'id'))
                     ->query(function (Builder $query, array $data) {
-                        if (!$data['value'])
+                        if (! $data['value']) {
                             return;
-                        $query->whereHas('group', fn($q) => $q->where('level_id', $data['value']));
+                        }
+                        $query->whereHas('group', fn ($q) => $q->where('level_id', $data['value']));
                     }),
                 Filter::make('date_range')
                     ->form([
@@ -92,8 +101,8 @@ class GroupMeetingHistory extends Page implements HasTable
                     ])
                     ->query(function (Builder $query, array $data) {
                         return $query
-                            ->when($data['date_from'], fn($q) => $q->whereDate('meeting_date', '>=', $data['date_from']))
-                            ->when($data['date_to'], fn($q) => $q->whereDate('meeting_date', '<=', $data['date_to']));
+                            ->when($data['date_from'], fn ($q) => $q->whereDate('meeting_date', '>=', $data['date_from']))
+                            ->when($data['date_to'], fn ($q) => $q->whereDate('meeting_date', '<=', $data['date_to']));
                     }),
             ])
             ->actions([
@@ -102,7 +111,7 @@ class GroupMeetingHistory extends Page implements HasTable
                         ->label('Detail Kehadiran Grup')
                         ->icon('heroicon-m-users')
                         ->color('grey')
-                        ->url(fn(Meeting $record) => \App\Filament\Resources\Meetings\Pages\MeetingAttendanceDetails::getUrl(['record' => $record->uid]) . '?group=' . $this->record->uid)
+                        ->url(fn (Meeting $record) => \App\Filament\Resources\Meetings\Pages\MeetingAttendanceDetails::getUrl(['record' => $record->uid]).'?group='.$this->record->uid)
                         ->openUrlInNewTab()
                         ->visible(fn () => auth()->user()->can('openAttendanceDetails', $this->getRecord())),
                 ])
@@ -136,7 +145,7 @@ class GroupMeetingHistory extends Page implements HasTable
             TextColumn::make('name')
                 ->label('Nama Pertemuan')
                 ->searchable()
-                ->url(fn(Meeting $record) => MeetingResource::getUrl('view', ['record' => $record]))
+                ->url(fn (Meeting $record) => MeetingResource::getUrl('view', ['record' => $record]))
                 ->openUrlInNewTab(),
             TextColumn::make('meeting_date')
                 ->label('Tanggal')
@@ -148,39 +157,39 @@ class GroupMeetingHistory extends Page implements HasTable
                 ->color(fn (Meeting $record): string => $record->group?->level?->getColor() ?? 'gray'),
             TextColumn::make('target_count')
                 ->label('Target Anggota')
-                ->state(fn(Meeting $record) => $this->getMeetingStats($record)['target'])
+                ->state(fn (Meeting $record) => $this->getMeetingStats($record)['target'])
                 ->badge()
                 ->color('gray')
                 ->alignCenter(),
             TextColumn::make('hadir_count')
                 ->label('Hadir')
-                ->state(fn(Meeting $record) => $this->getMeetingStats($record)['hadir'])
+                ->state(fn (Meeting $record) => $this->getMeetingStats($record)['hadir'])
                 ->badge()
                 ->color('success')
                 ->alignCenter(),
             TextColumn::make('izin_count')
                 ->label('Izin')
-                ->state(fn(Meeting $record) => $this->getMeetingStats($record)['izin'])
+                ->state(fn (Meeting $record) => $this->getMeetingStats($record)['izin'])
                 ->badge()
                 ->color('warning')
                 ->alignCenter(),
             TextColumn::make('sakit_count')
                 ->label('Sakit')
-                ->state(fn(Meeting $record) => $this->getMeetingStats($record)['sakit'])
+                ->state(fn (Meeting $record) => $this->getMeetingStats($record)['sakit'])
                 ->badge()
                 ->color('danger')
                 ->alignCenter(),
             TextColumn::make('alfa_count')
                 ->label('Tidak Hadir')
-                ->state(fn(Meeting $record) => $this->getMeetingStats($record)['alfa'])
+                ->state(fn (Meeting $record) => $this->getMeetingStats($record)['alfa'])
                 ->badge()
-                ->color(fn($state) => $state > 0 ? 'danger' : 'gray')
+                ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
                 ->alignCenter(),
             TextColumn::make('percentage')
                 ->label('% Hadir')
-                ->state(fn(Meeting $record) => $this->getMeetingStats($record)['percentage'] . '%')
+                ->state(fn (Meeting $record) => $this->getMeetingStats($record)['percentage'].'%')
                 ->badge()
-                ->color(fn($state) => (float) rtrim($state, '%') >= 75 ? 'success' : ((float) rtrim($state, '%') >= 50 ? 'warning' : 'danger'))
+                ->color(fn ($state) => (float) rtrim($state, '%') >= 75 ? 'success' : ((float) rtrim($state, '%') >= 50 ? 'warning' : 'danger'))
                 ->alignCenter(),
         ];
     }

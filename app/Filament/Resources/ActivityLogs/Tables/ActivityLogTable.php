@@ -97,6 +97,7 @@ class ActivityLogTable
                     ->modalDescription(function () {
                         $days = (int) env('ACTIVITY_LOG_RETENTION_DAYS', 30);
                         $count = ActivityLog::where('created_at', '<', now()->subDays($days))->count();
+
                         return "Ditemukan {$count} rekaman log yang berusia lebih dari {$days} hari. Apakah Anda yakin ingin menghapus data tersebut secara permanen?";
                     })
                     ->modalSubmitActionLabel('Ya, Bersihkan Sekarang')

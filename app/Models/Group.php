@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use App\Traits\LogsActivity;
 
 class Group extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
+
     protected $fillable = [
         'uid',
         'parent_id',
@@ -105,6 +106,7 @@ class Group extends Model
     public function getFullNameAttribute(): string
     {
         $code = $this->level?->code ?? 'N/A';
+
         return "({$code}) {$this->name}";
     }
 
@@ -125,8 +127,11 @@ class Group extends Model
     }
 
     protected static array $_descendant_cache = [];
+
     protected static array $_ancestor_cache = [];
+
     protected static ?array $_ancestor_tree = null;
+
     protected static ?array $_children_tree = null;
 
     protected static function warmHierarchyTree(): void
@@ -162,6 +167,7 @@ class Group extends Model
                     $ids = array_merge($ids, $collectDescendants($childId));
                 }
             }
+
             return $ids;
         };
 
@@ -199,12 +205,12 @@ class Group extends Model
             return true;
         }
 
-        if (!$user->group_id || !$user->group) {
+        if (! $user->group_id || ! $user->group) {
             return false;
         }
 
         // Cache descendant IDs in the user object to avoid repeated DB queries during table rendering
-        if (!isset($user->_descendant_group_ids)) {
+        if (! isset($user->_descendant_group_ids)) {
             $user->_descendant_group_ids = $user->group->getAllDescendantIds();
         }
 
@@ -220,6 +226,7 @@ class Group extends Model
         while ($curr->parent_id && $curr->parent) {
             $curr = $curr->parent;
         }
+
         return $curr;
     }
 
@@ -228,7 +235,7 @@ class Group extends Model
      */
     public static function isNameDuplicateInScope(string $name, ?int $levelId, ?int $parentId, ?int $ignoreId = null, ?\App\Models\User $user = null): bool
     {
-        if (empty(trim($name)) || !$levelId) {
+        if (empty(trim($name)) || ! $levelId) {
             return false;
         }
 
@@ -237,7 +244,7 @@ class Group extends Model
 
         // 1. Tentukan ID grup dalam scope
         $scopeGroupIds = null;
-        if ($user && !$user->isSuperAdmin() && $user->group_id) {
+        if ($user && ! $user->isSuperAdmin() && $user->group_id) {
             $scopeGroupIds = $user->getManageableGroupIds();
         } elseif ($parentId) {
             $parent = static::find($parentId);
@@ -259,7 +266,7 @@ class Group extends Model
             $query->whereIn('id', $scopeGroupIds);
         } else {
             // Jika grup tingkat teratas (parent_id null)
-            if (!$parentId) {
+            if (! $parentId) {
                 $query->whereNull('parent_id');
             }
         }
@@ -267,4 +274,3 @@ class Group extends Model
         return $query->exists();
     }
 }
-

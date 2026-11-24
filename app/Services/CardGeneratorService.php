@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Models\CardTemplate;
 use App\Models\Member;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Intervention\Image\ImageManager;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class CardGeneratorService
 {
@@ -15,7 +15,7 @@ class CardGeneratorService
 
     public function __construct()
     {
-        $this->manager = new ImageManager(new Driver());
+        $this->manager = new ImageManager(new Driver);
     }
 
     public function generate(CardTemplate $template, Member $member): string
@@ -31,7 +31,7 @@ class CardGeneratorService
             'full_name' => $scenario === 'long' ? 'Prof. Dr. H. Muhammad Hidayatullah Al-Banjari, S.Kom., M.Cs., Ph.D.' : 'Ahmad Fauzi',
             'nick_name' => $scenario === 'long' ? 'Hidayatullah' : 'Ahmad',
         ]);
-        
+
         return $this->processImage($template, $dummyMember, true, $scenario, $overrideElements);
     }
 
@@ -63,11 +63,11 @@ class CardGeneratorService
                 } else {
                     $text = $this->getFieldValue($member, $el['field'] ?? '', $isPreview, $scenario);
                 }
-                
+
                 $fontFamily = $el['fontFamily'] ?? 'Inter';
                 $fontWeight = $el['fontWeight'] ?? 'normal';
                 $fontStyle = $el['fontStyle'] ?? 'normal';
-                
+
                 $fontFile = $this->resolveFontFile($fontFamily, $fontWeight, $fontStyle);
 
                 $align = $el['textAlign'] ?? 'left';
@@ -76,7 +76,7 @@ class CardGeneratorService
                 $x = (float) ($el['left'] ?? 0);
                 $y = (float) ($el['top'] ?? 0);
                 $width = (float) ($el['width'] ?? 0);
-                
+
                 if ($originX === 'center') {
                     if ($align === 'left') {
                         $anchorX = $x - ($width / 2);
@@ -102,7 +102,7 @@ class CardGeneratorService
                     $anchorY = $y;
                     $vAlign = 'top';
                 }
-                
+
                 $fontSize = (int) ($el['fontSize'] ?? 24);
                 if ($width > 0) {
                     $text = $this->wrapTextToWidth($text, $width, (float) $fontSize, $fontFile);
@@ -119,34 +119,34 @@ class CardGeneratorService
             } elseif (($el['type'] ?? '') === 'qrcode') {
                 $code = $member->member_code ?? 'QR-CODE';
                 $qrSize = (int) ($el['width'] ?? 150);
-                
+
                 $x = (int) ($el['left'] ?? 0);
                 $y = (int) ($el['top'] ?? 0);
                 $originX = $el['originX'] ?? 'left';
                 $originY = $el['originY'] ?? 'top';
 
-                $placeX = $originX === 'center' ? $x - (int)($qrSize / 2) : $x;
-                $placeY = $originY === 'center' ? $y - (int)($qrSize / 2) : $y;
-                
+                $placeX = $originX === 'center' ? $x - (int) ($qrSize / 2) : $x;
+                $placeY = $originY === 'center' ? $y - (int) ($qrSize / 2) : $y;
+
                 $qrData = \App\Services\QrGenerator::generatePng($code, $qrSize, 0);
                 $qrImage = $this->manager->read($qrData);
                 $image->place($qrImage, 'top-left', $placeX, $placeY);
             } elseif (($el['type'] ?? '') === 'photo') {
                 $photoSize = (int) ($el['width'] ?? 150);
                 $photoPath = null;
-                
-                if (!$isPreview && $member->profile_photo_path && Storage::disk('public')->exists($member->profile_photo_path)) {
+
+                if (! $isPreview && $member->profile_photo_path && Storage::disk('public')->exists($member->profile_photo_path)) {
                     $photoPath = Storage::disk('public')->path($member->profile_photo_path);
                 }
-                
+
                 $x = (int) ($el['left'] ?? 0);
                 $y = (int) ($el['top'] ?? 0);
                 $originX = $el['originX'] ?? 'left';
                 $originY = $el['originY'] ?? 'top';
 
-                $placeX = $originX === 'center' ? $x - (int)($photoSize / 2) : $x;
-                $placeY = $originY === 'center' ? $y - (int)($photoSize / 2) : $y;
-                
+                $placeX = $originX === 'center' ? $x - (int) ($photoSize / 2) : $x;
+                $placeY = $originY === 'center' ? $y - (int) ($photoSize / 2) : $y;
+
                 if ($photoPath) {
                     $photoImage = $this->manager->read($photoPath);
                     $photoImage->cover($photoSize, $photoSize);
@@ -168,18 +168,18 @@ class CardGeneratorService
         }
 
         if ($isPreview) {
-            $filename = 'preview_' . $template->id . ($scenario !== 'default' ? '_' . $scenario : '') . '.png';
-            $path = 'kta/previews/' . $filename;
+            $filename = 'preview_'.$template->id.($scenario !== 'default' ? '_'.$scenario : '').'.png';
+            $path = 'kta/previews/'.$filename;
         } else {
-            $filename = $member->uid . '.png';
-            $path = 'kta/' . $filename;
+            $filename = $member->uid.'.png';
+            $path = 'kta/'.$filename;
         }
 
         // Save image to storage
         $imageData = (string) $image->toPng();
         Storage::disk('public')->put($path, $imageData);
 
-        if (!$isPreview) {
+        if (! $isPreview) {
             $member->update(['membership_card_photo_path' => $path]);
         }
 
@@ -218,6 +218,7 @@ class CardGeneratorService
                     'membership_type' => 'Pengurus',
                 ];
             }
+
             return $previewData[$field] ?? 'Contoh Teks';
         }
 
@@ -253,10 +254,10 @@ class CardGeneratorService
 
         // 1. Cek di resource_path('fonts/...') - font bawaan sistem
         $builtinCandidates = [
-            resource_path('fonts/' . $fontName . $fontSuffix . '.ttf'),
-            resource_path('fonts/' . $fontName . $fontSuffix . '.otf'),
-            resource_path('fonts/' . $fontName . '-Regular.ttf'),
-            resource_path('fonts/' . $fontName . '.ttf'),
+            resource_path('fonts/'.$fontName.$fontSuffix.'.ttf'),
+            resource_path('fonts/'.$fontName.$fontSuffix.'.otf'),
+            resource_path('fonts/'.$fontName.'-Regular.ttf'),
+            resource_path('fonts/'.$fontName.'.ttf'),
         ];
         foreach ($builtinCandidates as $candidate) {
             if (file_exists($candidate)) {
@@ -269,10 +270,10 @@ class CardGeneratorService
         if (is_dir($storageDir)) {
             // Prioritas A: Varian spesifik (contoh: Lexend-Bold.ttf / .otf)
             $specificFiles = [
-                $storageDir . '/' . $fontFamily . $fontSuffix . '.ttf',
-                $storageDir . '/' . $fontFamily . $fontSuffix . '.otf',
-                $storageDir . '/' . $fontName . $fontSuffix . '.ttf',
-                $storageDir . '/' . $fontName . $fontSuffix . '.otf',
+                $storageDir.'/'.$fontFamily.$fontSuffix.'.ttf',
+                $storageDir.'/'.$fontFamily.$fontSuffix.'.otf',
+                $storageDir.'/'.$fontName.$fontSuffix.'.ttf',
+                $storageDir.'/'.$fontName.$fontSuffix.'.otf',
             ];
             foreach ($specificFiles as $file) {
                 if (file_exists($file)) {
@@ -282,10 +283,10 @@ class CardGeneratorService
 
             // Prioritas B: Nama keluarga murni (contoh: Lexend.ttf / .otf)
             $familyFiles = [
-                $storageDir . '/' . $fontFamily . '.ttf',
-                $storageDir . '/' . $fontFamily . '.otf',
-                $storageDir . '/' . $fontName . '.ttf',
-                $storageDir . '/' . $fontName . '.otf',
+                $storageDir.'/'.$fontFamily.'.ttf',
+                $storageDir.'/'.$fontFamily.'.otf',
+                $storageDir.'/'.$fontName.'.ttf',
+                $storageDir.'/'.$fontName.'.otf',
             ];
             foreach ($familyFiles as $file) {
                 if (file_exists($file)) {
@@ -295,10 +296,10 @@ class CardGeneratorService
 
             // Prioritas C: Varian Regular (contoh: Lexend-Regular.ttf / .otf)
             $regularFiles = [
-                $storageDir . '/' . $fontFamily . '-Regular.ttf',
-                $storageDir . '/' . $fontFamily . '-Regular.otf',
-                $storageDir . '/' . $fontName . '-Regular.ttf',
-                $storageDir . '/' . $fontName . '-Regular.otf',
+                $storageDir.'/'.$fontFamily.'-Regular.ttf',
+                $storageDir.'/'.$fontFamily.'-Regular.otf',
+                $storageDir.'/'.$fontName.'-Regular.ttf',
+                $storageDir.'/'.$fontName.'-Regular.otf',
             ];
             foreach ($regularFiles as $file) {
                 if (file_exists($file)) {
@@ -307,15 +308,15 @@ class CardGeneratorService
             }
 
             // Prioritas D: Varian apa saja dalam keluarga yang sama (wildcard glob)
-            $patternTtf = $storageDir . '/' . $fontFamily . '-*.ttf';
+            $patternTtf = $storageDir.'/'.$fontFamily.'-*.ttf';
             $matchesTtf = glob($patternTtf);
-            if (!empty($matchesTtf) && file_exists($matchesTtf[0])) {
+            if (! empty($matchesTtf) && file_exists($matchesTtf[0])) {
                 return $matchesTtf[0];
             }
 
-            $patternOtf = $storageDir . '/' . $fontFamily . '-*.otf';
+            $patternOtf = $storageDir.'/'.$fontFamily.'-*.otf';
             $matchesOtf = glob($patternOtf);
-            if (!empty($matchesOtf) && file_exists($matchesOtf[0])) {
+            if (! empty($matchesOtf) && file_exists($matchesOtf[0])) {
                 return $matchesOtf[0];
             }
         }
@@ -348,13 +349,14 @@ class CardGeneratorService
             $words = preg_split('/\s+/', trim($paragraph));
             if (empty($words) || (count($words) === 1 && $words[0] === '')) {
                 $lines[] = '';
+
                 continue;
             }
 
             $currentLine = '';
 
             foreach ($words as $word) {
-                $testLine = $currentLine === '' ? $word : $currentLine . ' ' . $word;
+                $testLine = $currentLine === '' ? $word : $currentLine.' '.$word;
                 $bbox = @imagettfbbox($ptSize, 0, $fontFile, $testLine);
 
                 if ($bbox !== false) {

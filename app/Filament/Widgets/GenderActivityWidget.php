@@ -2,20 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
 use App\Models\Attendance;
 use App\Models\Meeting;
 use App\Models\Member;
-use App\Enums\Gender;
-use App\Enums\AttendanceStatus;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class GenderActivityWidget extends ChartWidget
 {
-    use HasWidgetShield;
     use InteractsWithPageFilters;
 
     protected static bool $isLazy = true;
@@ -73,13 +71,13 @@ class GenderActivityWidget extends ChartWidget
         $user = auth()->user();
         $ref = $this->getReferenceMeeting();
 
-        if (!$ref) {
+        if (! $ref) {
             return ['datasets' => [], 'labels' => []];
         }
 
-        $cacheKey = 'gender_activity_v2_' . ($user->group_id ?? 'all') . '_' . md5(json_encode($this->filters));
+        $cacheKey = 'gender_activity_v2_'.($user->group_id ?? 'all').'_'.md5(json_encode($this->filters));
 
-        return Cache::remember($cacheKey, 180, fn() => $this->getGenderActivityStats($user, $ref));
+        return Cache::remember($cacheKey, 180, fn () => $this->getGenderActivityStats($user, $ref));
     }
 
     private function getGenderActivityStats($user, Meeting $ref): array
@@ -102,8 +100,9 @@ class GenderActivityWidget extends ChartWidget
 
         foreach ($genders as $genderKey => $genderLabel) {
             $totalMembers = $memberCounts[$genderKey] ?? 0;
-            if ($totalMembers === 0)
+            if ($totalMembers === 0) {
                 continue;
+            }
 
             $counts = $attendanceCounts->get($genderKey, collect());
             $hadirCount = $counts->where('status', AttendanceStatus::HADIR->value)->sum('count');
@@ -141,17 +140,18 @@ class GenderActivityWidget extends ChartWidget
         if ($filterLevelId) {
             return \App\Models\Group::where('level_id', $filterLevelId)->get()->flatMap->getAllDescendantIds()->unique()->toArray();
         }
-        if ($user && !$user->isSuperAdmin() && $user->group_id) {
+        if ($user && ! $user->isSuperAdmin() && $user->group_id) {
             return $user->group->getAllDescendantIds();
         }
+
         return null;
     }
 
     private function getMemberCounts(?array $allowedGroupIds, array $targetAgeGroups)
     {
         return Member::where('status', true)
-            ->when($allowedGroupIds, fn($q) => $q->whereIn('group_id', $allowedGroupIds))
-            ->when(!empty($targetAgeGroups), fn($q) => $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups)))
+            ->when($allowedGroupIds, fn ($q) => $q->whereIn('group_id', $allowedGroupIds))
+            ->when(! empty($targetAgeGroups), fn ($q) => $q->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', $targetAgeGroups)))
             ->select('gender', DB::raw('count(*) as total'))
             ->groupBy('gender')
             ->pluck('total', 'gender');
@@ -164,8 +164,8 @@ class GenderActivityWidget extends ChartWidget
                 if ($allowedGroupIds) {
                     $q->whereIn('group_id', $allowedGroupIds);
                 }
-                if (!empty($targetAgeGroups)) {
-                    $q->whereHas('ageGroup', fn($aq) => $aq->whereIn('name', $targetAgeGroups));
+                if (! empty($targetAgeGroups)) {
+                    $q->whereHas('ageGroup', fn ($aq) => $aq->whereIn('name', $targetAgeGroups));
                 }
             })
             ->join('members', 'attendances.member_id', '=', 'members.id')

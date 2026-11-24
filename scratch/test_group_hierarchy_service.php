@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\DB;
 $passed = 0;
 $failed = 0;
 
-function assert_it(string $name, bool $condition, string $details = '') {
+function assert_it(string $name, bool $condition, string $details = '')
+{
     global $passed, $failed;
     if ($condition) {
         $passed++;
@@ -30,7 +31,7 @@ echo "\n======================================================\n";
 echo "   GROUP HIERARCHY SERVICE - AUTOMATED UNIT TESTS      \n";
 echo "======================================================\n\n";
 
-$service = new GroupHierarchyService();
+$service = new GroupHierarchyService;
 
 DB::beginTransaction();
 
@@ -56,7 +57,7 @@ try {
     $resA = $service->validateChainIntegrity($kelA);
     assert_it('Scenario A: Chain is valid', $resA['is_valid'] === true);
     assert_it('Scenario A: Status is valid', $resA['status'] === 'valid');
-    assert_it('Scenario A: Prefix is 1007', $resA['prefix'] === '1007', 'Got: ' . ($resA['prefix'] ?? 'null'));
+    assert_it('Scenario A: Prefix is 1007', $resA['prefix'] === '1007', 'Got: '.($resA['prefix'] ?? 'null'));
     assert_it('Scenario A: getCalculatedPrefix returns 1007', $service->getCalculatedPrefix($kelA) === '1007');
 
     // ── SCENARIO B: Broken Chain in Middle (Daerah=01, Desa=null, Kelompok=07) ──
@@ -94,7 +95,7 @@ try {
     $kelE = Group::create(['name' => 'KELOMPOK TEST', 'level_id' => $lvlKel->id, 'parent_id' => $desE->id, 'code' => '99']);
 
     $codeE1 = $service->generateNextMemberCode($kelE);
-    assert_it('Scenario E1: 1st code for fresh prefix is 8899001', $codeE1 === '8899001', 'Got: ' . ($codeE1 ?? 'null'));
+    assert_it('Scenario E1: 1st code for fresh prefix is 8899001', $codeE1 === '8899001', 'Got: '.($codeE1 ?? 'null'));
 
     $mE1 = Member::create([
         'member_code' => $codeE1,
@@ -106,7 +107,7 @@ try {
     ]);
 
     $codeE2 = $service->generateNextMemberCode($kelE);
-    assert_it('Scenario E2: 2nd code for fresh prefix is 8899002', $codeE2 === '8899002', 'Got: ' . ($codeE2 ?? 'null'));
+    assert_it('Scenario E2: 2nd code for fresh prefix is 8899002', $codeE2 === '8899002', 'Got: '.($codeE2 ?? 'null'));
 
     $mE2 = Member::create([
         'member_code' => $codeE2,
@@ -127,7 +128,7 @@ try {
         'status' => true,
     ]);
     $codeE1000 = $service->generateNextMemberCode($kelE);
-    assert_it('Scenario E3: Code expands to 88991000 after 999', $codeE1000 === '88991000', 'Got: ' . ($codeE1000 ?? 'null'));
+    assert_it('Scenario E3: Code expands to 88991000 after 999', $codeE1000 === '88991000', 'Got: '.($codeE1000 ?? 'null'));
 
     // Test with soft-deleted member (should not collide with soft-deleted)
     $mE2->delete();
@@ -143,11 +144,11 @@ try {
     ]);
     $mE1000->delete();
     $codeE1001 = $service->generateNextMemberCode($kelE);
-    assert_it('Scenario E4: Next code is 88991001 even after 1000 was soft deleted', $codeE1001 === '88991001', 'Got: ' . ($codeE1001 ?? 'null'));
+    assert_it('Scenario E4: Next code is 88991001 even after 1000 was soft deleted', $codeE1001 === '88991001', 'Got: '.($codeE1001 ?? 'null'));
 
     // E5: Existing prefix in real DB (1007 has members up to 1007033)
     $nextExistingCode = $service->generateNextMemberCode($kelA);
-    assert_it('Scenario E5: Accurately continues sequence on existing 1007 data (1007034)', $nextExistingCode === '1007034', 'Got: ' . ($nextExistingCode ?? 'null'));
+    assert_it('Scenario E5: Accurately continues sequence on existing 1007 data (1007034)', $nextExistingCode === '1007034', 'Got: '.($nextExistingCode ?? 'null'));
 
     // ── SCENARIO F: Template Inheritance & Strict Locking ──
     // Set template on Daerah Sidoarjo Tengah (daeA)

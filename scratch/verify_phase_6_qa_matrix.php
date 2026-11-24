@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 $passed = 0;
 $failed = 0;
 
-function assert_it(string $name, bool $condition, string $details = '') {
+function assert_it(string $name, bool $condition, string $details = '')
+{
     global $passed, $failed;
     if ($condition) {
         $passed++;
@@ -60,18 +61,18 @@ try {
     ]);
 
     // Matrix CSV content
-    $csvContent = "nama_lengkap_wajib,kelompok_wajib,lp_wajib,id_anggota,tanggal_lahir\n" .
-        "ANGGOTA AUTO ID,KELOMPOK QA MATRIX 82,L,,20/01/1998\n" .
-        "ANGGOTA NO CODE,KELOMPOK TANPA KODE QA,P,,21/02/1997\n" .
-        "DATA BARU UPDATE,KELOMPOK QA MATRIX 82,L,9182001,22/03/1996\n" .
-        "ANGGOTA BROKEN CHAIN,KELOMPOK QA 03,L,,23/04/1995\n" .
-        "ANGGOTA MANUAL BARU,KELOMPOK QA MATRIX 82,P,MANUAL-2026,24/05/1994\n" .
+    $csvContent = "nama_lengkap_wajib,kelompok_wajib,lp_wajib,id_anggota,tanggal_lahir\n".
+        "ANGGOTA AUTO ID,KELOMPOK QA MATRIX 82,L,,20/01/1998\n".
+        "ANGGOTA NO CODE,KELOMPOK TANPA KODE QA,P,,21/02/1997\n".
+        "DATA BARU UPDATE,KELOMPOK QA MATRIX 82,L,9182001,22/03/1996\n".
+        "ANGGOTA BROKEN CHAIN,KELOMPOK QA 03,L,,23/04/1995\n".
+        "ANGGOTA MANUAL BARU,KELOMPOK QA MATRIX 82,P,MANUAL-2026,24/05/1994\n".
         "ANGGOTA FORMAT TGL,KELOMPOK QA MATRIX 82,L,,1992-12-31\n";
 
     $tempCsvPath = storage_path('app/public/test_matrix_fase6.csv');
     file_put_contents($tempCsvPath, $csvContent);
 
-    $parser = new MemberImportParser();
+    $parser = new MemberImportParser;
     $result = $parser->parse($tempCsvPath);
 
     // Matrix 1: Baris tanpa ID di kelompok berkode lengkap
@@ -107,7 +108,7 @@ try {
     // Matrix 6: Baris dengan format tanggal ISO (YYYY-MM-DD)
     $row6 = $result['all_rows'][5];
     assert_it('Matrix 6: Format tanggal ISO terbaca valid', $row6['is_valid'] === true);
-    assert_it('Matrix 6: Tanggal terkonversi dengan benar', !empty($row6['birth_date']));
+    assert_it('Matrix 6: Tanggal terkonversi dengan benar', ! empty($row6['birth_date']));
 
     if (file_exists($tempCsvPath)) {
         unlink($tempCsvPath);

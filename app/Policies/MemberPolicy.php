@@ -4,136 +4,186 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
+use App\Enums\UserRole;
 use App\Models\Member;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MemberPolicy
 {
     use HandlesAuthorization;
 
-    private function canManageMember(AuthUser $authUser, Member $member): bool
+    public function viewAny(User $user): bool
     {
-        if (! $authUser instanceof \App\Models\User) {
-            return false;
-        }
+        return true;
+    }
 
-        if ($authUser->isSuperAdmin()) {
+    public function view(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        if ($member->group) {
-            return $member->group->canBeManagedBy($authUser);
-        }
-
-        return false;
-    }
-    
-    public function viewAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ViewAny:Member');
+        return $user->canManageGroup($member->group_id);
     }
 
-    public function view(AuthUser $authUser, Member $member): bool
+    public function create(User $user): bool
     {
-        return $authUser->can('View:Member') && $this->canManageMember($authUser, $member);
-    }
-
-    public function create(AuthUser $authUser): bool
-    {
-        return $authUser->can('Create:Member');
-    }
-
-    public function update(AuthUser $authUser, Member $member): bool
-    {
-        return $authUser->can('Update:Member') && $this->canManageMember($authUser, $member);
-    }
-
-    public function delete(AuthUser $authUser, Member $member): bool
-    {
-        return $authUser->can('Delete:Member') && $this->canManageMember($authUser, $member);
-    }
-
-    public function restore(AuthUser $authUser, Member $member): bool
-    {
-        return $authUser->can('Restore:Member') && $this->canManageMember($authUser, $member);
-    }
-
-    public function forceDelete(AuthUser $authUser, Member $member): bool
-    {
-        return $authUser->can('ForceDelete:Member') && $this->canManageMember($authUser, $member);
-    }
-
-    public function forceDeleteAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('ForceDeleteAny:Member');
-    }
-
-    public function restoreAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('RestoreAny:Member');
-    }
-
-    public function replicate(AuthUser $authUser, Member $member): bool
-    {
-        return $authUser->can('Replicate:Member') && $this->canManageMember($authUser, $member);
-    }
-
-    public function reorder(AuthUser $authUser): bool
-    {
-        return $authUser->can('Reorder:Member');
-    }
-
-    public function export(AuthUser $authUser, ?Member $member = null): bool
-    {
-        if ($authUser instanceof \App\Models\User && $authUser->isSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        if ($member && ! $this->canManageMember($authUser, $member)) {
-            return false;
-        }
-
-        return $authUser->can('Export:Member');
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR]);
     }
 
-    public function import(AuthUser $authUser, ?Member $member = null): bool
+    public function update(User $user, Member $member): bool
     {
-        if ($authUser instanceof \App\Models\User && $authUser->isSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        return $authUser->can('Import:Member');
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
     }
 
-    public function viewMeetingHistory(AuthUser $authUser, Member $member): bool
+    public function delete(User $user, Member $member): bool
     {
-        return $authUser->can('ViewMeetingHistory:Member') && $this->canManageMember($authUser, $member);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($member->group_id);
     }
 
-    public function generateCard(AuthUser $authUser, Member $member): bool
+    public function restore(User $user, Member $member): bool
     {
-        return $authUser->can('GenerateCard:Member') && $this->canManageMember($authUser, $member);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($member->group_id);
     }
 
-    public function makePermanent(AuthUser $authUser, Member $member): bool
+    public function forceDelete(User $user, Member $member): bool
     {
-        return $authUser->can('MakePermanent:Member') && $this->canManageMember($authUser, $member);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && $user->canManageGroup($member->group_id);
     }
 
-    public function deactivate(AuthUser $authUser, Member $member): bool
+    public function forceDeleteAny(User $user): bool
     {
-        return $authUser->can('Deactivate:Member') && $this->canManageMember($authUser, $member);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin();
     }
 
-    public function downloadKta(AuthUser $authUser, Member $member): bool
+    public function restoreAny(User $user): bool
     {
-        return $authUser->can('DownloadKta:Member') && $this->canManageMember($authUser, $member);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin();
     }
 
-    public function downloadQr(AuthUser $authUser, Member $member): bool
+    public function replicate(User $user, Member $member): bool
     {
-        return $authUser->can('DownloadQr:Member') && $this->canManageMember($authUser, $member);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
     }
 
+    public function reorder(User $user): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin();
+    }
+
+    public function export(User $user, ?Member $member = null): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->canExport() && (! $member || $user->canManageGroup($member->group_id));
+    }
+
+    public function import(User $user, ?Member $member = null): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->isAdmin() && (! $member || $user->canManageGroup($member->group_id));
+    }
+
+    public function viewMeetingHistory(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->canManageGroup($member->group_id);
+    }
+
+    public function generateCard(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
+    }
+
+    public function makePermanent(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
+    }
+
+    public function deactivate(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
+    }
+
+    public function downloadKta(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
+    }
+
+    public function downloadQr(User $user, Member $member): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->hasAnyRole([UserRole::ADMIN, UserRole::OPERATOR])
+            && $user->canManageGroup($member->group_id);
+    }
 }

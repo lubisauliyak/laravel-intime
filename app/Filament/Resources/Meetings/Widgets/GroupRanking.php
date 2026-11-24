@@ -2,25 +2,23 @@
 
 namespace App\Filament\Resources\Meetings\Widgets;
 
-use Livewire\Attributes\On;
-
+use App\Enums\AttendanceStatus;
+use App\Enums\Gender;
 use App\Models\Attendance;
 use App\Models\Group;
 use App\Models\Meeting;
-use App\Enums\AttendanceStatus;
-use App\Enums\Gender;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 class GroupRanking extends BaseWidget
 {
     public $filters = [];
+
     protected int|string|array $columnSpan = 'full';
+
     protected ?string $pollingInterval = '30s';
+
     protected static ?string $heading = 'Peringkat Kelompok';
 
     public function table(Table $table): Table
@@ -38,28 +36,28 @@ class GroupRanking extends BaseWidget
             $query->whereIn('id', $descendantIds);
         } elseif ($levelId) {
             $query->where('level_id', $levelId);
-        } elseif (!$user->isSuperAdmin() && $user->group_id) {
+        } elseif (! $user->isSuperAdmin() && $user->group_id) {
             $query->whereIn('id', $user->group->getAllDescendantIds());
         }
 
-        $query->withCount(['members' => fn($q) => $q->where('members.status', true)])
+        $query->withCount(['members' => fn ($q) => $q->where('members.status', true)])
             ->addSelect([
                 'present_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id'))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id'))
                     ->where('attendances.status', AttendanceStatus::HADIR)
-                    ->when($meeting, fn($q) => $q->where('meeting_id', $meeting->id)),
+                    ->when($meeting, fn ($q) => $q->where('meeting_id', $meeting->id)),
                 'male_present_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::MALE))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::MALE))
                     ->where('attendances.status', AttendanceStatus::HADIR)
-                    ->when($meeting, fn($q) => $q->where('meeting_id', $meeting->id)),
+                    ->when($meeting, fn ($q) => $q->where('meeting_id', $meeting->id)),
                 'female_present_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::FEMALE))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id')->where('gender', Gender::FEMALE))
                     ->where('attendances.status', AttendanceStatus::HADIR)
-                    ->when($meeting, fn($q) => $q->where('meeting_id', $meeting->id)),
+                    ->when($meeting, fn ($q) => $q->where('meeting_id', $meeting->id)),
                 'excused_count' => Attendance::selectRaw('count(*)')
-                    ->whereHas('member', fn($q) => $q->whereColumn('group_id', 'groups.id'))
+                    ->whereHas('member', fn ($q) => $q->whereColumn('group_id', 'groups.id'))
                     ->whereIn('status', [AttendanceStatus::IZIN, AttendanceStatus::SAKIT])
-                    ->when($meeting, fn($q) => $q->where('meeting_id', $meeting->id)),
+                    ->when($meeting, fn ($q) => $q->where('meeting_id', $meeting->id)),
             ]);
 
         return $table
@@ -74,11 +72,14 @@ class GroupRanking extends BaseWidget
                 TextColumn::make('attendance_percentage')
                     ->label('% Hadir')
                     ->getStateUsing(function ($record) {
-                        if ($record->members_count <= 0) return '0%';
-                        return number_format(($record->present_count / $record->members_count) * 100, 1) . '%';
+                        if ($record->members_count <= 0) {
+                            return '0%';
+                        }
+
+                        return number_format(($record->present_count / $record->members_count) * 100, 1).'%';
                     })
                     ->badge()
-                    ->color(fn($state) => ((float) $state >= 80) ? 'success' : (((float) $state >= 50) ? 'warning' : 'danger'))
+                    ->color(fn ($state) => ((float) $state >= 80) ? 'success' : (((float) $state >= 50) ? 'warning' : 'danger'))
                     ->alignCenter(),
             ])
             ->defaultSort('present_count', 'desc');

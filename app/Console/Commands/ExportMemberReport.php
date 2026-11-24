@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Member;
 use App\Models\Group;
 use App\Models\Level;
-use App\Enums\AttendanceStatus;
+use App\Models\Member;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -27,13 +26,13 @@ class ExportMemberReport extends Command
 
         // 1. Load KTA print list from Master Data CSV
         $ktaPrintedCodes = $this->loadKtaPrintedCodes($ktaFilePath);
-        $this->info("   ✓ Loaded " . count($ktaPrintedCodes) . " printed KTA codes from Master Data CSV");
+        $this->info('   ✓ Loaded '.count($ktaPrintedCodes).' printed KTA codes from Master Data CSV');
 
         // 2. Find the "Desa" level number
         $desaLevel = Level::whereRaw('UPPER(name) LIKE ?', ['%DESA%'])->first();
         $desaLevelNumber = $desaLevel?->level_number;
 
-        if (!$desaLevelNumber) {
+        if (! $desaLevelNumber) {
             $this->warn('⚠️  Level "Desa" not found, will try to use parent group name instead.');
         } else {
             $this->info("   ✓ Desa level found: level_number = {$desaLevelNumber}");
@@ -74,6 +73,7 @@ class ExportMemberReport extends Command
 
         if ($handle === false) {
             $this->error("❌ Cannot open output file: {$outputPath}");
+
             return self::FAILURE;
         }
 
@@ -180,14 +180,16 @@ class ExportMemberReport extends Command
     {
         $codes = [];
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $this->warn("⚠️  KTA Master Data file not found: {$filePath}");
+
             return $codes;
         }
 
         $handle = fopen($filePath, 'r');
         if ($handle === false) {
             $this->warn("⚠️  Cannot open KTA Master Data file: {$filePath}");
+
             return $codes;
         }
 
@@ -195,7 +197,7 @@ class ExportMemberReport extends Command
         fgetcsv($handle, 1000, ';');
 
         while (($row = fgetcsv($handle, 1000, ';')) !== false) {
-            if (!empty($row[1])) {
+            if (! empty($row[1])) {
                 $codes[] = trim($row[1]);
             }
         }

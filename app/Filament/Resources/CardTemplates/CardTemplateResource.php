@@ -12,7 +12,6 @@ use App\Models\CardTemplate;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class CardTemplateResource extends Resource
@@ -20,7 +19,7 @@ class CardTemplateResource extends Resource
     protected static ?string $model = CardTemplate::class;
 
     protected static ?string $modelLabel = 'Template Kartu';
-    
+
     protected static ?string $pluralModelLabel = 'Template Kartu';
 
     protected static string|BackedEnum|null $navigationIcon = null;

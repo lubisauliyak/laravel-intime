@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
 
 class Attendance extends Model
 {
     /** @use HasFactory<\Database\Factories\AttendanceFactory> */
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     /**
      * Hanya catat event updated dan deleted untuk mencegah lonjakan I/O saat absensi massal.
@@ -67,6 +67,7 @@ class Attendance extends Model
             $q->where('membership_type', \App\Enums\MembershipType::PENGURUS->value);
         });
     }
+
     /**
      * Check if the member should have a supervisor badge for this meeting.
      */
@@ -75,22 +76,24 @@ class Attendance extends Model
         $member = $this->member;
         $meeting = $this->meeting;
 
-        if (!$member || !$meeting) return false;
+        if (! $member || ! $meeting) {
+            return false;
+        }
 
         $isSupervisor = $member->hasPositionIn($meeting->group);
-        
+
         // Determine if they are a direct target
         $targetGroupIds = $meeting->group->getAllDescendantIds();
         $isTargetGroup = in_array($member->group_id, $targetGroupIds);
         $isTargetGender = ($meeting->target_gender === \App\Enums\MeetingTargetGender::ALL || $member->gender === $meeting->target_gender);
-        
+
         $allAgeGroupsCount = \App\Models\AgeGroup::count();
         $selectedAgeGroupsCount = empty($meeting->target_age_groups) ? 0 : count($meeting->target_age_groups);
         $shouldFilterByAge = $selectedAgeGroupsCount > 0 && $selectedAgeGroupsCount < $allAgeGroupsCount;
-        $isTargetAge = !$shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
-        
+        $isTargetAge = ! $shouldFilterByAge || ($member->ageGroup && in_array($member->ageGroup->name, (array) $meeting->target_age_groups));
+
         $isDirectTarget = $isTargetGroup && $isTargetGender && $isTargetAge;
 
-        return $isSupervisor && !$isDirectTarget;
+        return $isSupervisor && ! $isDirectTarget;
     }
 }

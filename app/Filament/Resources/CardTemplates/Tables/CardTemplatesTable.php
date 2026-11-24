@@ -2,16 +2,16 @@
 
 namespace App\Filament\Resources\CardTemplates\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class CardTemplatesTable
@@ -27,7 +27,7 @@ class CardTemplatesTable
                     ->width(33)
                     ->alignCenter()
                     ->extraImgAttributes(['class' => 'rounded shadow-xs object-cover border border-gray-200 dark:border-gray-700'])
-                    ->defaultImageUrl(fn($record) => $record->background_path ? asset('storage/' . $record->background_path) : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="66" height="104" viewBox="0 0 66 104" fill="%23f3f4f6"><rect width="66" height="104" rx="4" fill="%23f1f5f9"/><rect x="13" y="16" width="40" height="40" rx="20" fill="%23cbd5e1"/><rect x="10" y="66" width="46" height="6" rx="3" fill="%23cbd5e1"/><rect x="16" y="78" width="34" height="5" rx="2.5" fill="%23cbd5e1"/></svg>'),
+                    ->defaultImageUrl(fn ($record) => $record->background_path ? asset('storage/'.$record->background_path) : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="66" height="104" viewBox="0 0 66 104" fill="%23f3f4f6"><rect width="66" height="104" rx="4" fill="%23f1f5f9"/><rect x="13" y="16" width="40" height="40" rx="20" fill="%23cbd5e1"/><rect x="10" y="66" width="46" height="6" rx="3" fill="%23cbd5e1"/><rect x="16" y="78" width="34" height="5" rx="2.5" fill="%23cbd5e1"/></svg>'),
                 TextColumn::make('name')
                     ->label('Nama Template')
                     ->searchable()
@@ -35,7 +35,7 @@ class CardTemplatesTable
                     ->weight('bold'),
                 TextColumn::make('dimensions')
                     ->label('Ukuran Canvas')
-                    ->state(fn($record) => $record->canvas_width . ' x ' . $record->canvas_height . ' px')
+                    ->state(fn ($record) => $record->canvas_width.' x '.$record->canvas_height.' px')
                     ->toggleable(),
                 IconColumn::make('is_active')
                     ->label('Aktif')
@@ -64,11 +64,11 @@ class CardTemplatesTable
                         ->icon('heroicon-o-paint-brush')
                         ->color('info')
                         ->tooltip('Buka Canvas Editor di tab baru')
-                        ->url(fn($record) => url('/card-editor/' . $record->id))
+                        ->url(fn ($record) => url('/card-editor/'.$record->id))
                         ->openUrlInNewTab()
-                        ->visible(fn($record) => auth()->user()?->can('openEditor', $record)),
+                        ->visible(fn ($record) => auth()->user()?->can('openEditor', $record)),
                     DeleteAction::make(),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

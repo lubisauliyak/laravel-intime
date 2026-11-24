@@ -2,33 +2,32 @@
 
 namespace App\Exports;
 
-use App\Enums\Gender;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class MemberTemplateExport implements WithMultipleSheets
 {
     public function sheets(): array
     {
         return [
-            new TemplateSheet(),
-            new DocumentationSheet(),
+            new TemplateSheet,
+            new DocumentationSheet,
         ];
     }
 }
 
-class TemplateSheet implements FromArray, WithHeadings, WithMapping, WithStyles, WithTitle, WithColumnFormatting, WithColumnWidths
+class TemplateSheet implements FromArray, WithColumnFormatting, WithColumnWidths, WithHeadings, WithMapping, WithStyles, WithTitle
 {
     protected array $sampleData;
 
@@ -150,7 +149,7 @@ class TemplateSheet implements FromArray, WithHeadings, WithMapping, WithStyles,
     }
 }
 
-class DocumentationSheet implements FromArray, WithHeadings, WithStyles, WithTitle, WithColumnWidths
+class DocumentationSheet implements FromArray, WithColumnWidths, WithHeadings, WithStyles, WithTitle
 {
     public function array(): array
     {
@@ -163,7 +162,7 @@ class DocumentationSheet implements FromArray, WithHeadings, WithStyles, WithTit
             [
                 'Kelompok (Wajib)',
                 'Nama grup/kelompok (WAJIB)',
-                "Harus sesuai dengan nama grup yang sudah terdaftar di sistem. Pastikan tidak ada spasi di awal/akhir nama.",
+                'Harus sesuai dengan nama grup yang sudah terdaftar di sistem. Pastikan tidak ada spasi di awal/akhir nama.',
             ],
             [
                 'Nama Lengkap (Wajib)',
@@ -188,7 +187,7 @@ class DocumentationSheet implements FromArray, WithHeadings, WithStyles, WithTit
             [
                 'PERHATIAN LAINNYA',
                 'Batasan Skala Impor',
-                "Harap jangan mengunggah data dalam jumlah sangat masif (misal 10.000+ baris) sekaligus tanpa dipisah, untuk mencegah Timeout Gateway/kehabisan memori."
+                'Harap jangan mengunggah data dalam jumlah sangat masif (misal 10.000+ baris) sekaligus tanpa dipisah, untuk mencegah Timeout Gateway/kehabisan memori.',
             ],
         ];
     }

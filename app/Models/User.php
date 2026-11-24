@@ -2,30 +2,29 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
+use App\Traits\LogsActivity;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Enums\UserRole;
-use Spatie\Permission\Traits\HasRoles;
-use App\Traits\LogsActivity;
 
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, HasRoles, LogsActivity;
+    use HasFactory, LogsActivity, Notifiable, SoftDeletes;
 
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'admin') {
-            // Menggunakan permission check atau role check yang terpusat
-            return $this->hasAnyRole([
-                UserRole::SUPER_ADMIN->value,
-                UserRole::ADMIN->value,
-                UserRole::OPERATOR->value,
-                UserRole::PENGURUS->value,
+            return (bool) $this->status && $this->hasAnyRole([
+                UserRole::SUPER_ADMIN,
+                UserRole::ADMIN,
+                UserRole::OPERATOR,
+                UserRole::PENGURUS,
             ]);
         }
 
@@ -52,11 +51,11 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'group_id',
-        'role', // Tetap dipertahankan sementara sebagai jembatan/info
+        'role',
         'status',
     ];
 
-    public function group(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function group(): BelongsTo
     {
         return $this->belongsTo(Group::class);
     }
@@ -82,7 +81,46 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'status' => 'boolean',
         ];
+    }
+
+    /**
+     * Assign a role to the user.
+     */
+    public function assignRole(UserRole|string $role): self
+    {
+        $this->role = $role instanceof UserRole ? $role : (UserRole::tryFrom((string) $role) ?? $role);
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Check if user has a specific role.
+     */
+    public function hasRole(UserRole|string $role): bool
+    {
+        $roleValue = $role instanceof UserRole ? $role->value : $role;
+        $currentRole = $this->role instanceof UserRole ? $this->role->value : (string) $this->role;
+
+        return $currentRole === $roleValue;
+    }
+
+    /**
+     * Check if user has any of the given roles.
+     *
+     * @param  array<UserRole|string>  $roles
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -90,7 +128,7 @@ class User extends Authenticatable implements FilamentUser
      */
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole(config('filament-shield.super_admin.name', UserRole::SUPER_ADMIN->value));
+        return $this->hasRole(UserRole::SUPER_ADMIN);
     }
 
     /**
@@ -98,7 +136,7 @@ class User extends Authenticatable implements FilamentUser
      */
     public function isAdmin(): bool
     {
-        return $this->hasRole(UserRole::ADMIN->value);
+        return $this->hasRole(UserRole::ADMIN);
     }
 
     /**
@@ -106,7 +144,15 @@ class User extends Authenticatable implements FilamentUser
      */
     public function isOperator(): bool
     {
-        return $this->hasRole(UserRole::OPERATOR->value);
+        return $this->hasRole(UserRole::OPERATOR);
+    }
+
+    /**
+     * Helper check for pengurus role
+     */
+    public function isPengurus(): bool
+    {
+        return $this->hasRole(UserRole::PENGURUS);
     }
 
     /**
@@ -122,14 +168,51 @@ class User extends Authenticatable implements FilamentUser
      */
     public function canExport(): bool
     {
+        return $this->isSuperAdmin() || $this->isAdmin() || $this->isPengurus();
+    }
+
+    /**
+     * Check if the user can manage the given group (own group or any descendant).
+     */
+    public function canManageGroup(Group|int|null $group): bool
+    {
         if ($this->isSuperAdmin()) {
             return true;
         }
 
-        return $this->can('Export:Member')
-            || $this->can('Export:Group')
-            || $this->can('ExportExcel:Meeting')
-            || $this->can('ExportPdf:Meeting');
+        if (! $group) {
+            return false;
+        }
+
+        $groupId = $group instanceof Group ? $group->id : (int) $group;
+
+        return in_array($groupId, $this->getManageableGroupIds(), true);
+    }
+
+    /**
+     * Check if the user can access the given group's scope (manageable or ancestor branch).
+     */
+    public function canAccessGroupScope(Group|int|null $group): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $group) {
+            return false;
+        }
+
+        $groupId = $group instanceof Group ? $group->id : (int) $group;
+
+        if ($this->canManageGroup($groupId)) {
+            return true;
+        }
+
+        if ($this->group_id && $this->group) {
+            return in_array($groupId, $this->group->getAllAncestorIds(), true);
+        }
+
+        return false;
     }
 
     /**
@@ -149,7 +232,7 @@ class User extends Authenticatable implements FilamentUser
             return $this->_manageable_group_ids = Group::pluck('id')->toArray();
         }
 
-        if (!$this->group_id || !$this->group) {
+        if (! $this->group_id || ! $this->group) {
             return $this->_manageable_group_ids = [];
         }
 
